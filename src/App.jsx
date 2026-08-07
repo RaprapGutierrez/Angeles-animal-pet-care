@@ -14,7 +14,7 @@ import PatientRecord from './pages/Patient-Record/Patientrecord';
 import Appointment from './pages/Appoinment/Appointment';
 import RoomAvailability from './pages/Room-Availability/Roomavailability';
 import Inventory from './pages/Inventory/Inventory';
-import PointOfSale from './pages/POS/PointOfSale';
+import PointOfSale from './pages/POS/Pointofsale';
 import Walkin from './pages/Walkin/Walkin';
 import Report from './pages/Report/Report';
 import Messages from './pages/Message/Messages';
