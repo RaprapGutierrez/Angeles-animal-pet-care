@@ -1652,7 +1652,7 @@ const handleLogout = async () => {
             marginBottom: 4, flexShrink: 0,
           }}>
             <img
-              src="../public/image/446805041_881106557364617_1125518808684788316_n.jpg"
+              src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
               alt="Logo"
               style={{ width: '100%', height: '100%', objectFit: 'cover' }}
             />
@@ -1784,7 +1784,7 @@ const handleLogout = async () => {
               }}
             >
               <img
-                src="../public/image/446805041_881106557364617_1125518808684788316_n.jpg"
+                src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
                 alt="Logo"
                 style={{ width: 38, height: 38, objectFit: 'cover', borderRadius: '50%' }}
               />
@@ -2075,7 +2075,7 @@ const handleLogout = async () => {
                 </svg>
               </button>
               <img
-                src="../public/image/446805041_881106557364617_1125518808684788316_n.jpg"
+                src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
                 alt="APC Logo"
                 style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }}
               />
