@@ -1,0 +1,92 @@
+
+
+acc for each branch 
+super admin for main
+email:rafaelanunciacion502@gmail.com
+pass:Raf_super895623
+
+admin in main
+email:aj_baustista@admin.com
+pass:aj_ad895623
+
+
+employee in main 
+email:Adriennejey@employee.com
+pass:Aj_895623
+
+customer in main
+email:IsabellaJat@customer.com
+pass:isa_895623
+
+attendention all other branch only have manager but it like admin
+
+acc for mabalacat 2
+manager for mabalacat
+email:Andrewbitun@manager.com
+pass:bitun_895623
+
+employee in mabalacat 2
+email:JohnDoe@employee.com
+pass:John_895623
+
+customer in mabalacat 2
+email:EvelynLyn@customer.com
+pass:eve_895623
+
+acc for tarlac 
+manager for tarlac query 
+email:AndreaDelaCruz@manager.com
+pass:andrea_895623
+
+employee in tarlac 
+email:MarieRodrigo@employee.com
+pass:marie_895623
+
+customer in tarlac
+email:JordanMay@customer.com
+pass:jor_895623
+
+
+acc for angeles query 
+manager for angeles
+email:JohnAlcantara@manager.com
+pass:john_895623
+
+employee in angeles  
+email:NicoleLim@employee.com
+pass:Nicole_895623
+
+customer in angeles
+email:AverySantos@customer.com
+pass:Ave_895623
+
+acc for san fernando 
+manager for san Fernando 
+email:MiaDelaCruz@manager.com
+pass:mia_895623
+
+employee in san fernando  
+email:EmmaQuinto@employee.com
+pass:emma_895623
+
+customer in San fernando
+email:RilleyRamos@customer.com
+pass:Ril_895623
+
+acc for magalang
+manager for magalang query 
+email:OliviaRodrigues@manager.com
+pass:oliv_895623
+
+employee in magalang  
+email:HarperLim@employee.com
+pass:harper_895623
+
+customer in magalang 
+email:MorganGomez@customer.com
+pass:mor_895623
+
+
+
+
+

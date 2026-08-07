@@ -1,0 +1,79 @@
+@keyframes reportFadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in {
+  animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes reportFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes reportBarGrow {
+  from { transform: scaleY(0); opacity: 0; }
+  to   { transform: scaleY(1); opacity: 1; }
+}
+@keyframes reportSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes reportShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.report-stat-card {
+  animation: reportFadeUp 0.38s ease both;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+.report-stat-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 28px rgba(30,58,138,0.10) !important;
+}
+.report-chart-card {
+  animation: reportFadeIn 0.45s ease both;
+}
+.export-btn {
+  transition: all 0.18s;
+}
+.export-btn:hover:not(:disabled) {
+  filter: brightness(1.07);
+  transform: translateY(-1px);
+}
+.range-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 99px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+.bar-col {
+  transition: all 0.15s;
+}
+.bar-col:hover .bar-fill {
+  filter: brightness(1.12);
+}
+.skeleton {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e9ecef 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: reportShimmer 1.4s infinite;
+  border-radius: 8px;
+}
+.export-spin {
+  width: 14px;
+  height: 14px;
+  border: 2px solid currentColor;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: reportSpin 0.6s linear infinite;
+  display: inline-block;
+}
+.export-spin-light {
+  border-color: rgba(255,255,255,0.5);
+  border-top-color: #fff;
+}

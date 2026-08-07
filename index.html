@@ -12,76 +12,196 @@
     <meta name="theme-color" content="#1e3a8a" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Animal Care Hospital</title>
+    <title>Angeles Animal Pet Care</title>
 
     <style>
       #splash {
         position: fixed; inset: 0;
-        background: #f0f3fa;
+        background:
+          radial-gradient(circle at 18% 12%, rgba(99,102,241,0.07) 0%, transparent 45%),
+          radial-gradient(circle at 88% 88%, rgba(30,58,138,0.06) 0%, transparent 50%),
+          linear-gradient(180deg, #f8fafc 0%, #f0f3fa 100%);
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
         z-index: 9999; transition: opacity 0.5s ease;
+        overflow: hidden;
+        font-family: 'Inter', sans-serif;
+      }
+
+      .splash-decor {
+        position: absolute;
+        border-radius: 50%;
+        background: linear-gradient(135deg, rgba(30,58,138,0.05), rgba(99,102,241,0.03));
+        pointer-events: none;
+      }
+      .splash-decor-1 { width: 360px; height: 360px; top: -130px; left: -110px; }
+      .splash-decor-2 { width: 300px; height: 300px; bottom: -110px; right: -90px; }
+
+      .splash-content {
+        display: flex; flex-direction: column; align-items: center;
+        position: relative; z-index: 1;
+        animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) both;
       }
 
       /* Hospital profile photo */
+      .hospital-img-wrap {
+        width: 108px; height: 108px;
+        border-radius: 50%;
+        padding: 4px;
+        background: linear-gradient(135deg, #1e3a8a, #3b82f6);
+        margin-bottom: 22px;
+        box-shadow: 0 8px 28px rgba(30,58,138,0.18), 0 2px 8px rgba(0,0,0,0.06);
+        animation: breathe 3s ease-in-out infinite;
+      }
       #splash .hospital-img {
-        width: 100px; height: 100px;
-        border-radius: 50%; border: 4px solid #e8edf8;
-        object-fit: cover; margin-bottom: 20px;
-        animation: pulse 1.5s ease-in-out infinite;
+        width: 100%; height: 100%;
+        border-radius: 50%; border: 3px solid #fff;
+        object-fit: cover; display: block;
       }
 
-      #splash h1    { font-family: sans-serif; font-size: 22px; font-weight: 800; color: #1a1a6e; margin: 0 0 6px; }
-      #splash p.sub { font-family: sans-serif; font-size: 13px; color: #64748b; margin: 0 0 28px; }
+      #splash h1 {
+        font-size: 22px; font-weight: 400; color: #ffffff;
+        font-family: 'Poetsen One', sans-serif;
+        -webkit-text-stroke: 5px #1e3a8a; paint-order: stroke fill;
+        letter-spacing: -0.01em; margin: 0 0 6px;
+        animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.1s both;
+      }
+      #splash p.sub {
+        font-size: 13px; font-weight: 400; color: #ffffff;
+        font-family: 'Poetsen One', sans-serif;
+        -webkit-text-stroke: 4px #1e3a8a; paint-order: stroke fill;
+        letter-spacing: 0.02em; margin: 0 0 30px;
+        animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.18s both;
+      }
+
+      .loader {
+        display: flex; flex-direction: column; align-items: center; gap: 14px;
+        animation: fadeUp 0.6s cubic-bezier(0.22,1,0.36,1) 0.26s both;
+      }
 
       .spinner {
-        width: 36px; height: 36px;
-        border: 3px solid #e8edf8;
-        border-top-color: #1e3a8a;
+        width: 30px; height: 30px;
         border-radius: 50%;
-        animation: spin 0.8s linear infinite;
+        border: 3px solid #e0e7ff;
+        border-top-color: #1e3a8a;
+        border-right-color: #3b82f6;
+        animation: spin 0.85s cubic-bezier(0.5,0.1,0.5,0.9) infinite;
+      }
+
+      .progress-track {
+        position: relative;
+        width: 140px; height: 3px; border-radius: 99px;
+        background: #e2e8f0; overflow: hidden;
+      }
+      .progress-fill {
+        position: absolute; top: 0; left: -40%;
+        height: 100%; width: 40%; border-radius: 99px;
+        background: linear-gradient(90deg, #1e3a8a, #3b82f6);
+        animation: progressSlide 1.3s ease-in-out infinite;
       }
 
       /* ── SeraphVet badge ── */
       .seraphvet-badge {
         position: absolute;
-        bottom: 24px;
+        bottom: 26px;
         display: flex;
         flex-direction: column;
         align-items: center;
         gap: 6px;
+        animation: fadeUp 0.6s ease 0.4s both;
+      }
+      .badge-divider {
+        width: 28px; height: 1px; background: #d6dceb; margin-bottom: 8px;
       }
       .seraphvet-badge img {
-        width: 90px; height: 90px;
+        width: 52px; height: 52px;
         object-fit: contain;
-        opacity: 0.85;
+        opacity: 0.7;
       }
       .seraphvet-badge span {
-        font-family: sans-serif;
-        font-size: 11px;
+        font-size: 10.5px;
         color: #94a3b8;
-        letter-spacing: 0.04em;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
       }
       .seraphvet-badge strong {
-        color: #1a1a6e;
+        color: #475569;
         font-weight: 700;
       }
 
-      @keyframes spin  { to { transform: rotate(360deg); } }
-      @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+      @keyframes spin    { to { transform: rotate(360deg); } }
+      @keyframes breathe { 0%,100% { transform: scale(1); } 50% { transform: scale(1.035); } }
+      @keyframes fadeUp {
+        from { opacity: 0; transform: translateY(10px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes progressSlide {
+        0%   { left: -40%; }
+        100% { left: 100%; }
+      }
+
+      /* ── Splash exit: slide up + fade ── */
+      #splash.splash-hide {
+        transform: translateY(-100%);
+        opacity: 0;
+        transition: transform 0.65s cubic-bezier(0.65, 0, 0.35, 1),
+                    opacity 0.45s ease;
+        pointer-events: none;
+      }
+
+      /* ── App reveal: fades + rises in as splash slides away ── */
+      #root {
+        opacity: 0;
+        transform: translateY(16px);
+        transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.18s,
+                    transform 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.18s;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+      #root.app-revealed {
+        opacity: 1;
+        transform: translateY(0);
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow: auto;
+        height: 100%;
+      }
     </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Poetsen+One&display=swap" rel="stylesheet">
   </head>
-  <body>
+  <body style="margin:0;padding:0;width:100%;height:100%;overflow:hidden;">
     <div id="splash">
-      <!-- Hospital profile image -->
-      <img class="hospital-img" src="/image/446805041_881106557364617_1125518808684788316_n.jpg" alt="Logo" />
-      <h1>Animal Care Hospital</h1>
-      <p class="sub">Branch Information System</p>
-      <div class="spinner"></div>
+      <div class="splash-decor splash-decor-1"></div>
+      <div class="splash-decor splash-decor-2"></div>
+
+      <div class="splash-content">
+        <!-- Hospital profile image -->
+        <div class="hospital-img-wrap">
+          <img class="hospital-img" src="/image/446805041_881106557364617_1125518808684788316_n.jpg" alt="Animal Care Hospital" />
+        </div>
+        <h1>Angeles Animal Pet Care</h1>
+        <p class="sub">Branch Information System</p>
+
+        <div class="loader">
+          <div class="spinner"></div>
+          <div class="progress-track"><div class="progress-fill"></div></div>
+        </div>
+      </div>
 
       <!-- SeraphVet branding badge -->
       <div class="seraphvet-badge">
+        <div class="badge-divider"></div>
         <img src="/image/seraphvet-logo.png" alt="SeraphVet Logo" />
         <span>Made with <strong>SeraphVet</strong></span>
       </div>
@@ -94,25 +214,40 @@
        *  Splash dismissal
        *  ─────────────────────────────────────────────────────────────────
        *  React calls window.__dismissSplash() from main.jsx after mount.
-       *  The app's default route "/" now shows the Information System,
-       *  so users land there instead of the login page.
+       *  The splash slides up and out while the Information System
+       *  underneath fades + rises into view, so the transition reads as
+       *  one continuous motion rather than a hard cut.
+       *
+       *  MIN_SPLASH_MS guarantees the splash is always visible for at
+       *  least this long — on a fast refresh (cached assets, warm
+       *  connection) React can mount in well under 100ms, which would
+       *  otherwise cut the splash off before its entrance animation even
+       *  finishes. We track the actual start time and, if dismissal is
+       *  requested early, simply delay the reveal by the remainder so it
+       *  always feels like a deliberate, smooth transition.
+       *
        *  Fallback: force-remove after 6s in case React fails to load.
        */
-      window.__splashFallback = setTimeout(() => {
+      const SPLASH_START = performance.now();
+      const MIN_SPLASH_MS = 1400;
+
+      function revealApp() {
         const splash = document.getElementById('splash');
+        const root = document.getElementById('root');
+        if (root) root.classList.add('app-revealed');
         if (splash) {
-          splash.style.opacity = '0';
-          setTimeout(() => splash.remove(), 500);
+          splash.classList.add('splash-hide');
+          setTimeout(() => splash.remove(), 700);
         }
-      }, 6000);
+      }
+
+      window.__splashFallback = setTimeout(revealApp, 6000);
 
       window.__dismissSplash = function () {
         clearTimeout(window.__splashFallback);
-        const splash = document.getElementById('splash');
-        if (splash) {
-          splash.style.opacity = '0';
-          setTimeout(() => splash.remove(), 500);
-        }
+        const elapsed = performance.now() - SPLASH_START;
+        const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
+        setTimeout(revealApp, remaining);
       };
     </script>
 

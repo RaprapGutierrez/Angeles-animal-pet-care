@@ -1,0 +1,89 @@
+@keyframes fadeIn  { from { opacity:0; transform:translateY(8px);  } to { opacity:1; transform:translateY(0); } }
+@keyframes slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+@keyframes spin    { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+
+.profile-page { animation: fadeIn .3s ease; }
+
+.appt-row { transition: background .15s; }
+.appt-row:hover { background: rgba(148,163,184,0.12) !important; }
+
+.edit-inp {
+  padding: 9px 12px;
+  border: 1.5px solid var(--border, #e2e8f0);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--card, #fff);
+  color: var(--text, #1e293b);
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color .15s;
+}
+.edit-inp:focus {
+  border-color: var(--royal, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+
+.avatar-wrapper:hover .avatar-overlay { opacity: 1 !important; }
+
+.profile-grid-2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.profile-hero-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.profile-hero-stats {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .profile-page {
+    padding: 16px 16px 16px !important;
+    padding-top: calc(64px + 16px) !important;
+  }
+  .profile-grid-2col {
+    grid-template-columns: 1fr !important;
+  }
+  .profile-hero-row {
+    align-items: center !important;
+    text-align: center;
+    justify-content: center;
+    gap: 24px !important;
+  }
+  .profile-hero-stats {
+    gap: 20px !important;
+    justify-content: center;
+  }
+  .profile-hero-banner {
+    padding: 24px 18px 0 !important;
+    margin: 0 16px 24px !important;
+    border-radius: 18px !important;
+  }
+  .profile-hero-banner .profile-tabs-row {
+    margin: 0 -18px !important;
+    padding: 14px 18px !important;
+  }
+  .profile-info-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .profile-hero-row > div:last-child {
+    padding-bottom: 20px !important;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+  }
+  .profile-hero-row > div:last-child button {
+    flex: 1;
+    justify-content: center;
+  }
+  table { min-width: 640px; }
+}

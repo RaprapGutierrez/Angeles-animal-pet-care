@@ -1,0 +1,258 @@
+/* ============================================================
+   Information System / Branches — Public landing page styles
+   Used by: InformationSystemBranches.jsx
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Inter:wght@400;500;600;700&family=Poetsen+One&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; font-family: 'Inter', system-ui, sans-serif; }
+section[id] { scroll-margin-top: 0; }
+body { background: #0f172a; color: #1a1340; }
+
+.serif { font-family: 'Poetsen One', sans-serif; }
+
+/* ---------------------------------------------------------- */
+/* Animations                                                   */
+/* ---------------------------------------------------------- */
+@keyframes fadeInUp  { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+@keyframes fadeInDown { from { opacity:0; transform:translateX(-50%) translateY(-10px); } to { opacity:1; transform:translateX(-50%) translateY(0); } }
+@keyframes fadeIn    { from { opacity:0; } to { opacity:1; } }
+@keyframes scaleIn   { from { opacity:0; transform:scale(.95); } to { opacity:1; transform:scale(1); } }
+@keyframes pulseDot  { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.5; transform:scale(.8); } }
+@keyframes shimmer   { from { background-position:-200% 0; } to { background-position:200% 0; } }
+@keyframes floatUp   { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-12px); } }
+
+.anim-fade-up   { animation: fadeInUp .6s ease-out forwards; }
+.anim-fade-in   { animation: fadeIn .5s ease-out forwards; }
+.anim-scale-in  { animation: scaleIn .4s ease-out forwards; }
+.anim-pulse-dot { animation: pulseDot 2s ease-in-out infinite; }
+
+.slide-up {
+  opacity: 0;
+  transform: translateY(40px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.slide-up.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.delay-100 { animation-delay: 100ms; }
+.delay-200 { animation-delay: 200ms; }
+.delay-300 { animation-delay: 300ms; }
+
+/* ---------------------------------------------------------- */
+/* Skeleton loading                                             */
+/* ---------------------------------------------------------- */
+.skeleton {
+  background: linear-gradient(90deg, #e8e5ff 25%, #f3f0ff 50%, #e8e5ff 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+/* ---------------------------------------------------------- */
+/* Branch card hover                                            */
+/* ---------------------------------------------------------- */
+.branch-card {
+  transition: transform .25s ease, box-shadow .25s ease;
+  cursor: default;
+}
+.branch-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(61, 47, 160, .12);
+}
+
+/* ---------------------------------------------------------- */
+/* Pill buttons                                                 */
+/* ---------------------------------------------------------- */
+.pill { cursor: pointer; border: none; font-family: inherit; transition: background .15s, color .15s; }
+
+/* ---------------------------------------------------------- */
+/* FAQ expand                                                    */
+/* ---------------------------------------------------------- */
+.faq-answer { overflow: hidden; transition: max-height .3s ease; }
+
+/* ---------------------------------------------------------- */
+/* Flip card (branch card back/front)                           */
+/* ---------------------------------------------------------- */
+.flip-card { perspective: 1200px; cursor: pointer; }
+.flip-card .flip-inner { transform-origin: center center; }
+.flip-inner {
+  position: relative; width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transition: transform .6s cubic-bezier(.4, 0, .2, 1);
+}
+.flip-card:hover .flip-inner { transform: rotateY(180deg); }
+.flip-front, .flip-back {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border-radius: 18px; overflow: hidden;
+  will-change: transform;
+}
+.flip-front { background: #fff; z-index: 2; transform: rotateY(0deg); }
+.flip-back  { transform: rotateY(180deg); background: #1a1340; z-index: 1; }
+.flip-back img { width: 100%; height: 100%; object-fit: cover; display: block; border-radius: 18px; }
+.flip-back-badge {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  padding: 32px 16px 16px;
+  background: linear-gradient(to top, rgba(26, 19, 64, 1) 0%, rgba(26, 19, 64, 0) 100%);
+  color: #fff; font-size: 12px; font-weight: 600; text-align: center;
+  border-radius: 0 0 18px 18px;
+}
+
+/* ---------------------------------------------------------- */
+/* Scrollbar                                                     */
+/* ---------------------------------------------------------- */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: #f3f0ff; }
+::-webkit-scrollbar-thumb { background: #a89ee0; border-radius: 3px; }
+
+/* ---------------------------------------------------------- */
+/* Responsive: stickers                                          */
+/* ---------------------------------------------------------- */
+@media (max-width: 768px) {
+  .branches-sticker-cat { opacity: 1 !important; width: clamp(64px, 15vw, 90px) !important; left: 6px !important; bottom: 6px !important; z-index: 0 !important; }
+  .hero-sticker { width: clamp(50px, 11vw, 80px) !important; transform: translateY(calc(-50% + 15px)) !important; }
+}
+@media (max-width: 480px) {
+  .hero-sticker { width: clamp(42px, 10vw, 64px) !important; transform: translateY(calc(-50% + 15px)) !important; }
+}
+
+/* ---------------------------------------------------------- */
+/* Site header + nav                                             */
+/* ---------------------------------------------------------- */
+.site-header {
+  position: fixed !important;
+  left: 50% !important;
+  transform: translatex(-50%) !important;
+  z-index: 9000 !important;
+  width: 95% !important;
+  max-width: 900px !important;
+  isolation: isolate;
+}
+
+section, footer {
+  position: relative;
+  z-index: 1;
+}
+
+.nav-link {
+  position: relative;
+  cursor: pointer;
+  text-decoration: none;
+  transition: color .2s ease;
+}
+.nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%) scaleX(0);
+  width: 80%;
+  height: 2px;
+  background: #3d2fa0;
+  border-radius: 999px;
+  transition: transform .25s ease;
+}
+.nav-link:hover::after,
+.nav-link.active::after {
+  transform: translateX(-50%) scaleX(1);
+}
+.nav-link:hover {
+  color: #3d2fa0 !important;
+}
+.nav-link.active {
+  color: #3d2fa0 !important;
+  font-weight: 700 !important;
+}
+
+.radial-glow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: radial-gradient(circle 600px at 50% 50%, rgba(59, 130, 246, 0.3), transparent);
+  pointer-events: none;
+}
+
+.dark-section {
+  position: relative;
+  overflow: hidden;
+  padding: 80px 0;
+  background: #0f172a;
+}
+
+/* ---------------------------------------------------------- */
+/* Header: hamburger + mobile nav                                */
+/* NOTE: originally used `${T.border}` in a JSX-injected style   */
+/* tag. T is a fixed module-level constant (T.border = #e0dcf8), */
+/* so it's been resolved to a static value here.                 */
+/* ---------------------------------------------------------- */
+.header-hamburger { display: none !important; }
+@media (max-width: 600px) {
+  .site-header { width: 92% !important; }
+  .header-nav { display: none !important; }
+  .header-nav.open {
+    display: flex !important;
+    flex-direction: column;
+    position: absolute;
+    top: 74px;
+    left: 0;
+    right: 0;
+    background: rgba(255, 255, 255, .98);
+    border-radius: 0 0 18px 18px;
+    border: 1px solid #e0dcf8;
+    border-top: none;
+    padding: 12px 16px 16px;
+    gap: 4px;
+    z-index: 100;
+  }
+  .header-hamburger { display: flex !important; }
+}
+
+/* ---------------------------------------------------------- */
+/* Hero stats stickers                                           */
+/* ---------------------------------------------------------- */
+@media (max-width: 480px) {
+  .stats-sticker { width: clamp(74px, 18vw, 100px) !important; }
+}
+
+/* ---------------------------------------------------------- */
+/* Emergency banner                                              */
+/* ---------------------------------------------------------- */
+@media (max-width: 480px) {
+  .mascot-row { margin-top: -70px !important; }
+  .mascot-row img { width: clamp(50px, 16vw, 70px) !important; }
+}
+@media (max-width: 600px) {
+  .emergency-actions { flex-direction: column !important; align-items: stretch !important; }
+  .emergency-actions button { text-align: center; }
+}
+
+/* ---------------------------------------------------------- */
+/* Section stickers (AI + Trivia sections share this class)      */
+/* ---------------------------------------------------------- */
+@media (max-width: 700px) {
+  .section-sticker-vert { width: clamp(60px, 10vw, 90px) !important; }
+}
+@media (max-width: 480px) {
+  .section-sticker-vert { display: none !important; }
+}
+
+/* ---------------------------------------------------------- */
+/* AI chat card badges                                           */
+/* ---------------------------------------------------------- */
+@media (max-width: 600px) {
+  .ai-badge { display: none !important; }
+}
+
+/* ---------------------------------------------------------- */
+/* Trivia section responsive layout                              */
+/* ---------------------------------------------------------- */
+@media (max-width: 600px) {
+  .trivia-pet-img { width: 100% !important; max-width: 100% !important; min-height: 130px !important; max-height: 160px !important; flex: none !important; }
+  .trivia-pet-img img { width: 85% !important; height: 85% !important; }
+  .trivia-left { flex-direction: column !important; align-items: center !important; width: 100% !important; }
+  .trivia-grid { grid-template-columns: 1fr !important; }
+}
