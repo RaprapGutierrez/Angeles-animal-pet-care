@@ -665,7 +665,7 @@ function Hero({ onBrowse }) {
         {/* Stats */}
         <div className="stats-wrap" style={{ position: "relative" }}>
           <img
-            src="/image/dog_wipe_bg.png"
+            src="/image/cat_wipe_bg.png"
             alt="Cute cat sticker"
             className="stats-sticker"
             style={{ position: "absolute", left: "2%", top: 0, transform: "translateY(-70%)", width: "clamp(64px,10vw,96px)", height: "auto", zIndex: 0, pointerEvents: "none", filter: "drop-shadow(0 6px 14px rgba(0,0,0,.4))" }}
@@ -736,7 +736,7 @@ function EmergencyBanner() {
       {/* Pet mascots flanking the map */}
       <div className="mascot-row" style={{ position: "relative", zIndex: 10, maxWidth: 900, margin: "-180px auto 0", padding: "0 24px", display: "flex", justifyContent: "space-between", alignItems: "flex-end", pointerEvents: "none" }}>
         <img
-          src="/image/dog_wipe_bg.png"
+          src="/image/cat_wipe_bg.png"
           alt="Cat mascot"
           style={{ width: "clamp(80px,10vw,130px)", height: "auto", objectFit: "contain", filter: "drop-shadow(0 8px 20px rgba(0,0,0,.5))", animation: "floatUp 3.5s ease-in-out infinite .6s" }}
         />
@@ -756,7 +756,7 @@ function ServicesSection() {
     <section id="services" className="dark-section" style={{ paddingTop: 100, paddingBottom: 100 }}>
       <div className="radial-glow" />
       <img
-        src="/image/dog_wipe_bg.png"
+        src="/image/cat_wipe_bg.png"
         alt="Cat sticker"
         style={{ position: "absolute", left: -30, bottom: 0, width: "clamp(110px,12vw,170px)", height: "auto", zIndex: 0, pointerEvents: "none", opacity: 0.95 }}
       />
@@ -1389,7 +1389,7 @@ export default function InformationSystem() {
       {/* ── Branches Section ── */}
       <section ref={branchRef} id="branches" style={{ position: "relative", overflow: "hidden", padding: "80px 0", background: "#ffffff" }}>
         <img
-          src="/image/dog_wipe_bg.png"
+          src="/image/cat_wipe_bg.png"
           alt="Cat sticker"
           className="branches-sticker-cat"
           style={{ position: "absolute", left: -20, bottom: -10, width: "clamp(64px,9vw,110px)", height: "auto", zIndex: 0, pointerEvents: "none", opacity: 0.95 }}
