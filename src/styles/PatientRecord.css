@@ -438,8 +438,7 @@
   }
 
   .content {
-    padding-top: 70 !important;
-    padding-top: 70px !important;
+    padding-top: 0 !important;
     margin: 0 !important;
   }
   .content > *:first-child {
@@ -481,6 +480,18 @@
   .patient-actions button {
     width: 100%;
     justify-content: center;
+  }
+}
+
+@media (max-width: 768px) {
+  .toast-stack {
+    left: 16px !important;
+    right: 16px !important;
+    bottom: max(90px, calc(76px + env(safe-area-inset-bottom))) !important;
+    align-items: stretch !important;
+  }
+  .toast-stack .live-toast {
+    width: 100% !important;
   }
 }
 

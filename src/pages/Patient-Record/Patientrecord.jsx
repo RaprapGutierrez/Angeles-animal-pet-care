@@ -350,7 +350,7 @@ const LiveToast = ({ message, show, type = 'success' }) => {
   };
   const c = cfg[type] || cfg.success;
   return (
-    <div style={{
+    <div className="live-toast" style={{
       width: 340, pointerEvents: 'none',
       position: 'relative',
       opacity: show ? 1 : 0,
@@ -1903,7 +1903,7 @@ const S = {
 
   return (
     <Layout>
-      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999999, display: 'flex', flexDirection: 'column', gap: 10, pointerEvents: 'none' }}>
+      <div className="toast-stack" style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999999, display: 'flex', flexDirection: 'column', gap: 10, pointerEvents: 'none' }}>
         {toasts.slice().reverse().map(t => <LiveToast key={t.id} message={t.message} show={t.show} type={t.type} />)}
       </div>
       <Modal show={appModal.show} title={appModal.title} message={appModal.message} onConfirm={appModal.onConfirm} onCancel={appModal.onCancel} confirmText={appModal.confirmText} cancelText={appModal.cancelText} confirmColor={appModal.confirmColor} />

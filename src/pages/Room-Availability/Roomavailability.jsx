@@ -866,7 +866,7 @@ const RoomAvailability = () => {
       <ConfirmModal {...confirm} />
 
       {/* ── TOPBAR ── */}
-      <div className="topbar" style={{ position: "fixed", top: 68, left: "var(--current-sidebar-w, 62px)", right: 0, zIndex: 40, background: "#fff" }}>
+      <div className="topbar room-topbar" style={{ position: "fixed", top: 68, left: "var(--current-sidebar-w, 62px)", right: 0, zIndex: 40, background: "#fff" }}>
         <div className="topbar-title">
           <img src="/icon/room.png" alt="" />
           <div>

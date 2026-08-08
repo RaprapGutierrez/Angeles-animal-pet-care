@@ -435,6 +435,41 @@ const AdminSecurity = () => {
     }, 3000);
   };
 
+  const [pwdRequests, setPwdRequests] = useState([]);
+  const fetchPwdRequests = useCallback(async () => {
+    let q = supabase.from('forgot_password_requests').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+    const { data } = await q;
+    setPwdRequests(data || []);
+  }, []);
+
+
+  const approvePwdRequest = (req) => {
+    setConfirm({
+      title: 'Approve Password Change',
+      message: `Apply the new password requested by ${req.email}?`,
+      type: 'success', confirmLabel: 'Approve',
+      onConfirm: async () => {
+        setConfirm(null);
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(req.user_id, { password: req.new_password });
+        if (error) { alert('Error: ' + error.message); return; }
+        await supabase.from('forgot_password_requests').update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: currentUser.id }).eq('id', req.id);
+        setPwdRequests(prev => prev.filter(r => r.id !== req.id));
+        showToast(`Password updated for ${req.email}`);
+      },
+    });
+  };
+  const rejectPwdRequest = (req) => {
+    setConfirm({
+      title: 'Reject Request', message: `Reject the password change request from ${req.email}?`,
+      type: 'danger', confirmLabel: 'Reject',
+      onConfirm: async () => {
+        setConfirm(null);
+        await supabase.from('forgot_password_requests').update({ status: 'rejected', reviewed_at: new Date().toISOString(), reviewed_by: currentUser.id }).eq('id', req.id);
+        setPwdRequests(prev => prev.filter(r => r.id !== req.id));
+      },
+    });
+  };
+
   // ── Fetch branches ────────────────────────────────────────────────────────
   const fetchBranches = useCallback(async () => {
     const { data } = await supabase.from('branches').select('id, name').order('name');
@@ -607,10 +642,11 @@ const AdminSecurity = () => {
       fetchUsers();
       fetchDeletedUsers();
       fetchPending();
+      fetchPwdRequests();
       fetchCustomRoles();
       fetchLogs();
     }
-  }, [userLoading, fetchUsers, fetchDeletedUsers, fetchPending, fetchCustomRoles, fetchBranches]);
+  }, [userLoading, fetchUsers, fetchDeletedUsers, fetchPending, fetchPwdRequests, fetchCustomRoles, fetchBranches]);
 
   useEffect(() => { if (canSeeAllBranches) { fetchUsers(); fetchDeletedUsers(); } }, [branchFilter]); // eslint-disable-line
 
@@ -1411,6 +1447,7 @@ const AdminSecurity = () => {
   const TAB_LIST = [
     { key: 'users', label: 'Users' },
     { key: 'pending', label: `Pending Approval${pendingRequests.length > 0 ? ` (${pendingRequests.length})` : ''}` },
+    { key: 'pwdrequests', label: `Password Requests${pwdRequests.length > 0 ? ` (${pwdRequests.length})` : ''}` },
     { key: 'roles', label: 'Roles' },
     { key: 'logs', label: 'Logs' },
     { key: 'settings', label: 'Settings' },
@@ -1813,6 +1850,50 @@ const AdminSecurity = () => {
                               Approve
                             </button>
                             <button onClick={() => handleRejectPending(req)} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ══ PASSWORD REQUESTS TAB ══ */}
+            {tab === 'pwdrequests' && (
+              <div style={{ padding: 24 }}>
+                <div style={{ marginBottom: 20 }}>
+                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>Password Change Requests</h3>
+                  <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>
+                    Employees and customers submit a new password here; it only takes effect once you approve it.
+                  </p>
+                </div>
+                {pwdRequests.length === 0 ? (
+                  <div style={{ padding: '40px 0', textAlign: 'center' }}>
+                    <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#f0fdf4', border: '1.5px solid #86efac', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+                      <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                    </div>
+                    <p style={{ color: 'var(--muted)', fontSize: 14, fontWeight: 600 }}>No pending password requests.</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    {pwdRequests.map(req => (
+                      <div key={req.id} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', display: 'flex', alignItems: 'stretch' }}>
+                        <div style={{ width: 4, flexShrink: 0, background: '#2563eb' }} />
+                        <div style={{ flex: 1, padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                          <div>
+                            <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>{req.email}</p>
+                            <p style={{ margin: '2px 0 0', fontSize: 11, color: '#94a3b8' }}>Requested {fmtDate(req.created_at)}</p>
+                          </div>
+                          <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
+                            <button onClick={() => approvePwdRequest(req)} style={{ padding: '7px 14px', borderRadius: 8, border: 'none', background: '#16a34a', color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
+                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                              Approve
+                            </button>
+                            <button onClick={() => rejectPwdRequest(req)} style={{ padding: '7px 14px', borderRadius: 8, border: '1px solid #fca5a5', background: '#fef2f2', color: '#dc2626', fontSize: 12, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', display: 'flex', alignItems: 'center', gap: 5 }}>
                               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                               Reject
                             </button>

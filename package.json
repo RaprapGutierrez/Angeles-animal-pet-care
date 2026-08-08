@@ -9,7 +9,8 @@
     "client": "vite",
     "server": "node server.js",
     "build": "npx vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "jest"
   },
   "type": "module",
   "dependencies": {
@@ -28,12 +29,17 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
+    "@babel/core": "^8.0.1",
+    "@babel/preset-env": "^8.0.2",
     "@types/node": "^26.1.1",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/react-router-dom": "^5.3.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "babel-jest": "^30.4.1",
     "concurrently": "^9.2.1",
+    "jest": "^30.4.2",
     "vite": "^5.4.11"
   }
 }
+

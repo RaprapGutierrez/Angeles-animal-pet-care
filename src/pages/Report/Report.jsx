@@ -545,7 +545,7 @@ const Report = () => {
     topbar: { background: 'var(--card)', borderBottom: '1px solid var(--border)', padding: '14px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', position: 'fixed', top: 68, left: 'var(--current-sidebar-w, 62px)', right: 0, zIndex: 40, boxSizing: 'border-box', gap: 12 },
     card: { background: 'var(--card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)', boxShadow: 'var(--shadow)', width: '100%', marginBottom: 20 },
     inp: { padding: '9px 12px', border: '1.5px solid var(--border)', borderRadius: 8, fontSize: 13, fontFamily: 'inherit', background: 'var(--card)', color: 'var(--text)', outline: 'none' },
-    cont: { padding: '24px 28px', paddingTop: typeof window !== 'undefined' && window.innerWidth <= 480 ? 272 : 122, boxSizing: 'border-box' },
+    cont: { padding: '24px 28px', paddingTop: typeof window !== 'undefined' && window.innerWidth <= 768 ? 0 : 122, boxSizing: 'border-box' },
   };
 
   const statCards = [
@@ -587,7 +587,7 @@ const Report = () => {
       <div style={S.page}>
 
         {/* ══ Topbar ══════════════════════════════════════════════════════════ */}
-       <div className="topbar" style={{ position: "fixed", top: 68, left: "var(--current-sidebar-w, 62px)", right: 0, zIndex: 40, background: "#fff" }}>
+       <div className="topbar report-topbar" style={{ position: "fixed", top: 68, left: "var(--current-sidebar-w, 62px)", right: 0, zIndex: 40, background: "#fff" }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img src="/icon/reports.png" alt=""
               style={{ width: 22, height: 22, filter: 'brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)' }} />

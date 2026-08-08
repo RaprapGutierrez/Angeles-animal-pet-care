@@ -190,7 +190,7 @@ section, footer {
 /* so it's been resolved to a static value here.                 */
 /* ---------------------------------------------------------- */
 .header-hamburger { display: none !important; }
-@media (max-width: 600px) {
+@media (max-width: 900px) {
   .site-header { width: 92% !important; }
   .header-nav { display: none !important; }
   .header-nav.open {

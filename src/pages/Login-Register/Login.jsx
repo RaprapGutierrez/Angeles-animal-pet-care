@@ -141,37 +141,6 @@ const WelcomePopup = ({ name, role, branch, onDone }) => {
   );
 };
 
-// ── Generate a 6-digit 2FA code ───────────────────────────────────────────────
-const generateOtpCode = () => String(Math.floor(100000 + Math.random() * 900000));
-
-// ── Send a 6-digit code to the user's phone for 2FA ───────────────────────────
-// Stores the code in `two_factor_codes` (user_id, phone, code, expires_at).
-// Actually dispatching the SMS requires an SMS provider (e.g. Twilio) — wire
-// that in where marked below.
-const sendTwoFACode = async (userId, phone) => {
-  const code = generateOtpCode();
-  const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-
-  const { error: deleteErr } = await supabase.from("two_factor_codes").delete().eq("user_id", userId);
-  if (deleteErr) console.error("two_factor_codes delete failed:", deleteErr);
-
-  const { error } = await supabase
-    .from("two_factor_codes")
-    .insert([{ user_id: userId, phone, code, expires_at: expiresAt }]);
-  if (error) {
-    console.error("two_factor_codes insert failed:", error);
-    return { error };
-  }
-
-  try {
-    // TODO: replace with your SMS provider call (e.g. Twilio)
-    // await fetch('/api/send-sms', { method: 'POST', body: JSON.stringify({ phone, code }) });
-    console.log(`2FA code for ${phone}: ${code}`); // remove in production
-  } catch (smsErr) {
-    console.error("SMS send failed:", smsErr);
-  }
-  return { error: null };
-};
 
 // ── Resolve redirect based on role ────────────────────────────────────────────
 const resolveRedirect = (role) => {
@@ -197,204 +166,23 @@ const EyeOff = () => (
   </svg>
 );
 
-// ── OTP-style digit input row ─────────────────────────────────────────────────
-const OtpBoxes = React.forwardRef(({ length, value, onChange, autoFocus, onComplete, status = "default", disabled }, ref) => {
-  const inputsRef = React.useRef([]);
-  const digits = value.split("").concat(Array(length).fill("")).slice(0, length);
-
-  React.useImperativeHandle(ref, () => ({
-    focusFirst: () => inputsRef.current[0]?.focus(),
-  }));
-
-  const setDigit = (idx, char) => {
-    const next = digits.slice();
-    next[idx] = char;
-    const joined = next.join("").replace(/\s+$/, "");
-    onChange(joined);
-    if (next.every((d) => d !== "") && next.join("").length === length) {
-      onComplete?.(next.join(""));
-    }
-  };
-
-  const handleChange = (idx, raw) => {
-    const char = raw.replace(/\D/g, "").slice(-1);
-    setDigit(idx, char);
-    if (char && idx < length - 1) inputsRef.current[idx + 1]?.focus();
-  };
-
-  const handleKeyDown = (idx, e) => {
-    if (e.key === "Backspace") {
-      if (digits[idx]) {
-        setDigit(idx, "");
-      } else if (idx > 0) {
-        inputsRef.current[idx - 1]?.focus();
-        setDigit(idx - 1, "");
-      }
-    } else if (e.key === "ArrowLeft" && idx > 0) {
-      inputsRef.current[idx - 1]?.focus();
-    } else if (e.key === "ArrowRight" && idx < length - 1) {
-      inputsRef.current[idx + 1]?.focus();
-    }
-  };
-
-  const handlePaste = (e) => {
-    e.preventDefault();
-    const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, length);
-    if (!pasted) return;
-    onChange(pasted);
-    if (pasted.length === length) onComplete?.(pasted);
-    const focusIdx = Math.min(pasted.length, length - 1);
-    setTimeout(() => inputsRef.current[focusIdx]?.focus(), 0);
-  };
-
-  const borderColor = status === "success" ? "#198754" : status === "error" ? "#dc3545" : null;
-  const [poppedIdx, setPoppedIdx] = React.useState(null);
-
-  React.useEffect(() => {
-    if (status === "success") {
-      const t = setTimeout(() => setPoppedIdx(null), 400);
-      return () => clearTimeout(t);
-    }
-  }, [status]);
-
-  const rowAnim = status === "error" ? "pinShake 0.4s ease" : status === "success" ? "pinSuccessPulse 0.4s ease" : "none";
-
-  return (
-    <div style={{ display: "flex", gap: 8, justifyContent: "center", animation: rowAnim }} onPaste={handlePaste}>
-      {digits.map((d, idx) => (
-        <input
-          key={idx}
-          ref={(el) => (inputsRef.current[idx] = el)}
-          type="password"
-          inputMode="numeric"
-          maxLength={1}
-          autoFocus={autoFocus && idx === 0}
-          value={d}
-          disabled={disabled}
-          onChange={(e) => {
-            const hadValue = !!digits[idx];
-            handleChange(idx, e.target.value);
-            if (!hadValue && e.target.value) {
-              setPoppedIdx(idx);
-              setTimeout(() => setPoppedIdx((cur) => (cur === idx ? null : cur)), 200);
-            }
-          }}
-          onKeyDown={(e) => handleKeyDown(idx, e)}
-          style={{
-            width: 42,
-            height: 50,
-            textAlign: "center",
-            fontSize: 20,
-            fontWeight: 700,
-            border: `1.5px solid ${borderColor || (d ? "#05328A" : "#e2e8f0")}`,
-            borderRadius: 10,
-            outline: "none",
-            color: borderColor || "#0f172a",
-            background: status === "success" ? "#f0fdf4" : status === "error" ? "#fef2f2" : "#fff",
-            boxShadow: d && !borderColor ? "0 0 0 3px rgba(5,50,138,0.1)" : "none",
-            transition: "border-color .15s, box-shadow .15s, background .15s",
-            animation: poppedIdx === idx ? "pinDigitPop 0.2s ease" : "none",
-          }}
-        />
-      ))}
-    </div>
-  );
-});
-
-// ── 2FA Modal (asks for phone first if missing, then verifies SMS code) ──────
-const TwoFAModal = ({ step, phone, otp, error, success, sending, onChangePhone, onChangeOtp, onSubmitPhone, onSubmitOtp, onResend, onCancel, closing }) => {
-  const isPhoneStep = step === "phone";
-  const otpLength = 6;
-
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16, animation: closing ? "pinOverlayOut 0.25s ease forwards" : "pinOverlayIn 0.2s ease" }}>
-      <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", width: "100%", maxWidth: 380, boxShadow: "0 24px 64px rgba(0,0,0,0.3)", animation: closing ? "pinModalOut 0.25s cubic-bezier(0.4,0,1,1) forwards" : "pinModalIn 0.3s cubic-bezier(0.34,1.56,0.64,1)" }}>
-        <div style={{ background: success ? "#198754" : "#05328A", padding: "16px 20px", transition: "background .2s" }}>
-          <h5 style={{ margin: 0, fontWeight: 700, color: "#fff", fontSize: 15 }}>
-            {success ? "Verified" : isPhoneStep ? "Add your phone number" : "Enter verification code"}
-          </h5>
-        </div>
-        <div style={{ padding: "24px" }}>
-          <p style={{ margin: "0 0 16px", fontSize: 13, color: "#475569", textAlign: "center" }}>
-            {success
-              ? "Signing you in…"
-              : isPhoneStep
-                ? "We need a phone number on file to send you a 2FA code for future logins."
-                : `Enter the 6-digit code sent to ${phone}.`}
-          </p>
-
-          {isPhoneStep ? (
-            <input
-              type="tel"
-              placeholder="+63 9XX XXX XXXX"
-              value={phone}
-              disabled={sending}
-              onChange={(e) => onChangePhone(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && onSubmitPhone()}
-              style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", fontSize: 14, border: `1.5px solid ${error ? "#dc3545" : "#e2e8f0"}`, borderRadius: 10, outline: "none", fontFamily: "inherit" }}
-            />
-          ) : (
-            <OtpBoxes
-              length={otpLength}
-              value={otp}
-              onChange={onChangeOtp}
-              autoFocus
-              disabled={success || sending}
-              status={success ? "success" : error ? "error" : "default"}
-              onComplete={onSubmitOtp}
-            />
-          )}
-
-          {error && <p style={{ color: "#dc3545", fontSize: 12, margin: "16px 0 0", textAlign: "center" }}>{error}</p>}
-
-          {!isPhoneStep && !success && (
-            <p style={{ margin: "14px 0 0", fontSize: 12, color: "#94a3b8", textAlign: "center" }}>
-              Didn't get a code?{" "}
-              <button type="button" onClick={onResend} disabled={sending} style={{ background: "none", border: "none", color: "#2563eb", fontWeight: 700, cursor: "pointer", fontSize: 12, padding: 0 }}>
-                Resend
-              </button>
-            </p>
-          )}
-        </div>
-        {!success && (
-          <div style={{ padding: "0 24px 24px", display: "flex", gap: 10, justifyContent: "flex-end" }}>
-            <button onClick={onCancel} style={{ background: "#f1f5f9", color: "#475569", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
-            <button onClick={isPhoneStep ? onSubmitPhone : onSubmitOtp} disabled={sending} style={{ background: "#05328A", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>
-              {sending ? "Please wait…" : isPhoneStep ? "Send Code" : "Verify"}
-            </button>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
 // ── Login ─────────────────────────────────────────────────────────────────────
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showForgot, setShowForgot] = useState(false);
+  const [forgotStep, setForgotStep] = useState("email"); // "email" | "password" | "sent"
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [forgotNewPwd, setForgotNewPwd] = useState("");
+  const [forgotConfirmPwd, setForgotConfirmPwd] = useState("");
+  const [forgotError, setForgotError] = useState("");
+  const [forgotSending, setForgotSending] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(null);
   const [welcome, setWelcome] = useState(null);
   // Track focus for input highlight
   const [focusedField, setFocusedField] = useState(null);
-  const [twoFAStep, setTwoFAStep] = useState(null); // null | "phone" | "verify"
-  const [phoneValue, setPhoneValue] = useState("");
-  const [otpValue, setOtpValue] = useState("");
-  const [twoFAError, setTwoFAError] = useState("");
-  const [twoFASuccess, setTwoFASuccess] = useState(false);
-  const [twoFAClosing, setTwoFAClosing] = useState(false);
-  const [sendingCode, setSendingCode] = useState(false);
-  const [pendingSession, setPendingSession] = useState(null);
-
-  const closeTwoFAModal = useCallback(() => {
-    setTwoFAClosing(true);
-    setTimeout(() => {
-      setTwoFAStep(null);
-      setTwoFAClosing(false);
-    }, 250);
-  }, []);
   const navigate = useNavigate();
 
   const showModal = useCallback((type, title, message) => setModal({ type, title, message }), []);
@@ -488,6 +276,36 @@ const Login = () => {
     }
   };
 
+  const submitForgotEmail = async () => {
+    setForgotError("");
+    const em = forgotEmail.trim().toLowerCase();
+    if (!em) { setForgotError("Please enter your account email."); return; }
+    const { data: profile, error } = await supabase.from("profiles").select("id, role").eq("email", em).single();
+    if (error || !profile) { setForgotError("No account found with that email."); return; }
+    if (["admin", "super_admin"].includes((profile.role || "").toLowerCase())) {
+      setForgotError("Admin accounts can't use this flow. Please contact IT directly.");
+      return;
+    }
+    setForgotStep("password");
+  };
+
+  const submitForgotPassword = async () => {
+    setForgotError("");
+    if (forgotNewPwd.length < 8) { setForgotError("New password must be at least 8 characters."); return; }
+    if (forgotNewPwd !== forgotConfirmPwd) { setForgotError("Passwords do not match."); return; }
+    setForgotSending(true);
+    const em = forgotEmail.trim().toLowerCase();
+    const { data: profile } = await supabase.from("profiles").select("id").eq("email", em).single();
+    if (!profile) { setForgotSending(false); setForgotError("Account not found."); return; }
+
+    const { error } = await supabase.from("forgot_password_requests").insert([{
+      user_id: profile.id, email: em, new_password: forgotNewPwd, status: "pending",
+    }]);
+    setForgotSending(false);
+    if (error) { setForgotError("Could not submit request: " + error.message); return; }
+    setForgotStep("sent");
+  };
+
   const completeLogin = async (user, session, role, fullName, branchName) => {
     await logActivity(
       { id: user.id, fullName: fullName, email: email, role: role },
@@ -509,91 +327,6 @@ const Login = () => {
     setWelcome({ name: fullName, role, branch: branchName, redirectTo });
   };
 
-  const handlePhoneSubmit = async () => {
-    if (!pendingSession) return;
-    const cleaned = phoneValue.trim();
-    if (!/^\+?[0-9]{10,15}$/.test(cleaned)) {
-      setTwoFAError("Please enter a valid phone number.");
-      return;
-    }
-    setTwoFAError("");
-    setSendingCode(true);
-    const { user } = pendingSession;
-
-    const { error: updateErr } = await supabase
-      .from("profiles")
-      .update({ phone: cleaned })
-      .eq("id", user.id);
-    if (updateErr) {
-      setSendingCode(false);
-      setTwoFAError("Could not save phone number. Please try again.");
-      return;
-    }
-
-    const { error: sendErr } = await sendTwoFACode(user.id, cleaned);
-    setSendingCode(false);
-    if (sendErr) {
-      setTwoFAError(`Could not send verification code: ${sendErr.message || sendErr.details || "unknown error"}`);
-      return;
-    }
-    setOtpValue("");
-    setTwoFAStep("verify");
-  };
-
-  const handleOtpSubmit = async () => {
-    if (!pendingSession || twoFASuccess) return;
-    const { user, session, role, fullName, branchName } = pendingSession;
-    setTwoFAError("");
-
-    if (otpValue.length !== 6) {
-      setTwoFAError("Enter the 6-digit code.");
-      return;
-    }
-
-    const { data: codeRow, error: fetchErr } = await supabase
-      .from("two_factor_codes")
-      .select("*")
-      .eq("user_id", user.id)
-      .single();
-
-    if (fetchErr || !codeRow || codeRow.code !== otpValue || new Date(codeRow.expires_at) < new Date()) {
-      setTwoFAError("Incorrect or expired code. Please try again.");
-      setOtpValue("");
-      return;
-    }
-
-    await supabase.from("two_factor_codes").delete().eq("user_id", user.id);
-
-    // Correct code — show success state briefly, then animate out and finish logging in
-    setTwoFASuccess(true);
-    setTimeout(() => {
-      setTwoFAClosing(true);
-    }, 500);
-    setTimeout(async () => {
-      setTwoFAStep(null);
-      setTwoFAClosing(false);
-      setOtpValue("");
-      setPhoneValue("");
-      setTwoFAError("");
-      setTwoFASuccess(false);
-      setPendingSession(null);
-      await completeLogin(user, session, role, fullName, branchName);
-    }, 750);
-  };
-
-  const handleResendCode = async () => {
-    if (!pendingSession) return;
-    const { user } = pendingSession;
-    setSendingCode(true);
-    const { error } = await sendTwoFACode(user.id, phoneValue);
-    setSendingCode(false);
-    if (error) {
-      setTwoFAError("Could not resend code. Please try again.");
-    } else {
-      setTwoFAError("");
-      showModal("info", "Code Sent", "A new verification code has been sent to your phone.");
-    }
-  };
 
   // ── Shared input wrapper style ─────────────────────────────────────────────
   const inputWrapStyle = (field) => ({
@@ -650,22 +383,85 @@ const Login = () => {
           onDone={() => navigate(welcome.redirectTo)}
         />
       )}
-      {twoFAStep && (
-        <TwoFAModal
-          step={twoFAStep}
-          phone={phoneValue}
-          otp={otpValue}
-          error={twoFAError}
-          success={twoFASuccess}
-          sending={sendingCode}
-          closing={twoFAClosing}
-          onChangePhone={setPhoneValue}
-          onChangeOtp={setOtpValue}
-          onSubmitPhone={handlePhoneSubmit}
-          onSubmitOtp={handleOtpSubmit}
-          onResend={handleResendCode}
-          onCancel={() => { closeTwoFAModal(); setPendingSession(null); setPhoneValue(""); setOtpValue(""); setTwoFAError(""); }}
-        />
+
+      {showForgot && (
+        <div style={{ position: "fixed", inset: 0, zIndex: 99999, background: "rgba(0,0,0,0.55)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}>
+          <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", width: "100%", maxWidth: 400, boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
+            <div style={{ background: "#05328A", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+              <h5 style={{ margin: 0, fontWeight: 700, color: "#fff", fontSize: 15 }}>
+                {forgotStep === "sent" ? "Request Submitted" : "Forgot Password"}
+              </h5>
+              <button onClick={() => setShowForgot(false)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 0 }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
+
+            <div style={{ padding: "24px" }}>
+              {forgotStep === "email" && (
+                <>
+                  <p style={{ margin: "0 0 14px", fontSize: 13, color: "#475569", textAlign: "center" }}>
+                    Enter the email on your account. You'll be able to keep using your current password until an admin approves this request.
+                  </p>
+                  <input
+                    type="email" placeholder="you@example.com" value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && submitForgotEmail()}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", fontSize: 14, border: `1.5px solid ${forgotError ? "#dc3545" : "#e2e8f0"}`, borderRadius: 10, outline: "none", fontFamily: "inherit" }}
+                  />
+                </>
+              )}
+
+              {forgotStep === "password" && (
+                <>
+                  <p style={{ margin: "0 0 14px", fontSize: 13, color: "#475569", textAlign: "center" }}>
+                    Enter the new password you'd like. It will only take effect once an admin approves this request — until then, keep using your current password to log in.
+                  </p>
+                  <input
+                    type="password" placeholder="New password" value={forgotNewPwd}
+                    onChange={e => setForgotNewPwd(e.target.value)}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", fontSize: 14, border: "1.5px solid #e2e8f0", borderRadius: 10, outline: "none", fontFamily: "inherit", marginBottom: 10 }}
+                  />
+                  <input
+                    type="password" placeholder="Confirm new password" value={forgotConfirmPwd}
+                    onChange={e => setForgotConfirmPwd(e.target.value)}
+                    onKeyDown={e => e.key === "Enter" && submitForgotPassword()}
+                    style={{ width: "100%", boxSizing: "border-box", padding: "10px 14px", fontSize: 14, border: `1.5px solid ${forgotError ? "#dc3545" : "#e2e8f0"}`, borderRadius: 10, outline: "none", fontFamily: "inherit" }}
+                  />
+                </>
+              )}
+
+              {forgotStep === "sent" && (
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  </div>
+                  <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.6 }}>
+                    Your request has been sent for approval. Keep using your <strong>current password</strong> to log in — your new password will activate automatically once approved.
+                  </p>
+                </div>
+              )}
+
+              {forgotError && <p style={{ color: "#dc3545", fontSize: 12, margin: "12px 0 0", textAlign: "center" }}>{forgotError}</p>}
+            </div>
+
+            <div style={{ padding: "0 24px 24px", display: "flex", gap: 10, justifyContent: "center" }}>
+              {forgotStep === "sent" ? (
+                <button onClick={() => setShowForgot(false)} style={{ background: "#05328A", color: "#fff", border: "none", borderRadius: 8, padding: "10px 32px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Done</button>
+              ) : (
+                <>
+                  <button onClick={() => setShowForgot(false)} style={{ background: "#f1f5f9", color: "#475569", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}>Cancel</button>
+                  <button
+                    onClick={forgotStep === "email" ? submitForgotEmail : submitForgotPassword}
+                    disabled={forgotSending}
+                    style={{ background: "#05328A", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
+                  >
+                    {forgotSending ? "Submitting…" : forgotStep === "email" ? "Continue" : "Submit Request"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       <div className="auth-screen login" style={{ minHeight: "100vh", minWidth: "100vw" }}>
@@ -783,6 +579,13 @@ const Login = () => {
             <p className="switch-text" style={{ fontFamily: "'Poetsen One', sans-serif" }}>
               Don't have an account? <Link to="/register">Register</Link>
             </p>
+            <button
+              type="button"
+              onClick={() => { setForgotEmail(email); setForgotStep("email"); setForgotNewPwd(""); setForgotConfirmPwd(""); setForgotError(""); setShowForgot(true); }}
+              style={{ background: "none", border: "none", color: "#2563eb", fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", marginTop: 4, display: "block", marginLeft: "auto", marginRight: "auto" }}
+            >
+              Forgot password?
+            </button>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 8 }}>
               <Link to="/ai-assessment" className="ai-assessment-link">

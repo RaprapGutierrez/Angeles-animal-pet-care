@@ -641,7 +641,7 @@ const Appointment = () => {
     };
     const c = cfg[type] || cfg.success;
     return (
-      <div style={{
+      <div className="live-toast" style={{
         position: 'relative',
         width: 340, pointerEvents: 'none',
         opacity: show ? 1 : 0,
@@ -1245,7 +1245,7 @@ const Appointment = () => {
         </div>
       )}
 
-      <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999999, display: 'flex', flexDirection: 'column-reverse', gap: 10, pointerEvents: 'none' }}>
+      <div className="toast-stack" style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 999999, display: 'flex', flexDirection: 'column-reverse', gap: 10, pointerEvents: 'none' }}>
         {toasts.slice(-3).map(t => (
           <LiveToast key={t.id} message={t.message} show={t.show} type={t.type} />
         ))}
@@ -1297,7 +1297,7 @@ const Appointment = () => {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" stroke="none"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" /></svg>
             Reviews
           </button>
-          <div style={{ position: "fixed", bottom: 28, right: 28, zIndex: 999, display: "flex", alignItems: "center", gap: 10 }}
+          <div className="fab-wrap" style={{ position: "fixed", bottom: 28, right: 28, zIndex: 999, display: "flex", alignItems: "center", gap: 10 }}
             onMouseEnter={e => {
               e.currentTarget.querySelector('.fab-tooltip').style.opacity = '1';
               e.currentTarget.querySelector('.fab-tooltip').style.transform = 'translateX(0)';
@@ -2221,23 +2221,26 @@ const Appointment = () => {
                 <div style={{ display: "flex", gap: 10 }}>
                   <button className="btn btn-ghost" style={S.btn} onClick={() => setShowBook(false)}>Cancel</button>
                   {(editMode || bookStep !== "service") && (
-                    <>
-                    <style>{`
-                      .appt-submit-btn[data-enabled="true"] { opacity: 1 !important; cursor: pointer !important; filter: none !important; pointer-events: auto !important; }
-                      .appt-submit-btn[data-enabled="false"] { opacity: 0.5 !important; cursor: not-allowed !important; pointer-events: none !important; }
-                    `}</style>
                     <button
-                      className="btn btn-primary appt-submit-btn"
-                      data-enabled={canSubmitAppointment ? "true" : "false"}
-                      style={{ ...S.btn, background: "#0f172a", borderColor: "#0f172a", display: "inline-flex", alignItems: "center", gap: 6 }}
-                      onClick={() => { if (canSubmitAppointment) saveAppointment(); }}
+                      className="btn btn-primary"
+                      style={{
+                        ...S.btn,
+                        background: "#0f172a",
+                        borderColor: "#0f172a",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 6,
+                        opacity: canSubmitAppointment ? 1 : 0.5,
+                        cursor: canSubmitAppointment ? "pointer" : "not-allowed",
+                        pointerEvents: canSubmitAppointment ? "auto" : "none",
+                      }}
+                      onClick={saveAppointment}
                       disabled={!canSubmitAppointment}
                     >
                       {editMode ? "Save Changes" : isAdmin
                         ? <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg> {extraPets.length > 0 ? `File ${1 + extraPets.length} Appointments` : "File Appointment"}</>
                         : extraPets.length > 0 ? `Submit ${1 + extraPets.length} Requests` : "Submit Request"}
                     </button>
-                    </>
                   )}
                 </div>
               </div>

@@ -395,7 +395,7 @@ const PointOfSale = () => {
     topbar: {},
     cont: {
       padding: "24px 28px",
-      paddingTop: 110,
+      paddingTop: typeof window !== 'undefined' && window.innerWidth <= 768 ? 0 : 110,
       width: "100%", boxSizing: "border-box",
     },
     btn: { width: "auto" },
@@ -415,7 +415,7 @@ const PointOfSale = () => {
       <div style={S.page}>
 
         {/* ── Topbar ── */}
-        <div className="topbar" style={{ position: "fixed", top: 68, left: "var(--current-sidebar-w, 62px)", right: 0, zIndex: 40, background: "var(--card)" }}>
+        <div className="topbar pos-topbar" style={{ position: "fixed", top: 68, left: "var(--current-sidebar-w, 62px)", right: 0, zIndex: 40, background: "var(--card)" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img src="/icon/point_of_sale.png" alt="" style={{ width: 22, height: 22, filter: "brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)" }} />
             <div>

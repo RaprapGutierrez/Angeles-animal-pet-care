@@ -941,7 +941,7 @@ const Inventory = () => {
       </div>
 
       {/* ── TOPBAR ── */}
-      <div className="topbar" style={{ position: "fixed", top: 68, left: "var(--current-sidebar-w, 62px)", right: 0, zIndex: 40, background: "#fff" }}>
+      <div className="topbar inv-topbar" style={{ position: "fixed", top: 68, left: "var(--current-sidebar-w, 62px)", right: 0, zIndex: 40, background: "#fff" }}>
         <div className="topbar-title">
           <img src="/icon/inventory_2.png" alt="" />
           <div>
@@ -1020,7 +1020,7 @@ const Inventory = () => {
             <div
               key={i}
               className={`stat-card-v2 ${sc.color} fade-in`}
-              style={{ animationDelay: `${i * 0.1}s`, cursor: 'pointer', outline: sc.active ? `2px solid ${sc.color === 'red' ? '#dc2626' : sc.color === 'yellow' ? '#d97706' : sc.color === 'green' ? '#16a34a' : 'var(--royal)'}` : 'none', outlineOffset: 2 }}
+              style={{ animationDelay: `${i * 0.1}s`, cursor: 'pointer' }}
               role="button"
               tabIndex={0}
               onClick={sc.onClick}
