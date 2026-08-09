@@ -64,6 +64,16 @@
   .emergency-topbar { left: var(--current-sidebar-w, 62px) !important; }
   .emergency-cont { padding: 24px 28px !important; padding-top: 110px !important; }
 }
+
+@media (max-width: 768px) {
+  .emg-page {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+}
+
+
 @media (max-width: 768px) {
   .emergency-topbar {
     position: static !important;
