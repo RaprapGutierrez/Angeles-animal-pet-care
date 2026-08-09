@@ -10,8 +10,10 @@
 
 .emg-page {
   width: 100%;
+  max-width: 100vw;
   min-height: 100vh;
   display: block;
+  overflow-x: hidden;
 }
 
 .emg-topbar-pos {
@@ -106,6 +108,9 @@
   }
   .emg-panel {
     padding: 16px !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    word-break: break-word !important;
   }
   .emg-panel > div[style*="max-height"] {
     max-height: 320px !important;
