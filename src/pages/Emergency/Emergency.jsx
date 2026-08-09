@@ -1322,19 +1322,16 @@ const Emergency = ({ guestMode = false }) => {
     5: "Angeles",
   };
    const userBranch = BRANCH_ID_MAP[user?.branchId] || user?.branch || user?.branchName || null;
-  console.log('DEBUG userBranch:', userBranch, 'branchId:', user?.branchId, 'raw branch:', user?.branch, 'branchName:', user?.branchName);
 
   // ── Load / sync branch availability ──
   useEffect(() => {
     if (!userBranch) return;
-    console.log('Loading availability for branch:', userBranch);
     const load = async () => {
       const { data, error } = await supabase
         .from('branch_availability')
         .select('available')
         .eq('branch', userBranch)
         .single();
-      console.log('Loaded availability:', data, error);
       if (data) {
         setBranchAvailable(data.available);
       } else {
@@ -1361,7 +1358,6 @@ const Emergency = ({ guestMode = false }) => {
   const toggleAvailability = useCallback(async () => {
     if (!userBranch) return;
     const next = !branchAvailable;
-    console.log('Toggling branch:', userBranch, '→', next);
 
     // Try UPDATE first, then INSERT if no row exists
     const { data: updateData, error: updateError } = await supabase
@@ -1370,8 +1366,6 @@ const Emergency = ({ guestMode = false }) => {
       .eq('branch', userBranch)
       .select();
 
-    console.log('Update result:', updateData, updateError);
-
     if (updateError) {
       console.error('Update failed:', updateError);
       return;
@@ -1379,12 +1373,10 @@ const Emergency = ({ guestMode = false }) => {
 
     // If no row was updated, insert one
     if (!updateData || updateData.length === 0) {
-      console.log('No row found, inserting...');
       const { data: insertData, error: insertError } = await supabase
         .from('branch_availability')
         .insert({ branch: userBranch, available: next, updated_at: new Date().toISOString() })
         .select();
-      console.log('Insert result:', insertData, insertError);
       if (insertError) {
         console.error('Insert failed:', insertError);
         return;
@@ -1447,11 +1439,7 @@ const Emergency = ({ guestMode = false }) => {
         }
       )
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") {
-          console.log("✅ Realtime connected");
-        }
         if (status === "CLOSED" || status === "CHANNEL_ERROR") {
-          console.warn("⚠️ Realtime disconnected, refetching...");
           fetchAlerts(); // fallback refetch if realtime drops
         }
       });
@@ -1510,15 +1498,14 @@ const Emergency = ({ guestMode = false }) => {
   }, [guestMode, user, senderName]);
 
    const updateStatus = useCallback(async (id, status) => {
-    const updatedAt = new Date().toISOString();
     // Update UI instantly
     setAlerts(prev =>
-      prev.map(a => a.id === id ? { ...a, status, updated_at: updatedAt } : a)
+      prev.map(a => a.id === id ? { ...a, status } : a)
     );
 
     const { error } = await supabase
       .from("emergency_alerts")
-      .update({ status, updated_at: updatedAt })
+      .update({ status })
       .eq("id", id);
 
     if (error) {
