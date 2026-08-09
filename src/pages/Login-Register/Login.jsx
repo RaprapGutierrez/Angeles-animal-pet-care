@@ -181,6 +181,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [modal, setModal] = useState(null);
   const [welcome, setWelcome] = useState(null);
+  const [forgotIsAdmin, setForgotIsAdmin] = useState(false);
   // Track focus for input highlight
   const [focusedField, setFocusedField] = useState(null);
   const navigate = useNavigate();
@@ -277,34 +278,46 @@ const Login = () => {
   };
 
   const submitForgotEmail = async () => {
-    setForgotError("");
-    const em = forgotEmail.trim().toLowerCase();
-    if (!em) { setForgotError("Please enter your account email."); return; }
-    const { data: profile, error } = await supabase.from("profiles").select("id, role").eq("email", em).single();
-    if (error || !profile) { setForgotError("No account found with that email."); return; }
-    if (["admin", "super_admin"].includes((profile.role || "").toLowerCase())) {
-      setForgotError("Admin accounts can't use this flow. Please contact IT directly.");
-      return;
-    }
-    setForgotStep("password");
-  };
+  setForgotError("");
+  const em = forgotEmail.trim().toLowerCase();
+  if (!em) { setForgotError("Please enter your account email."); return; }
+
+  const { data: rows, error } = await supabase.rpc("check_forgot_password_email", { lookup_email: em });
+  const profile = rows?.[0];
+  if (error || !profile) { setForgotError("No account found with that email."); return; }
+
+  setForgotIsAdmin(["admin", "super_admin"].includes((profile.role || "").toLowerCase()));
+  setForgotStep("password");
+};
 
   const submitForgotPassword = async () => {
-    setForgotError("");
-    if (forgotNewPwd.length < 8) { setForgotError("New password must be at least 8 characters."); return; }
-    if (forgotNewPwd !== forgotConfirmPwd) { setForgotError("Passwords do not match."); return; }
-    setForgotSending(true);
-    const em = forgotEmail.trim().toLowerCase();
-    const { data: profile } = await supabase.from("profiles").select("id").eq("email", em).single();
-    if (!profile) { setForgotSending(false); setForgotError("Account not found."); return; }
+  setForgotError("");
+  if (forgotNewPwd.length < 8) { setForgotError("New password must be at least 8 characters."); return; }
+  if (forgotNewPwd !== forgotConfirmPwd) { setForgotError("Passwords do not match."); return; }
+  setForgotSending(true);
+  const em = forgotEmail.trim().toLowerCase();
 
-    const { error } = await supabase.from("forgot_password_requests").insert([{
-      user_id: profile.id, email: em, new_password: forgotNewPwd, status: "pending",
-    }]);
+  if (forgotIsAdmin) {
+    const { data, error } = await supabase.functions.invoke("admin-reset-password", {
+      body: { email: em, newPassword: forgotNewPwd },
+    });
     setForgotSending(false);
-    if (error) { setForgotError("Could not submit request: " + error.message); return; }
+    if (error || data?.error) { setForgotError(data?.error || "Could not reset password."); return; }
     setForgotStep("sent");
-  };
+    return;
+  }
+
+  const { data: rows } = await supabase.rpc("check_forgot_password_email", { lookup_email: em });
+  const profile = rows?.[0];
+  if (!profile) { setForgotSending(false); setForgotError("Account not found."); return; }
+
+  const { error } = await supabase.from("forgot_password_requests").insert([{
+    user_id: profile.id, email: em, new_password: forgotNewPwd, status: "pending",
+  }]);
+  setForgotSending(false);
+  if (error) { setForgotError("Could not submit request: " + error.message); return; }
+  setForgotStep("sent");
+};
 
   const completeLogin = async (user, session, role, fullName, branchName) => {
     await logActivity(
@@ -389,7 +402,7 @@ const Login = () => {
           <div style={{ background: "#fff", borderRadius: 16, overflow: "hidden", width: "100%", maxWidth: 400, boxShadow: "0 24px 64px rgba(0,0,0,0.3)" }}>
             <div style={{ background: "#05328A", padding: "16px 20px", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
               <h5 style={{ margin: 0, fontWeight: 700, color: "#fff", fontSize: 15 }}>
-                {forgotStep === "sent" ? "Request Submitted" : "Forgot Password"}
+                 {forgotStep === "sent" ? (forgotIsAdmin ? "Password Updated" : "Request Submitted") : "Forgot Password"}
               </h5>
               <button onClick={() => setShowForgot(false)} style={{ background: "none", border: "none", color: "#fff", cursor: "pointer", padding: 0 }}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
@@ -400,7 +413,7 @@ const Login = () => {
               {forgotStep === "email" && (
                 <>
                   <p style={{ margin: "0 0 14px", fontSize: 13, color: "#475569", textAlign: "center" }}>
-                    Enter the email on your account. You'll be able to keep using your current password until an admin approves this request.
+                    Enter the email on your account.
                   </p>
                   <input
                     type="email" placeholder="you@example.com" value={forgotEmail}
@@ -414,7 +427,9 @@ const Login = () => {
               {forgotStep === "password" && (
                 <>
                   <p style={{ margin: "0 0 14px", fontSize: 13, color: "#475569", textAlign: "center" }}>
-                    Enter the new password you'd like. It will only take effect once an admin approves this request — until then, keep using your current password to log in.
+                    {forgotIsAdmin
+                      ? "Enter your new password. It will be applied immediately."
+                      : "Enter the new password you'd like. It will only take effect once an admin approves this request — until then, keep using your current password to log in."}
                   </p>
                   <input
                     type="password" placeholder="New password" value={forgotNewPwd}
@@ -431,15 +446,17 @@ const Login = () => {
               )}
 
               {forgotStep === "sent" && (
-                <div style={{ textAlign: "center" }}>
+              <div style={{ textAlign: "center" }}>
                   <div style={{ width: 48, height: 48, borderRadius: "50%", background: "#dcfce7", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 12px" }}>
                     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>
-                  </div>
-                  <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.6 }}>
-                    Your request has been sent for approval. Keep using your <strong>current password</strong> to log in — your new password will activate automatically once approved.
-                  </p>
-                </div>
-              )}
+              </div>
+              <p style={{ margin: 0, fontSize: 13, color: "#475569", lineHeight: 1.6 }}>
+                {forgotIsAdmin
+                  ? "Your password has been updated. You can now log in with your new password."
+                  : <>Your request has been sent for approval. Keep using your <strong>current password</strong> to log in — your new password will activate automatically once approved.</>}
+            </p>
+            </div>
+          )}
 
               {forgotError && <p style={{ color: "#dc3545", fontSize: 12, margin: "12px 0 0", textAlign: "center" }}>{forgotError}</p>}
             </div>
@@ -455,7 +472,7 @@ const Login = () => {
                     disabled={forgotSending}
                     style={{ background: "#05328A", color: "#fff", border: "none", borderRadius: 8, padding: "10px 18px", fontSize: 13, fontWeight: 700, cursor: "pointer" }}
                   >
-                    {forgotSending ? "Submitting…" : forgotStep === "email" ? "Continue" : "Submit Request"}
+                    {forgotSending ? (forgotIsAdmin ? "Updating…" : "Submitting…") : forgotStep === "email" ? "Continue" : (forgotIsAdmin ? "Update Password" : "Submit Request")}
                   </button>
                 </>
               )}
