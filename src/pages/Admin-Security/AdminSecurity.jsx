@@ -416,8 +416,6 @@ const AdminSecurity = () => {
   const [roleFormErrors, setRoleFormErrors] = useState({});
   const [roleSaving, setRoleSaving] = useState(false);
 
-  const [settings, setSettings] = useState({ allowSelfRegister: true, requireEmailVerify: true, twoFactorAdmin: false, sessionTimeout: 30, maxLoginAttempts: 5, allowCustomerPortal: true, maintenanceMode: false, allowRoleChange: true, showActivityLogs: true, autoDeactivateInactive: false, inactiveDays: 90, passwordMinLength: 6 });
-  const [settingsSaved, setSettingsSaved] = useState(false);
 
   const [toasts, setToasts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
@@ -1390,8 +1388,6 @@ const AdminSecurity = () => {
     setRoleFormErrors(e => ({ ...e, perms: '' }));
   };
 
-  const saveSettings = () => { localStorage.setItem('adminSettings', JSON.stringify(settings)); setSettingsSaved(true); setTimeout(() => setSettingsSaved(false), 2500); };
-
   const filtered = users.filter(u => {
     const q = search.toLowerCase();
     const matchSearch = !search || `${fullName(u)} ${u.email || ''}`.toLowerCase().includes(q);
@@ -1450,7 +1446,6 @@ const AdminSecurity = () => {
     { key: 'pwdrequests', label: `Password Requests${pwdRequests.length > 0 ? ` (${pwdRequests.length})` : ''}` },
     { key: 'roles', label: 'Roles' },
     { key: 'logs', label: 'Logs' },
-    { key: 'settings', label: 'Settings' },
   ];
   if (userLoading) return null;
 
@@ -2073,59 +2068,7 @@ const AdminSecurity = () => {
               </div>
             )}
 
-            {/* ══ SETTINGS TAB ══ */}
-            {tab === 'settings' && (
-              <div style={{ padding: 24 }}>
-                <div style={{ marginBottom: 20 }}>
-                  <h3 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>System Settings</h3>
-                  <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Control system-wide behavior, security policies, and access permissions.</p>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(210px, 1fr))', gap: 16 }}>
-                  {[
-                    { title: 'Registration & Access', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="8.5" cy="7" r="4" /><line x1="20" y1="8" x2="20" y2="14" /><line x1="23" y1="11" x2="17" y2="11" /></svg>, items: [{ label: 'Allow self-registration', key: 'allowSelfRegister' }, { label: 'Require email verification', key: 'requireEmailVerify' }, { label: 'Enable customer portal', key: 'allowCustomerPortal' }, { label: 'Allow role changes by admin', key: 'allowRoleChange' }] },
-                    { title: 'System Behavior', icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="12" r="3" /><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14" /></svg>, items: [{ label: 'Enable activity logging', key: 'showActivityLogs' }, { label: 'Auto-deactivate inactive accounts', key: 'autoDeactivateInactive' }] },
-                  ].map(section => (
-                    <div key={section.title} style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-                      <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg)', color: 'var(--text)' }}>
-                        <span style={{ color: '#64748b' }}>{section.icon}</span>
-                        <span style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.7px' }}>{section.title}</span>
-                      </div>
-                      <div style={{ padding: '4px 0' }}>
-                        {section.items.map((item, i) => (
-                          <div key={item.key} style={{ padding: '12px 18px', borderBottom: i < section.items.length - 1 ? '1px solid var(--border)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                            <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{item.label}</span>
-                            <Toggle checked={settings[item.key]} onChange={v => setSettings(s => ({ ...s, [item.key]: v }))} label="" />
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                  <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-                    <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg)' }}>
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="2" strokeLinecap="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" /></svg>
-                      <span style={{ fontSize: 11, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.7px' }}>Security</span>
-                    </div>
-                    <div style={{ padding: '4px 0' }}>
-                      <div style={{ padding: '12px 18px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                        <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>Require 2FA for Admin accounts</span>
-                        <Toggle checked={settings.twoFactorAdmin} onChange={v => setSettings(s => ({ ...s, twoFactorAdmin: v }))} label="" />
-                      </div>
-                      {[{ label: 'Session timeout (minutes)', key: 'sessionTimeout', min: 5, max: 480, width: 90 }, { label: 'Max login attempts', key: 'maxLoginAttempts', min: 2, max: 20, width: 72 }, { label: 'Min password length', key: 'passwordMinLength', min: 4, max: 32, width: 72 }].map((item, i, arr) => (
-                        <div key={item.key} style={{ padding: '11px 18px', borderBottom: i < arr.length - 1 ? '1px solid var(--border)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-                          <span style={{ fontSize: 13, color: 'var(--text)', fontWeight: 500 }}>{item.label}</span>
-                          <input type="number" min={item.min} max={item.max} value={settings[item.key]} onChange={e => setSettings(s => ({ ...s, [item.key]: +e.target.value }))} style={{ ...S.inp, width: item.width, padding: '5px 8px', textAlign: 'center', fontWeight: 600, background: 'var(--bg)', color: 'var(--text)' }} />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-                <div style={{ marginTop: 24, display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <button className="btn btn-primary" style={S.btn} onClick={saveSettings}>Save Settings</button>
-                  {settingsSaved && <span style={{ fontSize: 13, color: '#16a34a', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2.5" strokeLinecap="round"><polyline points="20 6 9 17 4 12" /></svg>Settings saved</span>}
-                </div>
-              </div>
-            )}
-          </div>
+            </div>
         </div>
       </div>
 

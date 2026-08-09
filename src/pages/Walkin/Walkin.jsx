@@ -185,6 +185,7 @@ const Walkin = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState(null); // null | 'Today' | 'Attended' | 'Waiting'
   const [formOriginal, setFormOriginal] = useState(null); // snapshot for unsaved-changes detection
   const ROWS_PER_PAGE = 10;
   const [showModal, setShowModal] = useState(false);
@@ -339,11 +340,16 @@ const Walkin = () => {
 
   const todayWalkins = walkins.filter(w => w.arrived_at?.startsWith(today));
 
-  useEffect(() => { setCurrentPage(1); }, [walkins.length]);
+  useEffect(() => { setCurrentPage(1); }, [walkins.length, statusFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(walkins.length / ROWS_PER_PAGE));
+  const filteredWalkins = statusFilter === 'Today'
+    ? walkins.filter(w => w.arrived_at?.startsWith(today))
+    : statusFilter
+      ? walkins.filter(w => w.status === statusFilter)
+      : walkins;
+  const totalPages = Math.max(1, Math.ceil(filteredWalkins.length / ROWS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
-  const paginated = walkins.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+  const paginated = filteredWalkins.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
   const isGrooming = form.purpose === 'Grooming';
 
   const formatArrival = (iso) => {
@@ -890,11 +896,13 @@ const Walkin = () => {
               ))
             ) : (
               [
-                { label: "Today's Walk-Ins", value: todayWalkins.length, icon: '/icon/walkin.png', color: 'blue', sub: 'Recorded today' },
-                { label: 'Attended', value: walkins.filter(w => w.status === 'Attended').length, icon: '/icon/attended.png', color: 'green', sub: 'Visits completed' },
-                { label: 'Waiting', value: walkins.filter(w => w.status === 'Waiting').length, icon: '/icon/pending.png', color: 'yellow', sub: walkins.filter(w => w.status === 'Waiting').length > 0 ? 'Currently in queue' : 'Queue clear' },
+                { label: "Today's Walk-Ins", value: todayWalkins.length, icon: '/icon/walkin.png', color: 'blue', sub: 'Recorded today', filter: 'Today' },
+                { label: 'Attended', value: walkins.filter(w => w.status === 'Attended').length, icon: '/icon/attended.png', color: 'green', sub: 'Visits completed', filter: 'Attended' },
+                { label: 'Waiting', value: walkins.filter(w => w.status === 'Waiting').length, icon: '/icon/pending.png', color: 'yellow', sub: walkins.filter(w => w.status === 'Waiting').length > 0 ? 'Currently in queue' : 'Queue clear', filter: 'Waiting' },
               ].map((sc, i) => (
-                <div key={i} className={`stat-card-v2 ${sc.color} fade-in`} style={{ animationDelay: `${i * 0.1}s` }}>
+                <div key={i} className={`stat-card-v2 ${sc.color} fade-in`}
+                  onClick={() => setStatusFilter(prev => prev === sc.filter ? null : sc.filter)}
+                  style={{ animationDelay: `${i * 0.1}s`, cursor: 'pointer', outline: statusFilter === sc.filter ? '2px solid var(--royal)' : 'none', outlineOffset: 2 }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start' }}>
                     <div className={`stat-icon-v2 ${sc.color}`}>
                       <img src={sc.icon} alt="" style={{ width: 24, height: 24 }} />
@@ -936,7 +944,14 @@ const Walkin = () => {
           <div style={S.card}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 22px', borderBottom: '1px solid var(--border)' }}>
               <h2 style={{ fontSize: 15, fontWeight: 700 }}>Walk-In Records</h2>
-              <span style={{ color: 'var(--muted)', fontSize: 13 }}>{walkins.length} total</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {statusFilter && (
+                  <button onClick={() => setStatusFilter(null)} style={{ fontSize: 11, fontWeight: 700, color: 'var(--royal)', background: 'none', border: '1px solid var(--royal)', borderRadius: 20, padding: '3px 10px', cursor: 'pointer', fontFamily: 'inherit' }}>
+                    ✕ Clear filter: {statusFilter}
+                  </button>
+                )}
+                <span style={{ color: 'var(--muted)', fontSize: 13 }}>{filteredWalkins.length} of {walkins.length} total</span>
+              </div>
             </div>
             <div style={{ overflowX: 'auto' }}>
               {loading ? (
@@ -978,8 +993,8 @@ const Walkin = () => {
                     ))}</tr>
                   </thead>
                   <tbody>
-                    {walkins.length === 0 ? (
-                      <tr><td colSpan={8} style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>No walk-ins recorded yet</td></tr>
+                    {filteredWalkins.length === 0 ? (
+                      <tr><td colSpan={8} style={{ textAlign: "center", padding: 40, color: "var(--muted)" }}>{statusFilter ? `No walk-ins match "${statusFilter}"` : 'No walk-ins recorded yet'}</td></tr>
                     ) : paginated.map((w, idx) => {
                       const purposeIcons = {
                         Grooming: <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><line x1="20" y1="4" x2="8.12" y2="15.88" /><line x1="14.47" y1="14.48" x2="20" y2="20" /><line x1="8.12" y1="8.12" x2="12" y2="12" /></svg>,

@@ -3,7 +3,7 @@
 acc for each branch 
 super admin for main
 email:rafaelanunciacion502@gmail.com
-pass:Raf_super895623
+pass:Raf_895623
 
 admin in main
 email:aj_baustista@admin.com

@@ -995,6 +995,10 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
   const pending = visibleAlerts.filter(a => ["pending", "responding"].includes(a.status || "pending"));
   const resolved = visibleAlerts.filter(a => (a.status || "pending") === "resolved");
   const responding = visibleAlerts.filter(a => (a.status || "pending") === "responding");
+  const historyAlerts = alerts.filter(a =>
+    ["responding", "resolved"].includes(a.status || "pending") &&
+    normalizeBranchName(a.branch) === normalizeBranchName(userBranch)
+  );
 
   return (
     <div className="emg-page">
@@ -1096,7 +1100,7 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
           <div className="emg-panel" style={{ background: "var(--card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)" }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--royal)", margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
-              Alert History ({visibleAlerts.length})
+              Alert History ({historyAlerts.length})
             </h3>
             <hr style={{ border: "none", borderTop: "1px solid var(--border)", marginBottom: 16 }} />
             {loading ? (
@@ -1112,11 +1116,11 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
                   </div>
                 ))}
               </div>
-            ) : visibleAlerts.length === 0 ? (
+            ) : historyAlerts.length === 0 ? (
               <p style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: 20 }}>No alerts yet</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 420, overflowY: "auto" }}>
-                {visibleAlerts.map(a => <AlertCard key={a.id + a.status} a={a} showActions={true} onUpdateStatus={onUpdateStatus} />)}
+                {historyAlerts.map(a => <AlertCard key={a.id + a.status} a={a} showActions={true} onUpdateStatus={onUpdateStatus} />)}
               </div>
             )}
           </div>
@@ -1132,6 +1136,10 @@ const StaffView = ({ alerts, loading, sending, onSend, onExit, onUpdateStatus, u
   const branchAlerts = userBranch
     ? alerts.filter(a => normalizeBranchName(a.branch) === normalizeBranchName(userBranch))
     : alerts;
+  const historyAlerts = alerts.filter(a =>
+    ["responding", "resolved"].includes(a.status || "pending") &&
+    normalizeBranchName(a.branch) === normalizeBranchName(userBranch)
+  );
   return (
     <div className="emg-page">
       <div className="emergency-topbar emg-topbar-pos emg-topbar-white">
@@ -1181,7 +1189,7 @@ const StaffView = ({ alerts, loading, sending, onSend, onExit, onUpdateStatus, u
           <EmergencyForm guestMode={false} sending={sending} onSend={onSend} onExit={onExit} userBranch={userBranch} />          <div className="emg-panel" style={{ background: "var(--card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)" }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "var(--royal)", display: "flex", alignItems: "center", gap: 8 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
-              Alert History ({branchAlerts.length})
+              Alert History ({historyAlerts.length})
             </h3>
             <hr style={{ border: "none", borderTop: "1px solid var(--border)", marginBottom: 20 }} />
             {loading ? (
@@ -1197,11 +1205,11 @@ const StaffView = ({ alerts, loading, sending, onSend, onExit, onUpdateStatus, u
                   </div>
                 ))}
               </div>
-            ) : alerts.length === 0 ? (
+            ) : historyAlerts.length === 0 ? (
               <p style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: 20 }}>No alerts sent yet</p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 400, overflowY: "auto" }}>
-                {branchAlerts.map(a => <AlertCard key={a.id + a.status} a={a} showActions={true} onUpdateStatus={onUpdateStatus} />)}
+                {historyAlerts.map(a => <AlertCard key={a.id + a.status} a={a} showActions={true} onUpdateStatus={onUpdateStatus} />)}
               </div>
             )}
           </div>
@@ -1515,6 +1523,7 @@ const Emergency = ({ guestMode = false }) => {
 
     if (error) {
       console.error("Status update failed:", error.message);
+      alert("Could not update status: " + error.message);
       fetchAlerts();
       return;
     }
