@@ -1044,7 +1044,7 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
             <div key={s.label} className="fade-in" style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: "18px 20px", position: "relative", overflow: "hidden", animationDelay: `${i * 0.1}s` }}>
               <div style={{ position: "absolute", top: 0, left: 0, width: 3, height: "100%", background: s.color, borderRadius: "12px 0 0 12px" }} />
               <div style={{ fontSize: 30, fontWeight: 800, color: s.color, lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: s.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.4px", opacity: 0.8 }}>{s.label}</div>
+              <div style={{ fontSize: 11, color: s.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.4px", opacity: 0.8, wordBreak: "keep-all", overflowWrap: "normal" }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -1172,7 +1172,7 @@ const StaffView = ({ alerts, loading, sending, onSend, onExit, onUpdateStatus, u
             <div key={s.label} className="fade-in" style={{ background: s.bg, border: `1px solid ${s.border}`, borderRadius: 12, padding: "18px 20px", position: "relative", overflow: "hidden", animationDelay: `${i * 0.1}s` }}>
               <div style={{ position: "absolute", top: 0, left: 0, width: 3, height: "100%", background: s.color, borderRadius: "12px 0 0 12px" }} />
               <div style={{ fontSize: 30, fontWeight: 800, color: s.color, lineHeight: 1, marginBottom: 4 }}>{s.value}</div>
-              <div style={{ fontSize: 11, color: s.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.4px", opacity: 0.8 }}>{s.label}</div>
+              <div style={{ fontSize: 11, color: s.color, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.4px", opacity: 0.8, wordBreak: "keep-all", overflowWrap: "normal" }}>{s.label}</div>
             </div>
           ))}
         </div>
