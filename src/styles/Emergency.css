@@ -114,6 +114,10 @@
   .emg-panel * {
     min-width: 0 !important;
   }
+  .emg-panel [style*="justify-content: space-between"] {
+    flex-wrap: wrap !important;
+    row-gap: 6px !important;
+  }
   .emg-panel > div[style*="max-height"] {
     max-height: 320px !important;
   }
