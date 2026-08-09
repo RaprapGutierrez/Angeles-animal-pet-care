@@ -902,7 +902,7 @@ const Walkin = () => {
               ].map((sc, i) => (
                 <div key={i} className={`stat-card-v2 ${sc.color} fade-in`}
                   onClick={() => setStatusFilter(prev => prev === sc.filter ? null : sc.filter)}
-                  style={{ animationDelay: `${i * 0.1}s`, cursor: 'pointer', outline: statusFilter === sc.filter ? '2px solid var(--royal)' : 'none', outlineOffset: 2 }}>
+                  style={{ animationDelay: `${i * 0.1}s`, cursor: 'pointer', opacity: statusFilter && statusFilter !== sc.filter ? 0.55 : 1, transition: 'opacity 0.15s' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start' }}>
                     <div className={`stat-icon-v2 ${sc.color}`}>
                       <img src={sc.icon} alt="" style={{ width: 24, height: 24 }} />

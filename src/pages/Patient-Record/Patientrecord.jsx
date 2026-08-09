@@ -59,6 +59,7 @@ const T_MESSAGES = "messages";
 const T_VACCINATIONS = "vaccinations";
 const T_TREATMENTS = "treatments";
 const T_PRESCRIPTIONS = "prescriptions";
+const T_APPOINTMENTS = "appointments";
 const ROWS_PER_PAGE = 10;
 const sanitizeContact = (v) => v.replace(/\D/g, '').slice(0, 11);
 const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, '');
@@ -1017,6 +1018,8 @@ const PatientRecord = () => {
   const [vaccinations, setVaccinations] = useState([]);
   const [treatments, setTreatments] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
+  const [serviceHistory, setServiceHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [savingPatient, setSavingPatient] = useState(false);
   const [rxSaving, setRxSaving] = useState(false);
   const [vaxSaving, setVaxSaving] = useState(false);
@@ -1171,6 +1174,23 @@ const PatientRecord = () => {
     setVaccinations(vax.data || []); setTreatments(treat.data || []); setPrescriptions(rx.data || []);
   };
 
+  const fetchServiceHistory = async (patient) => {
+    if (!patient?.name) { setServiceHistory([]); return; }
+    setLoadingHistory(true);
+    // Match by patient name plus either the owner's display name or their linked
+    // account id, so appointments still show up even if the owner name was
+    // entered slightly differently than the patient record.
+    let q = supabase.from(T_APPOINTMENTS).select("*").ilike("patient", patient.name.trim());
+    if (patient.owner_user_id) {
+      q = q.or(`owner.ilike.${patient.owner ? patient.owner.trim() : ""},user_id.eq.${patient.owner_user_id}`);
+    } else if (patient.owner) {
+      q = q.ilike("owner", patient.owner.trim());
+    }
+    const { data, error } = await q.order("date", { ascending: false });
+    if (!error) setServiceHistory(data || []);
+    setLoadingHistory(false);
+  };
+
   const filtered = patients.filter(p => {
     const matchSearch = !search || `${p.name} ${p.owner} ${p.species} ${p.breed} ${p.condition}`.toLowerCase().includes(search.toLowerCase());
     const matchFilter = statusFilter === "all" || p.status === statusFilter || (statusFilter === "Critical" && p.health === "Critical");
@@ -1279,7 +1299,7 @@ const PatientRecord = () => {
 
   const openView = (p) => {
     setSelectedPatient(p); setActiveTab("info");
-    fetchMedical(p.id); fetchRooms();
+    fetchMedical(p.id); fetchRooms(); fetchServiceHistory(p);
     setShowRxForm(false); setShowVaxForm(false); setShowTreatForm(false);
     setEditingVaxId(null); setEditingTreatId(null); setEditingRxId(null);
     setActiveModal("view");
@@ -1435,6 +1455,24 @@ const PatientRecord = () => {
       return;
     }
     if (savingPatient) return;
+
+    const fullOwnerNameCheck = resolveOwnerFullName().trim();
+    if (form.name.trim() && fullOwnerNameCheck) {
+      const { data: dupData } = await supabase
+        .from(T_PATIENTS)
+        .select("id")
+        .is("deleted_at", null)
+        .ilike("name", form.name.trim())
+        .ilike("owner", fullOwnerNameCheck);
+      if (dupData && dupData.length > 0) {
+        showAlert(
+          "Patient Already Exists",
+          `${form.name.trim()} already has a record under owner "${fullOwnerNameCheck}". Please open the existing record from the patient list instead of creating a duplicate — you can add vaccinations, treatments, or view its appointment history there.`
+        );
+        return;
+      }
+    }
+
     setSavingPatient(true);
     let ownerUserId = null; let ownerPassword = null;
     const ownerEmail = form.owner_email?.trim().toLowerCase() || "";
@@ -1554,6 +1592,24 @@ const PatientRecord = () => {
   const saveEditPatient = async () => {
     if (!editPatientForm.name || !editPatientForm.species) { showAlert('Missing Fields', 'Patient name and species are required.'); return; }
     if (editPatientSaving) return;
+
+    if (editPatientForm.name.trim() && editPatientForm.owner.trim()) {
+      const { data: dupData } = await supabase
+        .from(T_PATIENTS)
+        .select("id")
+        .is("deleted_at", null)
+        .neq("id", editingPatient.id)
+        .ilike("name", editPatientForm.name.trim())
+        .ilike("owner", editPatientForm.owner.trim());
+      if (dupData && dupData.length > 0) {
+        showAlert(
+          "Patient Already Exists",
+          `Another record for "${editPatientForm.name.trim()}" already exists under owner "${editPatientForm.owner.trim()}". Please use that record instead to avoid duplicate patients.`
+        );
+        return;
+      }
+    }
+
     setEditPatientSaving(true);
     const oldRoom = editingPatient.room; const newRoom = editPatientForm.room;
     if (oldRoom && oldRoom !== newRoom) await freeRoom(oldRoom);
@@ -1714,7 +1770,7 @@ const S = {
   formBox: { background: "var(--bg)", border: "1.5px solid var(--border)", borderRadius: 10, padding: 20 },
   modalHeader: { display: "flex", alignItems: "center", justifyContent: "space-between", padding: "18px 24px" },
 };
-  const VIEW_TABS = ["info", "vaccination", "treatment", "prescription"];
+  const VIEW_TABS = ["info", "vaccination", "treatment", "prescription", "services"];
 
   const TabBar = ({ tabs, active, onSelect, counts = {} }) => (
     <div className="tab-bar">
@@ -2696,7 +2752,7 @@ const S = {
             <div style={{ padding: "0 24px", borderBottom: "1px solid var(--border)", flexShrink: 0 }}>
               <TabBar tabs={VIEW_TABS} active={activeTab}
                 onSelect={t => { setActiveTab(t); setShowRxForm(false); setShowVaxForm(false); setShowTreatForm(false); setEditingVaxId(null); setEditingTreatId(null); setEditingRxId(null); }}
-                counts={{ prescription: prescriptions.length, vaccination: vaccinations.length, treatment: treatments.length }} />
+                counts={{ prescription: prescriptions.length, vaccination: vaccinations.length, treatment: treatments.length, services: serviceHistory.length }} />
             </div>
 
             <div className="pr-modal-body">
@@ -2796,6 +2852,75 @@ const S = {
                           )}
                         </React.Fragment>
                       ))}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── SERVICES TAB ── */}
+              {activeTab === "services" && (
+                <div style={{ paddingTop: 4 }}>
+                  <div style={{ marginBottom: 18 }}>
+                    <h4 style={{ margin: 0, fontSize: 14, fontWeight: 800, color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                      Service History
+                    </h4>
+                    <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--muted)' }}>{serviceHistory.length} visit{serviceHistory.length !== 1 ? 's' : ''} on record</p>
+                  </div>
+
+                  {loadingHistory ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      {[1, 2, 3, 4].map(i => (
+                        <div key={i} style={{ background: 'var(--card)', border: '1.5px solid var(--border)', borderRadius: 12, padding: 16 }}>
+                          <Sk w="60%" h={14} style={{ marginBottom: 8 }} />
+                          <Sk w="40%" h={11} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : serviceHistory.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                      <div style={{ marginBottom: 8 }}><svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#cbd5e1" strokeWidth="1.5" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg></div>
+                      <p style={{ color: "var(--muted)", fontSize: 13, margin: 0 }}>No service history yet.</p>
+                      <p style={{ color: "var(--muted)", fontSize: 12, margin: '4px 0 0' }}>Appointments booked for this pet will appear here.</p>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      {(() => {
+                        const purposeStyle = {
+                          Consultation: { bg: "#f8fafc", color: "#475569", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.3.3 0 1 0 .3.3" /><path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" /><circle cx="20" cy="10" r="2" /></svg> },
+                          Vaccination: { bg: "#f0fdf4", color: "#15803d", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><line x1="12" y1="2" x2="12" y2="6" /><path d="M12 14v8" /><path d="M8 10c0-2.2 1.8-4 4-4s4 1.8 4 4" /></svg> },
+                          Deworming: { bg: "#f3e8ff", color: "#6d28d9", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="6" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><line x1="20" y1="4" x2="8.12" y2="15.88" /><line x1="14.47" y1="14.48" x2="20" y2="20" /><line x1="8.12" y1="8.12" x2="12" y2="12" /></svg> },
+                          Imaging: { bg: "#eff6ff", color: "#1d4ed8", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="m21 15-5-5L5 21" /></svg> },
+                          Diagnostics: { bg: "#fee2e2", color: "#dc2626", icon: <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg> },
+                        };
+                        const STATUS_DOT = { Confirmed: "#16a34a", Pending: "#d97706", Cancelled: "#dc2626", Completed: "#2563eb", Missed: "#6b7280" };
+                        return serviceHistory.map(a => {
+                          const style = purposeStyle[a.purpose] || { bg: "#f8fafc", color: "#475569", icon: null };
+                          return (
+                            <div key={a.id} style={{ background: 'var(--card)', border: `1.5px solid ${style.color}33`, borderRadius: 12, padding: '14px 16px', position: 'relative' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                                <div style={{ width: 34, height: 34, borderRadius: 9, background: style.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', color: style.color, flexShrink: 0 }}>
+                                  {style.icon}
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                  <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: style.color }}>{a.purpose || "Service"}</p>
+                                  <p style={{ margin: '2px 0 0', fontSize: 11, color: 'var(--muted)' }}>{selectedPatient.name}</p>
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderTop: '1px dashed var(--border)', paddingTop: 8 }}>
+                                <span style={{ fontSize: 12, color: 'var(--text)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 5 }}>
+                                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
+                                  {a.date}{a.time ? ` · ${a.time}` : ''}
+                                </span>
+                                <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: `${STATUS_DOT[a.status] || '#9ca3af'}18`, color: STATUS_DOT[a.status] || '#64748b', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                  <span style={{ width: 6, height: 6, borderRadius: '50%', background: STATUS_DOT[a.status] || '#9ca3af', display: 'inline-block' }} />
+                                  {a.status}
+                                </span>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
                     </div>
                   )}
                 </div>

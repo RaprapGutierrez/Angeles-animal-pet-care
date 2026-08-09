@@ -786,7 +786,6 @@ const Appointment = () => {
           owner_email: form.ownerEmail || null,
           status: "Outpatient",
           health: "Good",
-          condition: `Appointment: ${form.purpose}`,
           branch_id: insertedAppt?.branch_id || user?.branchId || null,
         }]);
         if (patientErr) {
@@ -836,7 +835,6 @@ const Appointment = () => {
             owner_email: form.ownerEmail || null,
             status: "Outpatient",
             health: "Good",
-            condition: `Appointment: ${p.purpose}`,
             branch_id: insertedExtra?.branch_id || user?.branchId || null,
           }]);
           if (patientErr) {
@@ -896,7 +894,6 @@ const Appointment = () => {
           owner_email: appt.owner_email || appt.contact_email || null,
           status: "Outpatient",
           health: "Good",
-          condition: `Appointment: ${appt.purpose}`,
           room: roomNumber || null,
           branch_id: appt.branch_id || user?.branchId || null,
         }]);
