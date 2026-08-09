@@ -886,7 +886,8 @@ const RoomAvailability = () => {
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></svg>
             Recently Deleted {deletedRooms.length > 0 ? `(${deletedRooms.length})` : ""}
-          </button>          <div style={{ position: "fixed", bottom: 28, right: 28, zIndex: 999, display: "flex", alignItems: "center", gap: 10 }}
+          </button>
+          <div className="fab-wrap" style={{ position: "fixed", bottom: 28, right: 28, zIndex: 999, display: "flex", alignItems: "center", gap: 10 }}
             onMouseEnter={e => { e.currentTarget.querySelector('.fab-tooltip').style.opacity = '1'; e.currentTarget.querySelector('.fab-tooltip').style.transform = 'translateX(0)'; e.currentTarget.querySelector('.fab-btn').style.transform = 'scale(1.1)'; e.currentTarget.querySelector('.fab-btn').style.boxShadow = '0 6px 28px rgba(30,58,138,0.5)'; }}
             onMouseLeave={e => { e.currentTarget.querySelector('.fab-tooltip').style.opacity = '0'; e.currentTarget.querySelector('.fab-tooltip').style.transform = 'translateX(8px)'; e.currentTarget.querySelector('.fab-btn').style.transform = 'scale(1)'; e.currentTarget.querySelector('.fab-btn').style.boxShadow = '0 4px 20px rgba(30,58,138,0.4)'; }}>
             <span className="fab-tooltip" style={{ opacity: 0, transform: 'translateX(8px)', transition: 'opacity 0.2s ease, transform 0.2s ease', background: 'linear-gradient(135deg,#0f172a,#1e3a8a)', color: '#fff', fontSize: 12, fontWeight: 700, padding: '8px 14px', borderRadius: 10, whiteSpace: 'nowrap', pointerEvents: 'none', boxShadow: '0 8px 24px rgba(30,58,138,0.35)', border: '1px solid rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', gap: 7, position: 'relative' }}>

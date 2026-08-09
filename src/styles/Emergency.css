@@ -64,11 +64,21 @@
 }
 @media (max-width: 768px) {
   .emergency-topbar {
-    left: 0 !important;
+    position: static !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
     flex-direction: column !important;
     align-items: stretch !important;
     gap: 10px !important;
     padding: 10px 14px !important;
+    margin: 0 !important;
+    /* Full-bleed: break out of the parent's horizontal padding regardless of its width */
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin-left: calc(50% - 50vw) !important;
+    margin-right: calc(50% - 50vw) !important;
+    box-sizing: border-box !important;
   }
   .emergency-topbar > div {
     width: 100% !important;
@@ -76,5 +86,28 @@
   }
   .emergency-topbar > div:last-child {
     justify-content: space-between !important;
+  }
+
+  /* Topbar is no longer fixed on mobile, so the flat padding-top reserved
+     by .emg-content (sized for the desktop single-row topbar) must go —
+     otherwise the Pending/History panels load hidden underneath the
+     stacked topbar. */
+  .emg-content {
+    padding: 16px !important;
+    padding-top: 16px !important;
+  }
+
+  /* Pending Alerts / Alert Histoqry panels: force single column and tighten
+     padding so they fit comfortably on small screens instead of squeezing
+     against the 280px minmax. */
+  .emg-panels-grid {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+  }
+  .emg-panel {
+    padding: 16px !important;
+  }
+  .emg-panel > div[style*="max-height"] {
+    max-height: 320px !important;
   }
 }

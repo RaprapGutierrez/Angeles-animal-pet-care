@@ -769,14 +769,15 @@ const Appointment = () => {
     if (error) { showAlert("Error", error.message); return; }
     logActivity(user, 'Created appointment', `Booked appointment for: ${form.patient}`);
     if (form.patient.trim() && form.owner.trim()) {
-      const { data: existing } = await supabase
+      const { data: existing, error: existingErr } = await supabase
         .from("patients")
         .select("id")
         .eq("name", form.patient.trim())
         .eq("owner", form.owner.trim())
         .maybeSingle();
+      if (existingErr) console.error('Patient lookup failed:', existingErr.message);
       if (!existing) {
-        await supabase.from("patients").insert([{
+        const { error: patientErr } = await supabase.from("patients").insert([{
           name: form.patient.trim(),
           species: form.species || null,
           owner: form.owner.trim(),
@@ -788,6 +789,10 @@ const Appointment = () => {
           condition: `Appointment: ${form.purpose}`,
           branch_id: insertedAppt?.branch_id || user?.branchId || null,
         }]);
+        if (patientErr) {
+          console.error('Auto patient-record creation failed:', patientErr.message);
+          showToast(`⚠ Appointment booked, but patient record wasn't created: ${patientErr.message}`, 'error');
+        }
       }
     }
 
@@ -814,14 +819,15 @@ const Appointment = () => {
       if (extraErr) { console.warn('Extra pet appointment failed:', extraErr.message); continue; }
 
       if (p.mode === 'new' && petName) {
-        const { data: existing } = await supabase
+        const { data: existing, error: existingErr } = await supabase
           .from("patients")
           .select("id")
           .eq("name", petName)
           .eq("owner", form.owner.trim())
           .maybeSingle();
+        if (existingErr) console.error('Patient lookup failed:', existingErr.message);
         if (!existing) {
-          await supabase.from("patients").insert([{
+          const { error: patientErr } = await supabase.from("patients").insert([{
             name: petName,
             species: petSpecies || null,
             owner: form.owner.trim(),
@@ -833,6 +839,10 @@ const Appointment = () => {
             condition: `Appointment: ${p.purpose}`,
             branch_id: insertedExtra?.branch_id || user?.branchId || null,
           }]);
+          if (patientErr) {
+            console.error('Auto patient-record creation failed (extra pet):', patientErr.message);
+            showToast(`⚠ Extra pet appointment booked, but patient record wasn't created: ${patientErr.message}`, 'error');
+          }
         }
       }
     }
@@ -2227,6 +2237,7 @@ const Appointment = () => {
                         ...S.btn,
                         background: "#0f172a",
                         borderColor: "#0f172a",
+                        color: "#fff",
                         display: "inline-flex",
                         alignItems: "center",
                         gap: 6,

@@ -1049,10 +1049,10 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
           ))}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 24 }}>
+        <div className="emg-panels-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 24 }}>
 
           {/* ── Pending panel ── */}
-          <div style={{ background: "var(--card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)" }}>
+          <div className="emg-panel" style={{ background: "var(--card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
               <h3 style={{ fontSize: 15, fontWeight: 700, color: "#dc2626", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
                 <img src="/icon/warning.png" alt="" style={{ width: 16, height: 16, filter: "brightness(0) saturate(100%) invert(20%) sepia(80%) saturate(2000%) hue-rotate(350deg)", flexShrink: 0 }} />
@@ -1093,7 +1093,7 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
           </div>
 
           {/* ── History panel ── */}
-          <div style={{ background: "var(--card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)" }}>
+          <div className="emg-panel" style={{ background: "var(--card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)" }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--royal)", margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
               Alert History ({visibleAlerts.length})
@@ -1177,8 +1177,8 @@ const StaffView = ({ alerts, loading, sending, onSend, onExit, onUpdateStatus, u
           ))}
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 24 }}>
-          <EmergencyForm guestMode={false} sending={sending} onSend={onSend} onExit={onExit} userBranch={userBranch} />          <div style={{ background: "var(--card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)" }}>
+        <div className="emg-panels-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 24 }}>
+          <EmergencyForm guestMode={false} sending={sending} onSend={onSend} onExit={onExit} userBranch={userBranch} />          <div className="emg-panel" style={{ background: "var(--card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)" }}>
             <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 16, color: "var(--royal)", display: "flex", alignItems: "center", gap: 8 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
               Alert History ({branchAlerts.length})

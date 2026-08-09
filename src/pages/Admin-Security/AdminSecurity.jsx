@@ -1515,7 +1515,7 @@ const AdminSecurity = () => {
                <div
                  key={i}
                  className="fade-in usr-stat-card"
-                 style={{ animationDelay: `${i * 0.1}s`, cursor: 'pointer', boxShadow: sc.active ? `0 0 0 2px ${sc.color === 'blue' ? 'var(--royal)' : sc.color === 'green' ? '#16a34a' : sc.color === 'purple' ? '#7c3aed' : '#d97706'}` : 'none' }}
+                 style={{ animationDelay: `${i * 0.1}s`, cursor: 'pointer' }}
                  role="button"
                  tabIndex={0}
                  title={`Show ${sc.label.toLowerCase()}`}

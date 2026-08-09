@@ -107,6 +107,13 @@
     align-items: stretch !important;
     padding: 12px 16px !important;
     gap: 10px;
+    margin: 0 !important;
+    /* Full-bleed: break out of the parent's horizontal padding regardless of its width */
+    width: 100vw !important;
+    max-width: 100vw !important;
+    margin-left: calc(50% - 50vw) !important;
+    margin-right: calc(50% - 50vw) !important;
+    box-sizing: border-box !important;
   }
 
   .appt-topbar .topbar-title {
@@ -121,7 +128,8 @@
     align-items: stretch !important;
   }
 
-  .appt-topbar .topbar-actions > div {
+  /* Exclude .fab-wrap — it's fixed-position and must NOT be stretched to 100% width */
+  .appt-topbar .topbar-actions > div:not(.fab-wrap) {
     width: 100% !important;
   }
 
@@ -148,16 +156,20 @@
 
   /* Since topbar is no longer fixed, remove the fixed-topbar padding reserved by .content */
   .appt-content {
-    padding-top: 0 !important;
+    padding-top: 12px !important;
     margin: 0 !important;
   }
   .appt-content > *:first-child {
     margin-top: 0 !important;
   }
 
+  /* FAB button: keep it fixed, auto-width, pinned bottom-right, not stretched by the flex rule above */
   .fab-wrap {
+    width: auto !important;
     bottom: max(20px, env(safe-area-inset-bottom)) !important;
     right: 16px !important;
+    left: auto !important;
+    justify-content: flex-end !important;
   }
 }
 

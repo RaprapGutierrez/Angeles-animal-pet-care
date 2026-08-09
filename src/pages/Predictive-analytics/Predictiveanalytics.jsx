@@ -410,7 +410,7 @@ const PredictiveAnalytics = () => {
   return (
     <Layout>
       {/* ── Topbar ── */}
-      <div className="topbar branches-topbar" style={{ position: 'fixed', top: 68, left: 'var(--current-sidebar-w, 62px)', right: 0, zIndex: 40, background: '#fff' }}>
+      <div className="topbar branches-topbar pa-topbar" style={{ position: 'fixed', top: 68, left: 'var(--current-sidebar-w, 62px)', right: 0, zIndex: 40, background: '#fff' }}>
         <div className="topbar-title">
           <img src="/icon/report.png" alt="" style={{ width: 28, opacity: 0.9 }} />
           <div>
