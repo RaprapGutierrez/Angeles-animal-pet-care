@@ -110,7 +110,9 @@
     padding: 16px !important;
     max-width: 100% !important;
     overflow-x: hidden !important;
-    word-break: break-word !important;
+  }
+  .emg-panel * {
+    min-width: 0 !important;
   }
   .emg-panel > div[style*="max-height"] {
     max-height: 320px !important;
