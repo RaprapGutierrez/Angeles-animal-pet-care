@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactDOM from "react-dom";
 import Layout, { Modal } from "../../components/layout";
-import { supabase, sb, supabaseAdmin } from "../../js/Utils/supabase";
+import { supabase, sb } from "../../js/Utils/supabase";
 import { useCurrentUser } from '../../js/hooks/Usecurrentuser';
 import { logActivity } from '../../js/Utils/logActivity';
 import { withBranchId } from "../../js/hooks/Usebranchfilter";
@@ -1342,7 +1342,7 @@ const PatientRecord = () => {
     const parts = (fullName || "").trim().split(/\s+/);
     const first = parts[0] || ""; const last = parts.slice(1).join(" ") || "";
     const branchId = resolveOwnerBranchId();
-    const { error: ensureProfileError } = await supabaseAdmin.from(T_PROFILES).upsert(
+    const { error: ensureProfileError } = await supabase.from(T_PROFILES).upsert(
       { id: userId, email, first_name: first, last_name: last, role: "Customer", sex: sex || null, branch_id: branchId },
       { onConflict: "id", ignoreDuplicates: false }
     );
