@@ -40,6 +40,16 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   },
 });
 
+// Temporary: points to anon key until admin actions are migrated to a
+// backend endpoint. auth.admin.* calls will fail safely (permission error)
+// rather than exposing a service role key in the browser.
+export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_ANON, {
+  auth: {
+    autoRefreshToken: false,
+    persistSession: false,
+  },
+});
+
 // ── Thin helper layer ──
 export const sb = {
   getUser() {
