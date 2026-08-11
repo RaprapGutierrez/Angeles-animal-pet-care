@@ -100,7 +100,7 @@ app.post('/api/chat', async (req, res) => {
     return res.status(500).json({ error: 'Gemini API key not configured' });
 
   try {
-     const response = await callgemini('gemini-3.1-flash-lite', {
+     const response = await callgemini('gemini-2.0-flash', {
       contents: [{
         parts: [{
           text: `You are a helpful pet care assistant for Angeles Animal Care Hospital.\n\n${question}`,
