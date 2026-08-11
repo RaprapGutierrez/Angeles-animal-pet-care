@@ -996,7 +996,7 @@ Rules:
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                   </button>
                    <div style={{ flex: 1, minHeight: 0, width: "100%", boxSizing: "border-box", padding: "16px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <div style={{ width: "70%", height: "100%", maxHeight: 720 }}>
+                    <div style={{ width: "100%", maxWidth: 900, height: "100%", maxHeight: 800, margin: "0 auto" }}>
                     <FollowUpChat
                       assessment={assessment}
                       petName={form.petName}
