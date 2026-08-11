@@ -2,7 +2,6 @@ import { createClient } from '@supabase/supabase-js';
 
 const SUPABASE_URL           = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON          = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-const SUPABASE_SERVICE_ROLE_KEY = import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY;
 
 const memoryStore = new Map();
 
@@ -41,8 +40,10 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   },
 });
 
-// Admin client — bypasses RLS for admin insert operations
-export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+// Temporary: points to anon key until admin actions are migrated to a
+// backend endpoint. auth.admin.* calls will fail safely (permission error)
+// rather than exposing a service role key in the browser.
+export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,
