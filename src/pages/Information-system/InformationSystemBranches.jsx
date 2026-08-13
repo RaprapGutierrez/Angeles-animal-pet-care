@@ -984,6 +984,7 @@ const PET_DATA = {
   },
 };
 
+//* Trivia Section */
 
 function TriviaSection() {
   const [pet, setPet] = useState("dog");
@@ -991,36 +992,120 @@ function TriviaSection() {
   const data = PET_DATA[pet];
 
   return (
-    <section id="pet-health" className="dark-section" style={{ paddingTop: 100, paddingBottom: 100 }}>
+    <section
+      id="pet-health"
+      className="dark-section"
+      style={{ paddingTop: 100, paddingBottom: 100 }}
+    >
       <div className="radial-glow" />
-      <div style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
 
+      <div
+        style={{
+          position: "relative",
+          zIndex: 10,
+          maxWidth: 1200,
+          margin: "0 auto",
+          padding: "0 24px",
+        }}
+      >
         {/* Header */}
-        <div className="slide-up" style={{ textAlign: "center", marginBottom: 44 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 2.5, color: data.accent, marginBottom: 10 }}>Pet Health Library</div>
-          <h2 style={{ fontSize: "clamp(26px,4vw,44px)", color: "#fff", marginBottom: 12, fontFamily: "'Poetsen One', sans-serif", WebkitTextStroke: "5px #455CD3", paintOrder: "stroke fill" }}>
-            Know Your Pet <em style={{ fontStyle: "normal", color: T.amber, WebkitTextStroke: "4px #92400e" }}>Better</em>
+        <div className="slide-up" style={{ textAlign: "center", marginBottom: 52 }}>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 8,
+              fontSize: 11,
+              fontWeight: 700,
+              textTransform: "uppercase",
+              letterSpacing: 2.5,
+              color: data.accent,
+              marginBottom: 14,
+            }}
+          >
+            <span
+              style={{
+                width: 6,
+                height: 6,
+                borderRadius: "50%",
+                background: data.accent,
+                boxShadow: `0 0 10px ${data.accent}`,
+              }}
+            />
+            Pet Health Library
+          </div>
+
+          <h2
+            style={{
+              fontSize: "clamp(30px, 5vw, 52px)",
+              lineHeight: 1.1,
+              color: "#fff",
+              marginBottom: 16,
+              fontFamily: "'Poetsen One', sans-serif",
+              letterSpacing: "-0.02em",
+            }}
+          >
+            Know Your Pet{" "}
+            <em
+              style={{
+                fontStyle: "normal",
+                color: data.accent,
+                textShadow: `0 0 30px ${data.accent}66`,
+              }}
+            >
+              Better
+            </em>
           </h2>
-          <p style={{ color: "rgba(255,255,255,.55)", fontSize: 15, maxWidth: 520, margin: "0 auto" }}>
-            Everything you need to know about breeds, nutrition, vaccines, and behavior — in one place.
+
+          <p
+            style={{
+              color: "rgba(255,255,255,.55)",
+              fontSize: 16,
+              lineHeight: 1.6,
+              maxWidth: 540,
+              margin: "0 auto",
+            }}
+          >
+            Everything you need to know about breeds, nutrition, vaccines, and
+            behavior — in one place.
           </p>
         </div>
 
         {/* Premium switcher */}
-        <div className="slide-up" style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
-          <div style={{ display: "inline-flex", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 999, padding: 5, backdropFilter: "blur(10px)" }}>
-            {["dog", "cat"].map(p => (
+        <div className="slide-up" style={{ display: "flex", justifyContent: "center", marginBottom: 40 }}>
+          <div
+            style={{
+              display: "inline-flex",
+              background: "rgba(255,255,255,.04)",
+              border: "1px solid rgba(255,255,255,.1)",
+              borderRadius: 999,
+              padding: 6,
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            {["dog", "cat"].map((p) => (
               <button
                 key={p}
-                onClick={() => { setPet(p); setOpenTab(0); }}
+                onClick={() => {
+                  setPet(p);
+                  setOpenTab(0);
+                }}
                 className="pill"
+                aria-pressed={pet === p}
                 style={{
-                  padding: "9px 26px", borderRadius: 999, border: "none", fontSize: 13, fontWeight: 700,
-                  textTransform: "uppercase", letterSpacing: 1, cursor: "pointer",
-                  background: pet === p ? PET_DATA[p].accent : "transparent",
+                  padding: "10px 28px",
+                  borderRadius: 999,
+                  border: "none",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  textTransform: "uppercase",
+                  letterSpacing: 1,
+                  cursor: "pointer",
+                  background: pet === p ? data.accent : "transparent",
                   color: pet === p ? "#fff" : "rgba(255,255,255,.55)",
-                  boxShadow: pet === p ? `0 4px 16px ${PET_DATA[p].accent}66` : "none",
-                  transition: "all .25s ease",
+                  boxShadow:
+                    pet === p ? `0 6px 22px ${data.accent}55` : "none",
+                  transition: "all .25s cubic-bezier(.4,0,.2,1)",
                 }}
               >
                 {p === "dog" ? "🐶 Dogs" : "🐱 Cats"}
@@ -1033,56 +1118,142 @@ function TriviaSection() {
         <div
           className="slide-up trivia-grid"
           style={{
-            display: "grid", gridTemplateColumns: "300px 1fr", gap: 0,
-            background: "rgba(255,255,255,.045)", border: "1px solid rgba(255,255,255,.1)",
-            borderRadius: 28, overflow: "hidden", backdropFilter: "blur(14px)",
-            boxShadow: "0 30px 70px rgba(0,0,0,.35)",
+            display: "grid",
+            gridTemplateColumns: "320px 1fr",
+            gap: 0,
+            background: "rgba(255,255,255,.04)",
+            border: "1px solid rgba(255,255,255,.1)",
+            borderRadius: 32,
+            overflow: "hidden",
+            backdropFilter: "blur(16px)",
+            boxShadow: "0 40px 90px rgba(0,0,0,.4)",
           }}
         >
           {/* Left: pet portrait panel */}
           <div
             className="trivia-left"
             style={{
-              position: "relative", padding: "36px 28px", display: "flex", flexDirection: "column",
-              alignItems: "center", justifyContent: "center", gap: 18,
-              background: `linear-gradient(160deg, ${data.accent}2e, transparent 70%)`,
+              position: "relative",
+              padding: "40px 32px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 22,
+              background: `linear-gradient(160deg, ${data.accent}25, transparent 70%)`,
               borderRight: "1px solid rgba(255,255,255,.08)",
             }}
           >
-            <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(circle at 30% 20%, ${data.accent}33, transparent 60%)`, pointerEvents: "none" }} />
+            <div
+              style={{
+                position: "absolute",
+                inset: 0,
+                backgroundImage: `radial-gradient(circle at 30% 20%, ${data.accent}30, transparent 60%)`,
+                pointerEvents: "none",
+              }}
+            />
+
             <div
               key={pet}
               className="anim-fade-in"
               style={{
-                position: "relative", width: "100%", maxWidth: 210, aspectRatio: "1/1", borderRadius: 24,
-                background: data.accentBg, display: "flex", alignItems: "center", justifyContent: "center",
-                overflow: "hidden", border: `2px solid ${data.accent}55`,
-                boxShadow: `0 16px 40px ${data.accent}44`,
+                position: "relative",
+                width: "100%",
+                maxWidth: 230,
+                aspectRatio: "1/1",
+                borderRadius: 28,
+                background: data.accentBg,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                overflow: "hidden",
+                border: `2px solid ${data.accent}50`,
+                boxShadow: `0 20px 50px ${data.accent}40`,
               }}
             >
-              <img src={data.image} alt={data.label} style={{ width: "78%", height: "78%", objectFit: "contain", filter: "drop-shadow(0 6px 14px rgba(0,0,0,.35))" }} />
+              <img
+                src={data.image}
+                alt={data.label}
+                style={{
+                  width: "80%",
+                  height: "80%",
+                  objectFit: "contain",
+                  filter: "drop-shadow(0 8px 18px rgba(0,0,0,.35))",
+                }}
+              />
             </div>
+
             <div style={{ position: "relative", textAlign: "center" }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: data.accent, letterSpacing: 3, textTransform: "uppercase" }}>{data.label}</div>
-              <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 4 }}>{data.tabs.length} health topics</div>
+              <div
+                style={{
+                  fontSize: 14,
+                  fontWeight: 800,
+                  color: data.accent,
+                  letterSpacing: 3,
+                  textTransform: "uppercase",
+                }}
+              >
+                {data.label}
+              </div>
+              <div
+                style={{
+                  fontSize: 12,
+                  color: "rgba(255,255,255,.45)",
+                  marginTop: 6,
+                }}
+              >
+                {data.tabs.length} health topics
+              </div>
             </div>
           </div>
 
           {/* Right: tab list + content */}
-          <div style={{ padding: "28px 28px", display: "flex", flexDirection: "column", minWidth: 0 }}>
+          <div
+            style={{
+              padding: "32px",
+              display: "flex",
+              flexDirection: "column",
+              minWidth: 0,
+            }}
+          >
             {/* Tab pills row */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
+            <div
+              role="tablist"
+              aria-label="Pet health topics"
+              style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 24 }}
+            >
               {data.tabs.map((tab, i) => (
                 <button
                   key={i}
+                  role="tab"
+                  aria-selected={openTab === i}
                   onClick={() => setOpenTab(i)}
                   className="pill"
                   style={{
-                    padding: "7px 14px", borderRadius: 999, fontSize: 12, fontWeight: 600, border: "1px solid",
-                    borderColor: openTab === i ? data.accent : "rgba(255,255,255,.15)",
-                    background: openTab === i ? `${data.accent}22` : "transparent",
+                    padding: "8px 16px",
+                    borderRadius: 999,
+                    fontSize: 12,
+                    fontWeight: 600,
+                    border: "1px solid",
+                    borderColor:
+                      openTab === i ? data.accent : "rgba(255,255,255,.12)",
+                    background:
+                      openTab === i ? `${data.accent}20` : "transparent",
                     color: openTab === i ? "#fff" : "rgba(255,255,255,.55)",
-                    transition: "all .2s ease", cursor: "pointer",
+                    transition: "all .2s cubic-bezier(.4,0,.2,1)",
+                    cursor: "pointer",
+                  }}
+                  onMouseEnter={(e) => {
+                    if (openTab !== i) {
+                      e.currentTarget.style.background = "rgba(255,255,255,.06)";
+                      e.currentTarget.style.color = "rgba(255,255,255,.85)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (openTab !== i) {
+                      e.currentTarget.style.background = "transparent";
+                      e.currentTarget.style.color = "rgba(255,255,255,.55)";
+                    }
                   }}
                 >
                   {tab.title}
@@ -1094,26 +1265,65 @@ function TriviaSection() {
             <div
               key={pet + openTab}
               className="anim-fade-in"
+              role="tabpanel"
               style={{
-                flex: 1, background: "rgba(0,0,0,.18)", border: `1px solid ${data.accent}2e`,
-                borderRadius: 18, padding: "22px 24px", minHeight: 220,
+                flex: 1,
+                background: "rgba(0,0,0,.2)",
+                border: `1px solid ${data.accent}25`,
+                borderRadius: 22,
+                padding: "26px 28px",
+                minHeight: 240,
               }}
             >
-              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
-                <span style={{ width: 6, height: 6, borderRadius: "50%", background: data.accent, flexShrink: 0 }} />
-                <h3 style={{ fontSize: 15, fontWeight: 700, color: "#fff", margin: 0 }}>{data.tabs[openTab].title}</h3>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  marginBottom: 16,
+                }}
+              >
+                <span
+                  style={{
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: data.accent,
+                    flexShrink: 0,
+                    boxShadow: `0 0 12px ${data.accent}`,
+                  }}
+                />
+                <h3
+                  style={{
+                    fontSize: 17,
+                    fontWeight: 700,
+                    color: "#fff",
+                    margin: 0,
+                  }}
+                >
+                  {data.tabs[openTab].title}
+                </h3>
               </div>
-              <p style={{ fontSize: 13.5, color: "rgba(255,255,255,.72)", lineHeight: 1.8, whiteSpace: "pre-line", margin: 0 }}>
+
+              <p
+                style={{
+                  fontSize: 14,
+                  color: "rgba(255,255,255,.75)",
+                  lineHeight: 1.85,
+                  whiteSpace: "pre-line",
+                  margin: 0,
+                }}
+              >
                 {data.tabs[openTab].content}
               </p>
             </div>
           </div>
         </div>
-
       </div>
     </section>
   );
 }
+
 
 /* ── Reviews Section ── */
 function ReviewsSection() {
