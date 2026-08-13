@@ -40,6 +40,18 @@ const CustomerShop = () => {
   const [receiptSearch, setReceiptSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
 
+  const printReceiptText = (text) => {
+    const w = window.open("", "PRINT", "height=650,width=420");
+    if (!w) return;
+    w.document.write(`<html><head><title>Receipt</title><style>
+      body{font-family:monospace;font-size:12px;white-space:pre-wrap;padding:16px;}
+    </style></head><body>${text.replace(/</g, "&lt;")}</body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+    w.close();
+  };
+
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 640);
     window.addEventListener("resize", onResize);
@@ -490,10 +502,26 @@ const CustomerShop = () => {
                       <div style={{ marginBottom: 8, display: "flex", justifyContent: "center", color: "var(--muted)" }}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 32, height: 32 }}><circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" /></svg></div>
                       <p style={{ fontSize: 13 }}>No receipts matching "{receiptSearch}"</p>
                     </div>
-                  ) : filteredReceipts.map(tx => {
+                  )() : filteredReceipts.map(tx => {
                     const isOpen = expandedTx === tx.id;
                     const pc = payColor(tx.payment);
                     const itemCount = (tx.items || []).length;
+                    const receiptText = `Angeles Animal Care Hospital
+${branchLabel}
+================================
+Client : ${tx.client}
+Date   : ${new Date(tx.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
+Time   : ${new Date(tx.created_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}
+--------------------------------
+${(tx.items || []).map(i => `${(i.name || "").substring(0, 20).padEnd(20)} x${i.qty}\n  @ ₱${Number(i.price).toFixed(2)} = ₱${(i.qty * Number(i.price)).toFixed(2)}`).join("\n")}
+--------------------------------
+Subtotal : ₱${Number(tx.subtotal).toFixed(2)}
+Discount : -₱${((Number(tx.subtotal) * Number(tx.discount)) / 100).toFixed(2)}
+================================
+TOTAL    : ₱${Number(tx.total).toFixed(2)}
+Payment  : ${tx.payment}
+================================
+        Thank you!`;
                     return (
                       <div key={tx.id} style={{ borderBottom: "1px solid var(--border)" }}>
                         <div
@@ -530,25 +558,10 @@ const CustomerShop = () => {
                         {isOpen && (
                           <div style={{ padding: "0 20px 16px", background: "var(--light-blue)" }}>
                             <div style={{ fontFamily: "monospace", fontSize: 12, background: "var(--bg)", borderRadius: 10, padding: 16, border: "1px dashed var(--border)", whiteSpace: "pre-wrap", lineHeight: 1.7 }}>
-                              {`Angeles Animal Care Hospital
-${branchLabel}
-================================
-Client : ${tx.client}
-Date   : ${new Date(tx.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
-Time   : ${new Date(tx.created_at).toLocaleTimeString("en-PH", { hour: "2-digit", minute: "2-digit" })}
---------------------------------
-${(tx.items || []).map(i => `${(i.name || "").substring(0, 20).padEnd(20)} x${i.qty}\n  @ ₱${Number(i.price).toFixed(2)} = ₱${(i.qty * Number(i.price)).toFixed(2)}`).join("\n")}
---------------------------------
-Subtotal : ₱${Number(tx.subtotal).toFixed(2)}
-Discount : -₱${((Number(tx.subtotal) * Number(tx.discount)) / 100).toFixed(2)}
-================================
-TOTAL    : ₱${Number(tx.total).toFixed(2)}
-Payment  : ${tx.payment}
-================================
-        Thank you!`}
+                              {receiptText}
                             </div>
                             <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 10 }}>
-                              <button onClick={() => window.print()}
+                              <button onClick={() => printReceiptText(receiptText)}
                                 style={{ background: "none", border: "1px solid var(--border)", borderRadius: 7, padding: "6px 14px", fontSize: 12, cursor: "pointer", fontFamily: "inherit", color: "var(--text)", width: "auto" }}>
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 13, height: 13, marginRight: 5 }}><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
                                 Print

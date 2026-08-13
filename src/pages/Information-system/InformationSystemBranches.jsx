@@ -14,6 +14,12 @@ function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
+/* Subtle dotted-grid background used behind dark sections for depth */
+const GRID_BG = {
+  backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)",
+  backgroundSize: "28px 28px",
+};
+
 /* ── Lucide-style SVG Icons (inlined) ── */
 const MapPin = ({ className }) => (
   <svg className={className} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -349,7 +355,9 @@ function BranchCard({ branch, index, onViewDetail }) {
   return (
     <div
       className="flip-card anim-fade-up"
-      style={{ height: 380, borderRadius: 18, animationDelay: `${index * 50}ms` }}
+      style={{ height: 380, borderRadius: 18, animationDelay: `${index * 50}ms`, transition: "filter .25s ease" }}
+      onMouseEnter={e => { e.currentTarget.style.filter = "drop-shadow(0 12px 28px rgba(61,47,160,.25))"; }}
+      onMouseLeave={e => { e.currentTarget.style.filter = "none"; }}
     >
       <div className="flip-inner" style={{ height: "100%" }}>
 
@@ -629,8 +637,9 @@ function Hero({ onBrowse }) {
     { num: "4", label: "Regions & Growing" },
   ];
   return (
-    <section style={{ position: "relative", minHeight: "85vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", paddingTop: 140, paddingBottom: 64, background: "#0f172a", position: "relative" }}>
+    <section style={{ position: "relative", minHeight: "85vh", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", paddingTop: 140, paddingBottom: 64, background: "#0f172a", ...GRID_BG }}>
       <div className="radial-glow" />
+      <div style={{ position: "absolute", inset: 0, background: "linear-gradient(180deg, rgba(15,23,42,0) 0%, rgba(15,23,42,0.6) 75%, #0f172a 100%)", pointerEvents: "none" }} />
       {/* decorative circles */}
       <div style={{ position: "relative", zIndex: 10, maxWidth: 860, margin: "0 auto", padding: "0 24px", textAlign: "center" }}>
         <h1 className="anim-fade-up" style={{ fontSize: "clamp(36px,6vw,68px)", color: "#05328A", lineHeight: 1.1, marginBottom: 4, fontFamily: "'Poetsen One', sans-serif", WebkitTextStroke: "5px #ffffff", paintOrder: "stroke fill", marginTop: 0 }}>
@@ -667,18 +676,18 @@ function Hero({ onBrowse }) {
           <img
             src="/image/cat_wipe_bg.png"
             alt="Cute cat sticker"
-            className="stats-sticker"
-            style={{ position: "absolute", left: "2%", top: 0, transform: "translateY(-70%)", width: "clamp(64px,10vw,96px)", height: "auto", zIndex: 0, pointerEvents: "none", filter: "drop-shadow(0 6px 14px rgba(0,0,0,.4))" }}
+            className="stats-sticker anim-fade-up"
+            style={{ position: "absolute", left: "2%", top: 0, transform: "translateY(-70%) rotate(-4deg)", width: "clamp(64px,10vw,96px)", height: "auto", zIndex: 0, pointerEvents: "none", filter: "drop-shadow(0 10px 18px rgba(0,0,0,.45))" }}
           />
           <img
             src="/image/dog_wipe_bg.png"
             alt="Cute dog sticker"
-            className="stats-sticker"
-            style={{ position: "absolute", right: "2%", top: 0, transform: "translateY(-70%)", width: "clamp(70px,10.5vw,104px)", height: "auto", zIndex: 0, pointerEvents: "none", filter: "drop-shadow(0 6px 14px rgba(0,0,0,.4))" }}
+            className="stats-sticker anim-fade-up"
+            style={{ position: "absolute", right: "2%", top: 0, transform: "translateY(-70%) rotate(4deg)", width: "clamp(70px,10.5vw,104px)", height: "auto", zIndex: 0, pointerEvents: "none", filter: "drop-shadow(0 10px 18px rgba(0,0,0,.45))" }}
           />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 12, justifyContent: "center", width: "100%" }}>
             {stats.map(s => (
-              <div key={s.label} className="slide-up" style={{ position: "relative", zIndex: 1, background: "#fff", borderRadius: 18, padding: "18px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,.2)", transition: "transform .2s, box-shadow .2s, opacity .2s", cursor: "default" }}
+              <div key={s.label} className="slide-up" style={{ position: "relative", zIndex: 1, background: "rgba(255,255,255,0.97)", borderRadius: 18, padding: "18px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.6)", border: "1px solid rgba(255,255,255,.4)", transition: "transform .2s, box-shadow .2s, opacity .2s", cursor: "default" }}
                 onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-4px)"; e.currentTarget.style.boxShadow = "0 16px 40px rgba(0,0,0,.3)"; }}
                 onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 8px 32px rgba(0,0,0,.2)"; }}>
                 <div style={{ fontSize: 36, fontWeight: 400, color: "#fff", fontFamily: "'Poetsen One', sans-serif", WebkitTextStroke: "5px #05328A", paintOrder: "stroke fill" }}>{s.num}</div>
@@ -755,16 +764,6 @@ function ServicesSection() {
   return (
     <section id="services" className="dark-section" style={{ paddingTop: 100, paddingBottom: 100 }}>
       <div className="radial-glow" />
-      <img
-        src="/image/cat_wipe_bg.png"
-        alt="Cat sticker"
-        style={{ position: "absolute", left: -30, bottom: 0, width: "clamp(110px,12vw,170px)", height: "auto", zIndex: 0, pointerEvents: "none", opacity: 0.95 }}
-      />
-      <img
-        src="/image/dog_wipe_bg.png"
-        alt="Dog sticker"
-        style={{ position: "absolute", right: -30, bottom: 0, width: "clamp(110px,12vw,170px)", height: "auto", zIndex: 0, pointerEvents: "none", opacity: 0.95 }}
-      />
       <div style={{ position: "relative", zIndex: 10, maxWidth: 1100, margin: "0 auto", padding: "0 24px" }}>
 
         <div className="slide-up" style={{ textAlign: "center", marginBottom: 48 }}>
@@ -985,9 +984,10 @@ const PET_DATA = {
   },
 };
 
+
 function TriviaSection() {
   const [pet, setPet] = useState("dog");
-  const [openTab, setOpenTab] = useState(null);
+  const [openTab, setOpenTab] = useState(0);
   const data = PET_DATA[pet];
 
   return (
@@ -996,58 +996,117 @@ function TriviaSection() {
       <div style={{ position: "relative", zIndex: 10, maxWidth: 1200, margin: "0 auto", padding: "0 24px" }}>
 
         {/* Header */}
-        <div className="slide-up" style={{ textAlign: "center", marginBottom: 40 }}>
+        <div className="slide-up" style={{ textAlign: "center", marginBottom: 44 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, textTransform: "uppercase", letterSpacing: 2.5, color: data.accent, marginBottom: 10 }}>Pet Health Library</div>
           <h2 style={{ fontSize: "clamp(26px,4vw,44px)", color: "#fff", marginBottom: 12, fontFamily: "'Poetsen One', sans-serif", WebkitTextStroke: "5px #455CD3", paintOrder: "stroke fill" }}>
             Know Your Pet <em style={{ fontStyle: "normal", color: T.amber, WebkitTextStroke: "4px #92400e" }}>Better</em>
           </h2>
+          <p style={{ color: "rgba(255,255,255,.55)", fontSize: 15, maxWidth: 520, margin: "0 auto" }}>
+            Everything you need to know about breeds, nutrition, vaccines, and behavior — in one place.
+          </p>
         </div>
 
-        {/* Main card */}
-        <div className="slide-up" style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 24, padding: 28, backdropFilter: "blur(8px)", overflowX: "hidden" }}>
-          <div className="trivia-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))", gap: 28, alignItems: "start" }}>
+        {/* Premium switcher */}
+        <div className="slide-up" style={{ display: "flex", justifyContent: "center", marginBottom: 32 }}>
+          <div style={{ display: "inline-flex", background: "rgba(255,255,255,.05)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 999, padding: 5, backdropFilter: "blur(10px)" }}>
+            {["dog", "cat"].map(p => (
+              <button
+                key={p}
+                onClick={() => { setPet(p); setOpenTab(0); }}
+                className="pill"
+                style={{
+                  padding: "9px 26px", borderRadius: 999, border: "none", fontSize: 13, fontWeight: 700,
+                  textTransform: "uppercase", letterSpacing: 1, cursor: "pointer",
+                  background: pet === p ? PET_DATA[p].accent : "transparent",
+                  color: pet === p ? "#fff" : "rgba(255,255,255,.55)",
+                  boxShadow: pet === p ? `0 4px 16px ${PET_DATA[p].accent}66` : "none",
+                  transition: "all .25s ease",
+                }}
+              >
+                {p === "dog" ? "🐶 Dogs" : "🐱 Cats"}
+              </button>
+            ))}
+          </div>
+        </div>
 
-            {/* Left: pet image + switcher */}
-            <div className="trivia-left" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16, alignSelf: "stretch" }}>
-              <div className="trivia-pet-img" style={{ width: "100%", maxWidth: 240, flex: 1, minHeight: 180, borderRadius: 20, background: data.accentBg, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", border: `2px solid ${data.accent}44` }}>
-                <img src={data.image} alt={data.label} style={{ width: "75%", height: "75%", objectFit: "contain", filter: "drop-shadow(0 4px 12px rgba(0,0,0,.3))" }} />
-              </div>
-              {/* Switcher */}
-              <div style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(0,0,0,.3)", borderRadius: 999, padding: "6px 14px", border: "1px solid rgba(255,255,255,.15)", alignSelf: "center" }}>
-                <button
-                  onClick={() => { setPet(p => p === "dog" ? "cat" : "dog"); setOpenTab(0); }}
-                  className="pill"
-                  style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 700 }}
-                >‹</button>
-                <span style={{ fontSize: 13, fontWeight: 800, color: data.accent, letterSpacing: 2, textTransform: "uppercase", minWidth: 36, textAlign: "center" }}>{data.label}</span>
-                <button
-                  onClick={() => { setPet(p => p === "dog" ? "cat" : "dog"); setOpenTab(0); }}
-                  className="pill"
-                  style={{ width: 26, height: 26, borderRadius: "50%", background: "rgba(255,255,255,.15)", border: "1px solid rgba(255,255,255,.25)", display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: 13, fontWeight: 700 }}
-                >›</button>
-              </div>
+        {/* Main premium card */}
+        <div
+          className="slide-up trivia-grid"
+          style={{
+            display: "grid", gridTemplateColumns: "300px 1fr", gap: 0,
+            background: "rgba(255,255,255,.045)", border: "1px solid rgba(255,255,255,.1)",
+            borderRadius: 28, overflow: "hidden", backdropFilter: "blur(14px)",
+            boxShadow: "0 30px 70px rgba(0,0,0,.35)",
+          }}
+        >
+          {/* Left: pet portrait panel */}
+          <div
+            className="trivia-left"
+            style={{
+              position: "relative", padding: "36px 28px", display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center", gap: 18,
+              background: `linear-gradient(160deg, ${data.accent}2e, transparent 70%)`,
+              borderRight: "1px solid rgba(255,255,255,.08)",
+            }}
+          >
+            <div style={{ position: "absolute", inset: 0, backgroundImage: `radial-gradient(circle at 30% 20%, ${data.accent}33, transparent 60%)`, pointerEvents: "none" }} />
+            <div
+              key={pet}
+              className="anim-fade-in"
+              style={{
+                position: "relative", width: "100%", maxWidth: 210, aspectRatio: "1/1", borderRadius: 24,
+                background: data.accentBg, display: "flex", alignItems: "center", justifyContent: "center",
+                overflow: "hidden", border: `2px solid ${data.accent}55`,
+                boxShadow: `0 16px 40px ${data.accent}44`,
+              }}
+            >
+              <img src={data.image} alt={data.label} style={{ width: "78%", height: "78%", objectFit: "contain", filter: "drop-shadow(0 6px 14px rgba(0,0,0,.35))" }} />
             </div>
+            <div style={{ position: "relative", textAlign: "center" }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: data.accent, letterSpacing: 3, textTransform: "uppercase" }}>{data.label}</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 4 }}>{data.tabs.length} health topics</div>
+            </div>
+          </div>
 
-            {/* Right: accordion tabs */}
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          {/* Right: tab list + content */}
+          <div style={{ padding: "28px 28px", display: "flex", flexDirection: "column", minWidth: 0 }}>
+            {/* Tab pills row */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 20 }}>
               {data.tabs.map((tab, i) => (
-                <div key={i} style={{ borderRadius: 12, border: `1px solid ${openTab === i ? data.accent + "66" : "rgba(255,255,255,.15)"}`, overflow: "hidden", transition: "border-color .2s" }}>
-                  <button
-                    onClick={() => setOpenTab(openTab === i ? -1 : i)}
-                    className="pill"
-                    style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "11px 16px", background: openTab === i ? `${data.accent}22` : "rgba(255,255,255,.05)", border: "none", color: "#fff", fontSize: 13, fontWeight: 600, textAlign: "left", transition: "background .2s" }}
-                  >
-                    <span>{tab.title}</span>
-                    <ChevronDown className="" style={{ width: 16, height: 16, color: data.accent, flexShrink: 0, transform: openTab === i ? "rotate(180deg)" : "rotate(0)", transition: "transform .25s" }} />
-                  </button>
-                  {openTab === i && (
-                    <div className="anim-fade-in" style={{ padding: "12px 16px 14px", fontSize: 13, color: "rgba(255,255,255,.75)", lineHeight: 1.75, whiteSpace: "pre-line", borderTop: `1px solid ${data.accent}33` }}>
-                      {tab.content}
-                    </div>
-                  )}
-                </div>
+                <button
+                  key={i}
+                  onClick={() => setOpenTab(i)}
+                  className="pill"
+                  style={{
+                    padding: "7px 14px", borderRadius: 999, fontSize: 12, fontWeight: 600, border: "1px solid",
+                    borderColor: openTab === i ? data.accent : "rgba(255,255,255,.15)",
+                    background: openTab === i ? `${data.accent}22` : "transparent",
+                    color: openTab === i ? "#fff" : "rgba(255,255,255,.55)",
+                    transition: "all .2s ease", cursor: "pointer",
+                  }}
+                >
+                  {tab.title}
+                </button>
               ))}
             </div>
 
+            {/* Active tab content */}
+            <div
+              key={pet + openTab}
+              className="anim-fade-in"
+              style={{
+                flex: 1, background: "rgba(0,0,0,.18)", border: `1px solid ${data.accent}2e`,
+                borderRadius: 18, padding: "22px 24px", minHeight: 220,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                <span style={{ width: 6, height: 6, borderRadius: "50%", background: data.accent, flexShrink: 0 }} />
+                <h3 style={{ fontSize: 15, fontWeight: 700, color: "#fff", margin: 0 }}>{data.tabs[openTab].title}</h3>
+              </div>
+              <p style={{ fontSize: 13.5, color: "rgba(255,255,255,.72)", lineHeight: 1.8, whiteSpace: "pre-line", margin: 0 }}>
+                {data.tabs[openTab].content}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -1060,24 +1119,38 @@ function TriviaSection() {
 function ReviewsSection() {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [active, setActive] = useState(0);
+  const trackRef = useRef(null);
 
   useEffect(() => {
-    let active = true;
+    let active2 = true;
     supabase.from("reviews").select("*").order("created_at", { ascending: false }).limit(9)
       .then(({ data, error }) => {
-        if (!active) return;
+        if (!active2) return;
         if (!error) setReviews(data || []);
         setLoading(false);
       });
-    return () => { active = false; };
+    return () => { active2 = false; };
   }, []);
 
   const avgRating = reviews.length ? (reviews.reduce((s, r) => s + (r.rating || 0), 0) / reviews.length).toFixed(1) : null;
 
+  const goTo = (i) => {
+    const clamped = (i + reviews.length) % reviews.length;
+    setActive(clamped);
+  };
+
+  // Autoplay
+  useEffect(() => {
+    if (reviews.length < 2) return;
+    const t = setInterval(() => setActive(a => (a + 1) % reviews.length), 5000);
+    return () => clearInterval(t);
+  }, [reviews.length]);
+
   return (
     <section id="reviews" className="dark-section" style={{ paddingTop: 100, paddingBottom: 100 }}>
       <div className="radial-glow" />
-      <div style={{ position: "relative", zIndex: 10, maxWidth: 1100, margin: "0 auto", padding: "0 24px" }}>
+      <div style={{ position: "relative", zIndex: 10, maxWidth: 900, margin: "0 auto", padding: "0 24px" }}>
         <div className="slide-up" style={{ textAlign: "center", marginBottom: 44 }}>
           <h2 style={{ fontSize: "clamp(26px,4vw,44px)", color: "#fff", marginBottom: 12, fontFamily: "'Poetsen One', sans-serif", WebkitTextStroke: "5px #05328A", paintOrder: "stroke fill" }}>
             What Pet Owners <em style={{ fontStyle: "normal", color: T.amber, WebkitTextStroke: "3px #92400e" }}>Say</em>
@@ -1097,29 +1170,90 @@ function ReviewsSection() {
         </div>
 
         {loading ? (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px,1fr))", gap: 18 }}>
-            {[1, 2, 3].map(i => (
-              <div key={i} className="skeleton" style={{ height: 160, borderRadius: 18 }} />
-            ))}
-          </div>
+          <div className="skeleton" style={{ height: 220, borderRadius: 24 }} />
         ) : reviews.length === 0 ? (
           <p style={{ textAlign: "center", color: "rgba(255,255,255,.6)" }}>No reviews yet — be the first to share your experience!</p>
         ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px,1fr))", gap: 18 }}>
-            {reviews.map((r, i) => (
-              <div key={r.id} className="slide-up" style={{ background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)", borderRadius: 18, padding: "22px 20px", backdropFilter: "blur(8px)", transitionDelay: `${i * 60}ms` }}>
-                <div style={{ display: "flex", gap: 2, marginBottom: 10 }}>
-                  {[1, 2, 3, 4, 5].map(s => (
-                    <svg key={s} width="15" height="15" viewBox="0 0 24 24" fill={s <= (r.rating || 0) ? "#f59e0b" : "none"} stroke={s <= (r.rating || 0) ? "#f59e0b" : "rgba(255,255,255,.25)"} strokeWidth="1.5">
-                      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                    </svg>
-                  ))}
-                </div>
-                {r.comment && <p style={{ fontSize: 14, color: "rgba(255,255,255,.8)", lineHeight: 1.7, marginBottom: 14 }}>"{r.comment}"</p>}
-                <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{r.owner || "Pet Owner"}</div>
-                {r.patient && <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)" }}>Pet: {r.patient}</div>}
+          <div className="slide-up" style={{ position: "relative" }}>
+            {/* Carousel viewport */}
+            <div style={{ overflow: "hidden", borderRadius: 24 }}>
+              <div
+                ref={trackRef}
+                style={{
+                  display: "flex",
+                  transform: `translateX(-${active * 100}%)`,
+                  transition: "transform .5s cubic-bezier(.65,0,.35,1)",
+                }}
+              >
+                {reviews.map((r) => (
+                  <div key={r.id} style={{ flex: "0 0 100%", padding: 4 }}>
+                    <div style={{
+                      background: "rgba(255,255,255,.06)", border: "1px solid rgba(255,255,255,.12)",
+                      borderRadius: 22, padding: "40px 44px", backdropFilter: "blur(10px)",
+                      minHeight: 200, display: "flex", flexDirection: "column", justifyContent: "center",
+                      position: "relative", overflow: "hidden",
+                    }}>
+                      <span style={{ position: "absolute", top: 6, left: 20, fontSize: 90, fontFamily: "Georgia, serif", color: "rgba(255,255,255,.06)", lineHeight: 1, userSelect: "none" }}>&ldquo;</span>
+                      <div style={{ display: "flex", gap: 3, marginBottom: 16, position: "relative" }}>
+                        {[1, 2, 3, 4, 5].map(s => (
+                          <svg key={s} width="16" height="16" viewBox="0 0 24 24" fill={s <= (r.rating || 0) ? "#f59e0b" : "none"} stroke={s <= (r.rating || 0) ? "#f59e0b" : "rgba(255,255,255,.25)"} strokeWidth="1.5">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+                          </svg>
+                        ))}
+                      </div>
+                      {r.comment && (
+                        <p style={{ fontSize: 17, color: "rgba(255,255,255,.88)", lineHeight: 1.7, marginBottom: 22, position: "relative", fontWeight: 500 }}>
+                          "{r.comment}"
+                        </p>
+                      )}
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <div style={{ width: 38, height: 38, borderRadius: "50%", background: T.primary, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
+                          {(r.owner || "P")[0].toUpperCase()}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>{r.owner || "Pet Owner"}</div>
+                          {r.patient && <div style={{ fontSize: 12, color: "rgba(255,255,255,.5)" }}>Pet: {r.patient}</div>}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            {/* Arrows */}
+            {reviews.length > 1 && (
+              <>
+                <button
+                  onClick={() => goTo(active - 1)}
+                  className="pill"
+                  style={{ position: "absolute", top: "50%", left: -18, transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.18)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", backdropFilter: "blur(8px)" }}
+                >‹</button>
+                <button
+                  onClick={() => goTo(active + 1)}
+                  className="pill"
+                  style={{ position: "absolute", top: "50%", right: -18, transform: "translateY(-50%)", width: 40, height: 40, borderRadius: "50%", background: "rgba(255,255,255,.08)", border: "1px solid rgba(255,255,255,.18)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", backdropFilter: "blur(8px)" }}
+                >›</button>
+              </>
+            )}
+
+            {/* Dots */}
+            {reviews.length > 1 && (
+              <div style={{ display: "flex", justifyContent: "center", gap: 8, marginTop: 24 }}>
+                {reviews.map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => goTo(i)}
+                    className="pill"
+                    style={{
+                      width: active === i ? 22 : 8, height: 8, borderRadius: 999, border: "none",
+                      background: active === i ? T.amber : "rgba(255,255,255,.25)",
+                      transition: "all .3s ease", cursor: "pointer", padding: 0,
+                    }}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -1388,12 +1522,6 @@ export default function InformationSystem() {
 
       {/* ── Branches Section ── */}
       <section ref={branchRef} id="branches" style={{ position: "relative", overflow: "hidden", padding: "80px 0", background: "#ffffff" }}>
-        <img
-          src="/image/cat_wipe_bg.png"
-          alt="Cat sticker"
-          className="branches-sticker-cat"
-          style={{ position: "absolute", left: -20, bottom: -10, width: "clamp(64px,9vw,110px)", height: "auto", zIndex: 0, pointerEvents: "none", opacity: 0.95 }}
-        />
         <div style={{ position: "relative", zIndex: 1, maxWidth: 1100, margin: "0 auto", padding: "0 24px" }}>
 
           {/* Section header */}
@@ -1403,11 +1531,6 @@ export default function InformationSystem() {
               <h2 style={{ fontSize: "clamp(24px,4vw,38px)", color: "#ffffff", marginBottom: 6, fontFamily: "'Poetsen One', sans-serif", WebkitTextStroke: "8px #05328A", paintOrder: "stroke fill" }}>Find a branch near you</h2>
               <p style={{ color: T.mutedFg, fontSize: 15 }}>Filter by region or facility type to locate your nearest Angeles Pet Care location.</p>
             </div>
-            <img
-              src="/image/dog_wipe_bg.png"
-              alt="Dog sticker"
-              style={{ width: "clamp(64px,9vw,110px)", height: "auto", flexShrink: 0, pointerEvents: "none" }}
-            />
             <div style={{ display: "flex", alignItems: "baseline", gap: 6 }}>
               <span style={{ fontSize: 40, color: "#fff", fontFamily: "'Poetsen One', sans-serif", WebkitTextStroke: "5px #05328A", paintOrder: "stroke fill" }}>{loading ? "—" : filtered.length}</span>
               <span style={{ fontSize: 13, color: T.mutedFg }}>of {BRANCHES.length} branches</span>

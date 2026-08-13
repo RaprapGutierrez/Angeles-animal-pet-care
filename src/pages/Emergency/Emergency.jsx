@@ -1000,6 +1000,40 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
     normalizeBranchName(a.branch) === normalizeBranchName(userBranch)
   );
 
+  const printSummaryReport = () => {
+    const w = window.open("", "PRINT", "height=800,width=650");
+    if (!w) return;
+    const typeCounts = {};
+    visibleAlerts.forEach(a => { typeCounts[a.type] = (typeCounts[a.type] || 0) + 1; });
+    const topTypes = Object.entries(typeCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+    const branchCounts = {};
+    alerts.forEach(a => { const b = normalizeBranchName(a.branch) || "Unknown"; branchCounts[b] = (branchCounts[b] || 0) + 1; });
+    const branchRows = Object.entries(branchCounts).sort((a, b) => b[1] - a[1]);
+    const statusRows = [
+      ["Pending", visibleAlerts.filter(a => (a.status || "pending") === "pending").length],
+      ["Responding", responding.length],
+      ["Resolved", resolved.length],
+    ];
+    const rowsHtml = (rows) => rows.map(([k, v]) => `<tr><td style="padding:4px 8px;">${k}</td><td style="padding:4px 8px;text-align:right;">${v}</td></tr>`).join("");
+    w.document.write(`<html><head><title>Emergency Summary Report</title><style>
+      body{font-family:Arial,sans-serif;padding:24px;color:#111;}
+      h1{font-size:18px;margin-bottom:2px;} p.sub{color:#666;font-size:12px;margin-top:0;}
+      h2{font-size:14px;margin:20px 0 6px;border-bottom:1px solid #ccc;padding-bottom:4px;}
+      table{width:100%;border-collapse:collapse;font-size:13px;}
+      tr:nth-child(even){background:#f5f5f5;}
+    </style></head><body>
+      <h1>Angeles Animal Care Hospital — Emergency Summary Report</h1>
+      <p class="sub">Generated: ${new Date().toLocaleString("en-PH")}</p>
+      <h2>Top Emergency Types</h2><table>${rowsHtml(topTypes)}</table>
+      <h2>Alerts by Branch</h2><table>${rowsHtml(branchRows)}</table>
+      <h2>Resolution Status</h2><table>${rowsHtml(statusRows)}</table>
+    </body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+    w.close();
+  };
+
   const [historyStatusFilter, setHistoryStatusFilter] = useState("");
   const [historyTypeFilter, setHistoryTypeFilter] = useState("");
   const historyTypeOptions = [...new Set(historyAlerts.map(a => a.type))].filter(Boolean).sort();
@@ -1068,7 +1102,7 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
               Summary Report
             </h3>
-            <button onClick={() => window.print()} style={{ fontSize: 12, fontWeight: 700, padding: "7px 14px", borderRadius: 8, border: "1.5px solid var(--border)", background: "var(--card)", cursor: "pointer", fontFamily: "inherit", color: "var(--text)", display: "flex", alignItems: "center", gap: 6 }}>
+            <button onClick={printSummaryReport} style={{ fontSize: 12, fontWeight: 700, padding: "7px 14px", borderRadius: 8, border: "1.5px solid var(--border)", background: "var(--card)", cursor: "pointer", fontFamily: "inherit", color: "var(--text)", display: "flex", alignItems: "center", gap: 6 }}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
               Print
             </button>

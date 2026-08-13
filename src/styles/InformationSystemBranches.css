@@ -21,7 +21,10 @@ body { background: #0f172a; color: #1a1340; }
 @keyframes scaleIn   { from { opacity:0; transform:scale(.95); } to { opacity:1; transform:scale(1); } }
 @keyframes pulseDot  { 0%,100%{ opacity:1; transform:scale(1); } 50%{ opacity:.5; transform:scale(.8); } }
 @keyframes shimmer   { from { background-position:-200% 0; } to { background-position:200% 0; } }
-@keyframes floatUp   { 0%,100%{ transform:translateY(0); } 50%{ transform:translateY(-12px); } }
+@keyframes floatUp {
+  0%, 100% { transform: translateY(0) rotate(-1deg); }
+  50% { transform: translateY(-10px) rotate(1deg); }
+}
 
 .anim-fade-up   { animation: fadeInUp .6s ease-out forwards; }
 .anim-fade-in   { animation: fadeIn .5s ease-out forwards; }
@@ -247,12 +250,16 @@ section, footer {
   .ai-badge { display: none !important; }
 }
 
+@media (max-width: 640px) {
+  #reviews button[style*="position: absolute"] { display: none; }
+}
+
 /* ---------------------------------------------------------- */
 /* Trivia section responsive layout                              */
 /* ---------------------------------------------------------- */
-@media (max-width: 600px) {
+@media (max-width: 720px) {
   .trivia-pet-img { width: 100% !important; max-width: 100% !important; min-height: 130px !important; max-height: 160px !important; flex: none !important; }
   .trivia-pet-img img { width: 85% !important; height: 85% !important; }
-  .trivia-left { flex-direction: column !important; align-items: center !important; width: 100% !important; }
   .trivia-grid { grid-template-columns: 1fr !important; }
+  .trivia-left { border-right: none !important; border-bottom: 1px solid rgba(255,255,255,.08); }
 }

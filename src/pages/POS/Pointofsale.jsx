@@ -166,6 +166,18 @@ const PointOfSale = () => {
 
   const [confirmVoid, setConfirmVoid] = useState({ show: false, txId: null });
 
+  const printReceiptText = (text) => {
+    const w = window.open("", "PRINT", "height=650,width=420");
+    if (!w) return;
+    w.document.write(`<html><head><title>Receipt</title><style>
+      body{font-family:monospace;font-size:12px;white-space:pre-wrap;padding:16px;}
+    </style></head><body>${text.replace(/</g, "&lt;")}</body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+    w.close();
+  };
+
   const [toasts, setToasts] = useState([]);
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -822,7 +834,7 @@ const PointOfSale = () => {
               </div>
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost" style={S.btn} onClick={() => window.print()}>Print</button>
+              <button className="btn btn-ghost" style={S.btn} onClick={() => printReceiptText(`Angeles Animal Care Hospital\n============================\nClient: ${lastTx.client}${lastTx._isWalkin ? " (Walk-in)" : ""}\n${lastTx._walkinContact ? `Contact: ${lastTx._walkinContact}\n` : ""}Date:   ${new Date().toLocaleDateString()}\n----------------------------\n${(lastTx.items || []).map((i) => `${i.name.substring(0, 20).padEnd(20)} x${i.qty}\n  @ ₱${Number(i.price).toFixed(2)} = ₱${(i.qty * i.price).toFixed(2)}`).join("\n")}\n----------------------------\nSubtotal:     ₱${Number(lastTx.subtotal).toFixed(2)}\nDiscount:     -₱${((lastTx.subtotal * lastTx.discount) / 100).toFixed(2)}\n============================\nTOTAL:        ₱${Number(lastTx.total).toFixed(2)}\nPayment:      ${lastTx.payment}\n============================\nThank you!`)}>Print</button>
               <button className="btn btn-primary" style={S.btn} onClick={() => setShowReceipt(false)}>Done</button>
             </div>
           </div>
