@@ -394,7 +394,7 @@ const AdminSecurity = () => {
   const [addErrors, setAddErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [createdCredentials, setCreatedCredentials] = useState(null);
-  const [editForm, setEditForm] = useState({ role: 'Employee', status: 'Active', first_name: '', last_name: '', branch_id: '' });
+  const [editForm, setEditForm] = useState({ role: 'Employee', status: 'Active', first_name: '', last_name: '', branch_id: '', phone_number: '' });
  const [editFormOriginal, setEditFormOriginal] = useState(null);
   const [pendingEmailChange, setPendingEmailChange] = useState(null);
   const [showPersonalEmailPrompt, setShowPersonalEmailPrompt] = useState(false);
@@ -423,6 +423,10 @@ const AdminSecurity = () => {
   const ROWS_PER_PAGE = 10;
   const LOGS_PER_PAGE = 10;
   const toastTimer = useRef(null);
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const handleSort = (key) => {
+    setSortConfig(prev => prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' });
+  };
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -437,8 +441,19 @@ const AdminSecurity = () => {
   const fetchPwdRequests = useCallback(async () => {
     let q = supabase.from('forgot_password_requests').select('*').eq('status', 'pending').order('created_at', { ascending: false });
     const { data } = await q;
-    setPwdRequests(data || []);
-  }, []);
+    let rows = data || [];
+    // Managers can only see/approve requests for users in their own branch —
+    // only Admin/SuperAdmin see requests across all branches.
+    if (!canSeeAllBranches && currentUser?.branchId && rows.length) {
+      const { data: profs } = await supabaseAdmin
+        .from('profiles')
+        .select('id, branch_id')
+        .in('id', rows.map(r => r.user_id).filter(Boolean));
+      const branchById = new Map((profs || []).map(p => [p.id, p.branch_id]));
+      rows = rows.filter(r => branchById.get(r.user_id) === currentUser.branchId);
+    }
+    setPwdRequests(rows);
+  }, [canSeeAllBranches, currentUser]);
 
 
   const approvePwdRequest = (req) => {
@@ -448,6 +463,19 @@ const AdminSecurity = () => {
       type: 'success', confirmLabel: 'Approve',
       onConfirm: async () => {
         setConfirm(null);
+
+        // Re-check branch ownership right before applying — the list can go
+        // stale, and this is the action that actually changes a credential,
+        // so it gets its own authorization check regardless of what the UI showed.
+        if (!canSeeAllBranches && currentUser?.branchId) {
+          const { data: prof } = await supabaseAdmin.from('profiles').select('branch_id').eq('id', req.user_id).single();
+          if (!prof || prof.branch_id !== currentUser.branchId) {
+            alert("You don't have permission to approve a password change for a user outside your branch.");
+            setPwdRequests(prev => prev.filter(r => r.id !== req.id));
+            return;
+          }
+        }
+
         const { error } = await supabaseAdmin.auth.admin.updateUserById(req.user_id, { password: req.new_password });
         if (error) { alert('Error: ' + error.message); return; }
         await supabase.from('forgot_password_requests').update({ status: 'approved', reviewed_at: new Date().toISOString(), reviewed_by: currentUser.id }).eq('id', req.id);
@@ -1040,6 +1068,7 @@ const AdminSecurity = () => {
       branch_id: u.branch_id || '',
       email: u.email || '',
       sex: u.sex || '',
+      phone_number: u.phone_number || '',
     };
     setEditForm(initialForm);
     setEditFormOriginal(JSON.stringify(initialForm));
@@ -1076,6 +1105,7 @@ const AdminSecurity = () => {
         last_name: editForm.last_name,
         branch_id: editForm.branch_id || null,
         sex: editForm.sex || null,
+        phone_number: editForm.phone_number || null,
       };
 
       // SuperAdmin can also update email via admin API
@@ -1400,9 +1430,33 @@ const AdminSecurity = () => {
   useEffect(() => { setCurrentPage(1); }, [search, roleFilter, branchFilter, statusFilter, adminsOnlyFilter]);
   useEffect(() => { setLogsPage(1); }, [logSearch, logRole]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
+  const sortedUsers = (() => {
+    if (!sortConfig.key) return filtered;
+    const { key, direction } = sortConfig;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let av, bv;
+      if (key === 'name') { av = fullName(a).toLowerCase(); bv = fullName(b).toLowerCase(); }
+      else if (key === 'branch') {
+        av = (a.branches?.name || branches.find(b => b.id === a.branch_id)?.name || '').toLowerCase();
+        bv = (b.branches?.name || branches.find(b => b.id === b.branch_id)?.name || '').toLowerCase();
+      } else if (key === 'created_at') {
+        av = a.created_at ? new Date(a.created_at).getTime() : 0;
+        bv = b.created_at ? new Date(b.created_at).getTime() : 0;
+      } else {
+        av = (a[key] || '').toString().toLowerCase();
+        bv = (b[key] || '').toString().toLowerCase();
+      }
+      if (av < bv) return direction === 'asc' ? -1 : 1;
+      if (av > bv) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return arr;
+  })();
+
+  const totalPages = Math.max(1, Math.ceil(sortedUsers.length / ROWS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
-  const paginated = filtered.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+  const paginated = sortedUsers.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
 
   const filteredLogs = logs.filter(l => {
     const q = logSearch.toLowerCase();
@@ -1424,7 +1478,7 @@ const AdminSecurity = () => {
 
   const counts = {
     total: users.length,
-    active: users.filter(u => u.status === 'Active').length,
+    active: users.filter(u => onlineIds.has(u.id)).length,
     admins: users.filter(u => ['admin', 'super_admin'].includes(u.role?.toLowerCase())).length,
     pending: pendingRequests.length,
   };
@@ -1685,8 +1739,36 @@ const AdminSecurity = () => {
                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 780 }}>
                       <thead>
                         <tr>
-                          {['User', 'Email', 'Role', 'Sex', ...(canSeeAllBranches ? ['Branch'] : []), 'Status', 'Joined', 'Actions'].map(h => (
-                            <th key={h} className="usr-th">{h}</th>
+                          {[
+                            { label: 'User', key: 'name' },
+                            { label: 'Email', key: 'email' },
+                            { label: 'Role', key: 'role' },
+                            { label: 'Sex', key: 'sex' },
+                            ...(canSeeAllBranches ? [{ label: 'Branch', key: 'branch' }] : []),
+                            { label: 'Status', key: 'status' },
+                            { label: 'Joined', key: 'created_at' },
+                            { label: 'Actions', key: null },
+                          ].map(({ label, key }) => (
+                            <th
+                              key={label}
+                              className="usr-th"
+                              onClick={() => key && handleSort(key)}
+                              style={{ cursor: key ? 'pointer' : 'default', userSelect: 'none' }}
+                            >
+                              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                {label}
+                                {key && (
+                                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
+                                    style={{
+                                      opacity: sortConfig.key === key ? 1 : 0.3,
+                                      transform: sortConfig.key === key && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                      transition: 'transform 0.15s',
+                                    }}>
+                                    <polyline points="18 15 12 9 6 15" />
+                                  </svg>
+                                )}
+                              </span>
+                            </th>
                           ))}
                         </tr>
                       </thead>
@@ -2128,6 +2210,17 @@ const AdminSecurity = () => {
                       options={['Male', 'Female']}
                     />
                   </div>
+                  <div className="form-group" style={{ marginBottom: 14 }}>
+                  <label>Phone Number</label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={11}
+                    value={editForm.phone_number}
+                    onChange={e => setEditForm({ ...editForm, phone_number: e.target.value.replace(/\D/g, '').slice(0, 11) })}
+                    placeholder="e.g. 09170000000"
+                  />
+                </div>
                   <div style={{ padding: '10px 16px' }}>
                     <div className="usr-field-label">Status</div>
                     <CustomSelect

@@ -293,8 +293,8 @@ const AlertDetailModal = ({ alert, onClose, onUpdateStatus, isAdmin }) => {
         </div>
         <div style={{ background: 'var(--bg)', borderRadius: 10, padding: '16px', marginBottom: 20 }}>
           <div style={{ marginBottom: 12 }}>
-            <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Description</p>
-            <p style={{ fontSize: 14, color: '#1e293b', margin: 0, lineHeight: 1.6 }}>{alert.description}</p>
+            <p style={{ fontSize: 11, color: '#64748b', fontWeight: 600, margin: '0 0 4px', textTransform: 'uppercase', letterSpacing: 0.5 }}>Place of Emergency</p>
+            <p style={{ fontSize: 14, color: '#1e293b', margin: 0, lineHeight: 1.6 }}>{alert.location || alert.guest_address || 'Location not specified'}</p>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             {[

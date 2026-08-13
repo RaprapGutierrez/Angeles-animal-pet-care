@@ -144,6 +144,7 @@ const PointOfSale = () => {
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const [discount, setDiscount] = useState(0);
+  const DISCOUNT_CAP = 30; // max allowed discount percentage
   const [loading, setLoading] = useState(true);
   const [catFilter, setCatFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -257,10 +258,18 @@ const PointOfSale = () => {
   }, [userLoading, user, fetchTransactions]);
 
   const categories = ["All", ...new Set(products.map((p) => p.category))];
-  const filtered = products.filter((p) =>
-    (catFilter === "All" || p.category === catFilter) &&
-    (!search || p.name.toLowerCase().includes(search.toLowerCase()))
-  );
+  const [sortBy, setSortBy] = useState("name");
+  const filtered = products
+    .filter((p) =>
+      (catFilter === "All" || p.category === catFilter) &&
+      (!search || p.name.toLowerCase().includes(search.toLowerCase()))
+    )
+    .sort((a, b) => {
+      if (sortBy === "price-asc") return Number(a.price) - Number(b.price);
+      if (sortBy === "price-desc") return Number(b.price) - Number(a.price);
+      if (sortBy === "stock") return Number(b.qty) - Number(a.qty);
+      return a.name.localeCompare(b.name);
+    });
 
   const filteredClients = (() => {
     const q = clientSearch.toLowerCase().trim();
@@ -443,6 +452,16 @@ const PointOfSale = () => {
                   <button key={c} className={`cat-pill${catFilter === c ? " active" : ""}`} onClick={() => setCatFilter(c)}>{c}</button>
                 ))}
               </div>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+                style={{ padding: "8px 12px", border: "1.5px solid var(--border)", borderRadius: 8, fontSize: 12, fontWeight: 600, fontFamily: "inherit", background: "var(--card)", color: "var(--text)", outline: "none", cursor: "pointer" }}
+              >
+                <option value="name">Sort: Name (A–Z)</option>
+                <option value="price-asc">Sort: Price (Low–High)</option>
+                <option value="price-desc">Sort: Price (High–Low)</option>
+                <option value="stock">Sort: Stock (High–Low)</option>
+              </select>
             </div>
 
             {loading ? (
@@ -706,7 +725,12 @@ const PointOfSale = () => {
               </div>
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 13, padding: "4px 0" }}>
                 <span style={{ color: "var(--muted)" }}>Discount (%)</span>
-                <input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} min={0} max={100}
+                <input type="number" value={discount} min={0} max={DISCOUNT_CAP}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === "") { setDiscount(""); return; }
+                    setDiscount(Math.min(DISCOUNT_CAP, Math.max(0, Number(val))));
+                  }}
                   style={{ width: 64, padding: "4px 8px", border: "1.5px solid var(--border)", borderRadius: 6, fontSize: 13, textAlign: "right", fontFamily: "inherit", outline: "none" }} />
               </div>
               {Number(discount) > 0 && (

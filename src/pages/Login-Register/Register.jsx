@@ -269,24 +269,26 @@ const Register = () => {
 
       // Mirror the profile into your own "users" table so the rest of the
       // app (admin views, bookings, etc.) can query it like before.
+      // NEW
       if (userId) {
-        const { error: profileError } = await supabase.from("profiles").insert([{
-          id: userId,
-          first_name: firstName.trim(),
-          last_name: lastName.trim(),
-          email: email.toLowerCase().trim(),
-          phone_number: phoneNumber.trim(),
-          sex,
-          role: "Customer",
-          branch_id: branchId || null,
-          branch: selectedBranch ? `${selectedBranch.name} Branch` : null,
-          status: "active",
-        }]);
+      const { error: profileError } = await supabase.from("profiles").upsert([{
+        id: userId,
+        first_name: firstName.trim(),
+        last_name: lastName.trim(),
+        email: email.toLowerCase().trim(),
+        phone_number: phoneNumber.trim(),
+        sex,
+        role: "Customer",
+        branch_id: branchId || null,
+        branch: selectedBranch ? `${selectedBranch.name} Branch` : null,
+        status: "active",
+      }], { onConflict: "id", ignoreDuplicates: false });
 
-        if (profileError) {
-          console.error("Profile insert error:", profileError);
-        }
+      if (profileError) {
+        console.error("Profile upsert error:", profileError);
+        showModal("warning", "Account Created", "Your account was created, but some profile details couldn't be saved. You can update them later.");
       }
+    }
 
       // signUp() only returns a session if "Confirm email" is OFF in
       // Supabase Auth settings. If it didn't come back, explicitly sign

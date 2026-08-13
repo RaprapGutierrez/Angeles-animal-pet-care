@@ -188,6 +188,10 @@ const Walkin = () => {
   const [statusFilter, setStatusFilter] = useState(null); // null | 'Today' | 'Attended' | 'Waiting'
   const [formOriginal, setFormOriginal] = useState(null); // snapshot for unsaved-changes detection
   const ROWS_PER_PAGE = 10;
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const handleSort = (key) => {
+    setSortConfig(prev => prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' });
+  };
   const [showModal, setShowModal] = useState(false);
   const [dialog, setDialog] = useState({ show: false, message: '', type: 'confirm', onConfirm: null, title: '' });
   const showAlert = (message, title = 'Notice') => setDialog({ show: true, message, type: 'alert', onConfirm: null, title });
@@ -347,9 +351,24 @@ const Walkin = () => {
     : statusFilter
       ? walkins.filter(w => w.status === statusFilter)
       : walkins;
-  const totalPages = Math.max(1, Math.ceil(filteredWalkins.length / ROWS_PER_PAGE));
+
+  const sortedWalkins = (() => {
+    if (!sortConfig.key) return filteredWalkins;
+    const { key, direction } = sortConfig;
+    const arr = [...filteredWalkins];
+    arr.sort((a, b) => {
+      let av = (a[key] || '').toString().toLowerCase();
+      let bv = (b[key] || '').toString().toLowerCase();
+      if (av < bv) return direction === 'asc' ? -1 : 1;
+      if (av > bv) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return arr;
+  })();
+
+  const totalPages = Math.max(1, Math.ceil(sortedWalkins.length / ROWS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
-  const paginated = filteredWalkins.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+  const paginated = sortedWalkins.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
   const isGrooming = form.purpose === 'Grooming';
 
   const formatArrival = (iso) => {
@@ -988,9 +1007,38 @@ const Walkin = () => {
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: 640 }}>
                   <thead>
-                    <tr>{['#', 'Patient', 'Owner', 'Purpose', 'Vet / Service', 'Room', 'Status', 'Actions'].map(h => (
-                      <th key={h} style={S.th}>{h}</th>
-                    ))}</tr>
+                    <tr>
+                      {[
+                        { label: '#', key: null },
+                        { label: 'Patient', key: 'patient' },
+                        { label: 'Owner', key: 'owner' },
+                        { label: 'Purpose', key: 'purpose' },
+                        { label: 'Vet / Service', key: 'vet' },
+                        { label: 'Room', key: 'room' },
+                        { label: 'Status', key: 'status' },
+                        { label: 'Actions', key: null },
+                      ].map(({ label, key }) => (
+                        <th
+                          key={label}
+                          style={{ ...S.th, cursor: key ? 'pointer' : 'default', userSelect: 'none' }}
+                          onClick={() => key && handleSort(key)}
+                        >
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                            {label}
+                            {key && (
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
+                                style={{
+                                  opacity: sortConfig.key === key ? 1 : 0.3,
+                                  transform: sortConfig.key === key && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                  transition: 'transform 0.15s',
+                                }}>
+                                <polyline points="18 15 12 9 6 15" />
+                              </svg>
+                            )}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
                   </thead>
                   <tbody>
                     {filteredWalkins.length === 0 ? (

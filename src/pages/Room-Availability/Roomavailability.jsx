@@ -841,6 +841,15 @@ const RoomAvailability = () => {
     quarantine: rooms.filter(r => r.status === 'Quarantine').length,
     cleaning: rooms.filter(r => r.status === 'Cleaning').length,
   };
+  const totalRooms = rooms.length;
+  const usageRate = totalRooms > 0 ? Math.round((counts.occupied / totalRooms) * 100) : 0;
+  const usageByType = rooms.reduce((acc, r) => {
+    const t = r.type || 'General';
+    if (!acc[t]) acc[t] = { total: 0, occupied: 0 };
+    acc[t].total += 1;
+    if (r.status === 'Occupied') acc[t].occupied += 1;
+    return acc;
+  }, {});
   const filterMap = { All: rooms, Available: rooms.filter(r => r.status === 'Available'), Occupied: rooms.filter(r => r.status === 'Occupied'), Quarantine: rooms.filter(r => r.status === 'Quarantine'), Cleaning: rooms.filter(r => r.status === 'Cleaning') };
   const filtered = filterMap[filter] || rooms;
   const generalRooms = filtered.filter(r => !r.infected);
@@ -947,6 +956,54 @@ const RoomAvailability = () => {
           ))}
           <span style={{ marginLeft: 4, color: 'var(--muted)', fontSize: 12 }}>{filtered.length} room{filtered.length !== 1 ? 's' : ''}</span>
         </div>
+
+        {/* ── Room Usage Tracking ── */}
+        {!loading && totalRooms > 0 && (
+          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow)', padding: '18px 22px', marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text)', display: 'flex', alignItems: 'center', gap: 7 }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--royal)" strokeWidth="2.5" strokeLinecap="round"><path d="M3 3v18h18" /><path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3" /></svg>
+                Room Usage
+              </h3>
+              <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>{counts.occupied} of {totalRooms} rooms in use</span>
+            </div>
+
+            {/* Overall utilization bar */}
+            <div style={{ marginBottom: 18 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 700, color: 'var(--text)', marginBottom: 5 }}>
+                <span>Overall Utilization</span>
+                <span style={{ color: usageRate >= 80 ? '#dc2626' : usageRate >= 50 ? '#d97706' : '#16a34a' }}>{usageRate}%</span>
+              </div>
+              <div style={{ background: '#f1f5f9', borderRadius: 99, height: 10, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', borderRadius: 99, width: `${usageRate}%`, transition: 'width 0.5s ease',
+                  background: usageRate >= 80 ? 'linear-gradient(90deg,#ef4444,#dc2626)' : usageRate >= 50 ? 'linear-gradient(90deg,#f59e0b,#d97706)' : 'linear-gradient(90deg,#22c55e,#16a34a)',
+                }} />
+              </div>
+            </div>
+
+            {/* Breakdown by ward type */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14 }}>
+              {Object.entries(usageByType).map(([type, { total, occupied }]) => {
+                const rate = total > 0 ? Math.round((occupied / total) * 100) : 0;
+                return (
+                  <div key={type}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 4 }}>
+                      <span>{type}</span>
+                      <span>{occupied}/{total}</span>
+                    </div>
+                    <div style={{ background: '#f1f5f9', borderRadius: 99, height: 6, overflow: 'hidden' }}>
+                      <div style={{
+                        height: '100%', borderRadius: 99, width: `${rate}%`, transition: 'width 0.5s ease',
+                        background: rate >= 80 ? '#dc2626' : rate >= 50 ? '#d97706' : '#16a34a',
+                      }} />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {loading ? (
           <>

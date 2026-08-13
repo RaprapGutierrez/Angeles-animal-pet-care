@@ -1000,6 +1000,14 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
     normalizeBranchName(a.branch) === normalizeBranchName(userBranch)
   );
 
+  const [historyStatusFilter, setHistoryStatusFilter] = useState("");
+  const [historyTypeFilter, setHistoryTypeFilter] = useState("");
+  const historyTypeOptions = [...new Set(historyAlerts.map(a => a.type))].filter(Boolean).sort();
+  const filteredHistoryAlerts = historyAlerts.filter(a =>
+    (!historyStatusFilter || a.status === historyStatusFilter) &&
+    (!historyTypeFilter || a.type === historyTypeFilter)
+  );
+
   return (
     <div className="emg-page">
       <div className="emergency-topbar emg-topbar-pos emg-topbar-card">
@@ -1053,6 +1061,83 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
           ))}
         </div>
 
+        {/* ── Summary Report Card ── */}
+        <div className="emg-panel" style={{ background: "var(--card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)", marginBottom: 24 }}>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16, flexWrap: "wrap", gap: 10 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--text)", margin: 0, display: "flex", alignItems: "center", gap: 8 }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+              Summary Report
+            </h3>
+            <button onClick={() => window.print()} style={{ fontSize: 12, fontWeight: 700, padding: "7px 14px", borderRadius: 8, border: "1.5px solid var(--border)", background: "var(--card)", cursor: "pointer", fontFamily: "inherit", color: "var(--text)", display: "flex", alignItems: "center", gap: 6 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
+              Print
+            </button>
+          </div>
+          <hr style={{ border: "none", borderTop: "1px solid var(--border)", marginBottom: 16 }} />
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 10px" }}>Top Emergency Types</p>
+              {(() => {
+                const counts = {};
+                visibleAlerts.forEach(a => { counts[a.type] = (counts[a.type] || 0) + 1; });
+                const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+                if (top.length === 0) return <p style={{ fontSize: 12, color: "var(--muted)" }}>No data yet</p>;
+                const max = top[0][1];
+                return top.map(([type, count]) => (
+                  <div key={type} style={{ marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text)", marginBottom: 3 }}>
+                      <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160 }}>{type}</span>
+                      <strong>{count}</strong>
+                    </div>
+                    <div style={{ background: "#fee2e2", borderRadius: 99, height: 6, overflow: "hidden" }}>
+                      <div style={{ height: "100%", background: "#dc2626", borderRadius: 99, width: `${(count / max) * 100}%` }} />
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 10px" }}>Alerts by Branch</p>
+              {(() => {
+                const counts = {};
+                alerts.forEach(a => { const b = normalizeBranchName(a.branch) || "Unknown"; counts[b] = (counts[b] || 0) + 1; });
+                const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+                if (rows.length === 0) return <p style={{ fontSize: 12, color: "var(--muted)" }}>No data yet</p>;
+                const max = rows[0][1];
+                return rows.map(([branch, count]) => (
+                  <div key={branch} style={{ marginBottom: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "var(--text)", marginBottom: 3 }}>
+                      <span>{branch}</span>
+                      <strong>{count}</strong>
+                    </div>
+                    <div style={{ background: "#e0e7ff", borderRadius: 99, height: 6, overflow: "hidden" }}>
+                      <div style={{ height: "100%", background: "#6366f1", borderRadius: 99, width: `${(count / max) * 100}%` }} />
+                    </div>
+                  </div>
+                ));
+              })()}
+            </div>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 700, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 0.5, margin: "0 0 10px" }}>Resolution Status</p>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {[
+                  { label: "Pending", value: visibleAlerts.filter(a => (a.status || "pending") === "pending").length, color: "#dc2626" },
+                  { label: "Responding", value: responding.length, color: "#1d4ed8" },
+                  { label: "Resolved", value: resolved.length, color: "#16a34a" },
+                ].map(row => (
+                  <div key={row.label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 12 }}>
+                    <span style={{ display: "flex", alignItems: "center", gap: 6, color: "var(--text)" }}>
+                      <span style={{ width: 7, height: 7, borderRadius: "50%", background: row.color, display: "inline-block" }} />
+                      {row.label}
+                    </span>
+                    <strong style={{ color: row.color }}>{row.value}</strong>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="emg-panels-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16, marginBottom: 24 }}>
 
           {/* ── Pending panel ── */}
@@ -1098,10 +1183,29 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
 
           {/* ── History panel ── */}
           <div className="emg-panel" style={{ background: "var(--card)", borderRadius: "var(--radius-lg)", border: "1px solid var(--border)", padding: 24, boxShadow: "var(--shadow)" }}>
-            <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--royal)", margin: "0 0 16px", display: "flex", alignItems: "center", gap: 8 }}>
+            <h3 style={{ fontSize: 15, fontWeight: 700, color: "var(--royal)", margin: "0 0 12px", display: "flex", alignItems: "center", gap: 8 }}>
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
-              Alert History ({historyAlerts.length})
+              Alert History ({filteredHistoryAlerts.length}{filteredHistoryAlerts.length !== historyAlerts.length ? ` of ${historyAlerts.length}` : ''})
             </h3>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+              <select value={historyStatusFilter} onChange={e => setHistoryStatusFilter(e.target.value)}
+                style={{ fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 7, border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--text)", fontFamily: "inherit", outline: "none", cursor: "pointer" }}>
+                <option value="">All Statuses</option>
+                <option value="responding">Responding</option>
+                <option value="resolved">Resolved</option>
+              </select>
+              <select value={historyTypeFilter} onChange={e => setHistoryTypeFilter(e.target.value)}
+                style={{ fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 7, border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--text)", fontFamily: "inherit", outline: "none", cursor: "pointer", maxWidth: 220 }}>
+                <option value="">All Types</option>
+                {historyTypeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              {(historyStatusFilter || historyTypeFilter) && (
+                <button onClick={() => { setHistoryStatusFilter(""); setHistoryTypeFilter(""); }}
+                  style={{ fontSize: 11, fontWeight: 700, color: "var(--royal)", background: "none", border: "1px solid var(--royal)", borderRadius: 20, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit" }}>
+                  ✕ Clear filters
+                </button>
+              )}
+            </div>
             <hr style={{ border: "none", borderTop: "1px solid var(--border)", marginBottom: 16 }} />
             {loading ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -1116,11 +1220,13 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
                   </div>
                 ))}
               </div>
-            ) : historyAlerts.length === 0 ? (
-              <p style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: 20 }}>No alerts yet</p>
+            ) : filteredHistoryAlerts.length === 0 ? (
+              <p style={{ color: "var(--muted)", fontSize: 13, textAlign: "center", padding: 20 }}>
+                {historyAlerts.length === 0 ? "No alerts yet" : "No alerts match these filters"}
+              </p>
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 12, maxHeight: 420, overflowY: "auto" }}>
-                {historyAlerts.map(a => <AlertCard key={a.id + a.status} a={a} showActions={true} onUpdateStatus={onUpdateStatus} />)}
+                {filteredHistoryAlerts.map(a => <AlertCard key={a.id + a.status} a={a} showActions={true} onUpdateStatus={onUpdateStatus} />)}
               </div>
             )}
           </div>

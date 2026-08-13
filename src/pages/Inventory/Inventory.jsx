@@ -780,6 +780,10 @@ const Inventory = () => {
   const [toasts, setToasts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const ROWS_PER_PAGE = 10;
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' });
+  const handleSort = (key) => {
+    setSortConfig(prev => prev.key === key ? { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' } : { key, direction: 'asc' });
+  };
 
   const showToast = (message, type = 'success') => {
     const id = Date.now() + Math.random();
@@ -851,9 +855,31 @@ const Inventory = () => {
 
   useEffect(() => { setCurrentPage(1); }, [search, catFilter, stockFilter, expiryFilter]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / ROWS_PER_PAGE));
+  const sorted = useMemo(() => {
+    if (!sortConfig.key) return filtered;
+    const { key, direction } = sortConfig;
+    const arr = [...filtered];
+    arr.sort((a, b) => {
+      let av = a[key], bv = b[key];
+      if (key === 'qty' || key === 'price') {
+        av = Number(av) || 0; bv = Number(bv) || 0;
+      } else if (key === 'expiry') {
+        av = av ? new Date(av).getTime() : Infinity;
+        bv = bv ? new Date(bv).getTime() : Infinity;
+      } else {
+        av = (av || '').toString().toLowerCase();
+        bv = (bv || '').toString().toLowerCase();
+      }
+      if (av < bv) return direction === 'asc' ? -1 : 1;
+      if (av > bv) return direction === 'asc' ? 1 : -1;
+      return 0;
+    });
+    return arr;
+  }, [filtered, sortConfig]);
+
+  const totalPages = Math.max(1, Math.ceil(sorted.length / ROWS_PER_PAGE));
   const safePage = Math.min(currentPage, totalPages);
-  const paginated = filtered.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
+  const paginated = sorted.slice((safePage - 1) * ROWS_PER_PAGE, safePage * ROWS_PER_PAGE);
 
   const openAdd = () => perms.canAdd && setEditItem({ name: '', category: 'Medicine', qty: 0, unit: 'pcs', threshold: 10, price: 0, expiry: '', supplier: '' });
   const openEdit = (item, e) => { e?.stopPropagation(); perms.canEdit && setEditItem(item); };
@@ -1089,9 +1115,36 @@ const Inventory = () => {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr>
-                    {['Item', 'Category', 'Stock', 'Price', 'Expiry', 'Supplier',
-                      ...(perms.canEdit || perms.canDelete ? ['Actions'] : [])
-                    ].map(h => <th key={h} className="inv-th">{h}</th>)}
+                    {[
+                      { label: 'Item', key: 'name' },
+                      { label: 'Category', key: 'category' },
+                      { label: 'Stock', key: 'qty' },
+                      { label: 'Price', key: 'price' },
+                      { label: 'Expiry', key: 'expiry' },
+                      { label: 'Supplier', key: 'supplier' },
+                      ...(perms.canEdit || perms.canDelete ? [{ label: 'Actions', key: null }] : [])
+                    ].map(({ label, key }) => (
+                      <th
+                        key={label}
+                        className="inv-th"
+                        onClick={() => key && handleSort(key)}
+                        style={{ cursor: key ? 'pointer' : 'default', userSelect: 'none' }}
+                      >
+                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                          {label}
+                          {key && (
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round"
+                              style={{
+                                opacity: sortConfig.key === key ? 1 : 0.3,
+                                transform: sortConfig.key === key && sortConfig.direction === 'desc' ? 'rotate(180deg)' : 'none',
+                                transition: 'transform 0.15s',
+                              }}>
+                              <polyline points="18 15 12 9 6 15" />
+                            </svg>
+                          )}
+                        </span>
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody>
