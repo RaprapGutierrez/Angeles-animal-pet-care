@@ -14,6 +14,19 @@ function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
+/* ── Dog / Cat SVG icons (same paths used in CustomerAIChat pet-type picker) ── */
+const DogIcon = ({ size = 18, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill={color} xmlns="http://www.w3.org/2000/svg">
+    <path fillRule="evenodd" clipRule="evenodd" d="M16 4V7C16 9.20914 14.2091 11 12 11H10V15H0V13L0.931622 10.8706C1.25226 10.9549 1.59036 11 1.94124 11C3.74931 11 5.32536 9.76947 5.76388 8.01538L3.82359 7.53031C3.60766 8.39406 2.83158 9.00001 1.94124 9.00001C1.87789 9.00001 1.81539 8.99702 1.75385 8.99119C1.02587 8.92223 0.432187 8.45551 0.160283 7.83121C0.0791432 7.64491 0.0266588 7.44457 0.00781272 7.23658C-0.0112323 7.02639 0.00407892 6.80838 0.0588889 6.58914L0.698705 4.02986C1.14387 2.24919 2.7438 1 4.57928 1H10L12 4H16ZM9 6C9.55229 6 10 5.55228 10 5C10 4.44772 9.55229 4 9 4C8.44771 4 8 4.44772 8 5C8 5.55228 8.44771 6 9 6Z" />
+  </svg>
+);
+const CatIcon = ({ size = 18, color = "currentColor" }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill={color} xmlns="http://www.w3.org/2000/svg">
+    <path fillRule="evenodd" clipRule="evenodd" d="M1 7L4.80061 1.43926C5.56059 0.527292 6.68638 0 7.8735 0H8V4L12 5L15 10L14.1875 11.2188C13.4456 12.3316 12.1967 13 10.8593 13H9L7 16H5L1 7ZM10 9C10.5523 9 11 8.55229 11 8C11 7.44772 10.5523 7 10 7C9.44771 7 9 7.44772 9 8C9 8.55229 9.44771 9 10 9Z" />
+    <path d="M10 0.465878V2.43845L12 2.93845V0H11.8735C11.2125 0 10.5704 0.163501 10 0.465878Z" />
+  </svg>
+);
+
 /* Subtle dotted-grid background used behind dark sections for depth */
 const GRID_BG = {
   backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px)",
@@ -673,18 +686,6 @@ function Hero({ onBrowse }) {
 
         {/* Stats */}
         <div className="stats-wrap" style={{ position: "relative" }}>
-          <img
-            src="/image/cat_wipe_bg.png"
-            alt="Cute cat sticker"
-            className="stats-sticker anim-fade-up"
-            style={{ position: "absolute", left: "2%", top: 0, transform: "translateY(-70%) rotate(-4deg)", width: "clamp(64px,10vw,96px)", height: "auto", zIndex: 0, pointerEvents: "none", filter: "drop-shadow(0 10px 18px rgba(0,0,0,.45))" }}
-          />
-          <img
-            src="/image/dog_wipe_bg.png"
-            alt="Cute dog sticker"
-            className="stats-sticker anim-fade-up"
-            style={{ position: "absolute", right: "2%", top: 0, transform: "translateY(-70%) rotate(4deg)", width: "clamp(70px,10.5vw,104px)", height: "auto", zIndex: 0, pointerEvents: "none", filter: "drop-shadow(0 10px 18px rgba(0,0,0,.45))" }}
-          />
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", gap: 12, justifyContent: "center", width: "100%" }}>
             {stats.map(s => (
               <div key={s.label} className="slide-up" style={{ position: "relative", zIndex: 1, background: "rgba(255,255,255,0.97)", borderRadius: 18, padding: "18px 16px", textAlign: "center", boxShadow: "0 8px 32px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.6)", border: "1px solid rgba(255,255,255,.4)", transition: "transform .2s, box-shadow .2s, opacity .2s", cursor: "default" }}
@@ -955,7 +956,7 @@ function SectionDivider() {
 /* ── Trivia Section ── */
 const PET_DATA = {
   dog: {
-    image: "/image/dog.png",
+    image: "/image/dog.jpeg",
     label: "DOG",
     accent: "#f59e0b",
     accentBg: "linear-gradient(135deg, #fef3c7, #fde68a)",
@@ -969,7 +970,7 @@ const PET_DATA = {
     ],
   },
   cat: {
-    image: "/image/cat.png",
+    image: "/image/cat.jpeg",
     label: "CAT",
     accent: "#7c3aed",
     accentBg: "linear-gradient(135deg, #ede9fe, #ddd6fe)",
@@ -1010,31 +1011,6 @@ function TriviaSection() {
       >
         {/* Header */}
         <div className="slide-up" style={{ textAlign: "center", marginBottom: 52 }}>
-          <div
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              fontSize: 11,
-              fontWeight: 700,
-              textTransform: "uppercase",
-              letterSpacing: 2.5,
-              color: data.accent,
-              marginBottom: 14,
-            }}
-          >
-            <span
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: "50%",
-                background: data.accent,
-                boxShadow: `0 0 10px ${data.accent}`,
-              }}
-            />
-            Pet Health Library
-          </div>
-
           <h2
             style={{
               fontSize: "clamp(30px, 5vw, 52px)",
@@ -1083,34 +1059,41 @@ function TriviaSection() {
               backdropFilter: "blur(12px)",
             }}
           >
-            {["dog", "cat"].map((p) => (
-              <button
-                key={p}
-                onClick={() => {
-                  setPet(p);
-                  setOpenTab(0);
-                }}
-                className="pill"
-                aria-pressed={pet === p}
-                style={{
-                  padding: "10px 28px",
-                  borderRadius: 999,
-                  border: "none",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: 1,
-                  cursor: "pointer",
-                  background: pet === p ? data.accent : "transparent",
-                  color: pet === p ? "#fff" : "rgba(255,255,255,.55)",
-                  boxShadow:
-                    pet === p ? `0 6px 22px ${data.accent}55` : "none",
-                  transition: "all .25s cubic-bezier(.4,0,.2,1)",
-                }}
-              >
-                {p === "dog" ? "🐶 Dogs" : "🐱 Cats"}
-              </button>
-            ))}
+            {["dog", "cat"].map((p) => {
+              const active = pet === p;
+              const iconColor = active ? "#fff" : "rgba(255,255,255,.55)";
+              return (
+                <button
+                  key={p}
+                  onClick={() => {
+                    setPet(p);
+                    setOpenTab(0);
+                  }}
+                  className="pill"
+                  aria-pressed={active}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "10px 28px",
+                    borderRadius: 999,
+                    border: "none",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    textTransform: "uppercase",
+                    letterSpacing: 1,
+                    cursor: "pointer",
+                    background: active ? PET_DATA[p].accent : "transparent",
+                    color: iconColor,
+                    boxShadow: active ? `0 6px 22px ${PET_DATA[p].accent}55` : "none",
+                    transition: "all .25s cubic-bezier(.4,0,.2,1)",
+                  }}
+                >
+                  {p === "dog" ? <DogIcon size={16} color={iconColor} /> : <CatIcon size={16} color={iconColor} />}
+                  {p === "dog" ? "Dogs" : "Cats"}
+                </button>
+              );
+            })}
           </div>
         </div>
 
