@@ -299,7 +299,7 @@ body {
     top 0.3s;
 }
 .site-header.is-scrolled {
-  width: 95% !important;
+  width: 75% !important;
   max-width: 900px !important;
 }
 
