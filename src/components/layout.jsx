@@ -3310,8 +3310,8 @@ export const Layout = ({ children }) => {
               paddingLeft: isExpanded ? 14 : 0,
               paddingRight: isExpanded ? 10 : 0,
               justifyContent: isExpanded ? "flex-start" : "center",
-              marginTop: 8,
-              marginBottom: isExpanded ? 16 : 6,
+              marginTop: 4,
+              marginBottom: isExpanded ? 16 : 2,
               transition:
                 "padding 0.3s cubic-bezier(0.4,0,0.2,1), justify-content 0.3s",
             }}
@@ -3435,7 +3435,7 @@ export const Layout = ({ children }) => {
               marginLeft: isExpanded ? 14 : 0,
               height: 1,
               background: "rgba(255,255,255,0.1)",
-              marginBottom: 10,
+              marginBottom: isExpanded ? 10 : 4,
               transition: "width 0.3s, margin-left 0.3s",
             }}
           />
