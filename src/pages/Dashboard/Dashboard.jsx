@@ -797,6 +797,7 @@ const Dashboard = () => {
     minute: "2-digit",
     second: "2-digit",
   });
+  const greeting = time.getHours() < 12 ? "Good day" : "Good night";
 
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (userLoading) {
