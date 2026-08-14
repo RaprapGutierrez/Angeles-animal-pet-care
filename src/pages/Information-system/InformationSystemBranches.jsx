@@ -1595,7 +1595,7 @@ function Header({ onFAQClick }) {
 
   return (
     <header
-      className="site-header"
+      className={`site-header${scrolled ? " is-scrolled" : ""}`}
       style={{
         top: scrolled ? "8px" : "0",
         left: scrolled ? undefined : 0,
