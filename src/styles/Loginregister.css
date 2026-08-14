@@ -1,20 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap");
 
-* { margin:0; padding:0; box-sizing:border-box; }
-
-:root {
-  --primary:    #1e3a8a;
-  --primary-dk: #1a1a6e;
-  --primary-lt: #e8edf8;
-  --border:     #c7d2e8;
-  --text:       #1e293b;
-  --muted:      #64748b;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-body { font-family:'Plus Jakarta Sans',sans-serif; min-height:100vh; padding-top:0 !important; }
-body:has(.auth-screen) { padding-top: 0 !important; overflow: hidden !important; }
+:root {
+  --primary: #1e3a8a;
+  --primary-dk: #1a1a6e;
+  --primary-lt: #e8edf8;
+  --border: #c7d2e8;
+  --text: #1e293b;
+  --muted: #64748b;
+}
+
+body {
+  font-family: "Plus Jakarta Sans", sans-serif;
+  min-height: 100vh;
+  padding-top: 0 !important;
+}
+body:has(.auth-screen) {
+  padding-top: 0 !important;
+  overflow: hidden !important;
+}
 body:has(.auth-screen) #root,
-body:has(.auth-screen) .app-revealed { 
+body:has(.auth-screen) .app-revealed {
   height: 100vh !important;
   min-height: 100vh !important;
   max-height: 100vh !important;
@@ -34,10 +45,27 @@ body:has(.auth-screen) .app-revealed {
   right: 0;
   bottom: 0;
   z-index: 0;
-  background-image: url('/image/bg.png');
-  background-size: cover;
-  background-position: center center;
-  background-repeat: no-repeat;
+  background-color: #0f172a;
+  background-image:
+    radial-gradient(
+      circle at 18% 12%,
+      rgba(99, 102, 241, 0.1) 0%,
+      transparent 45%
+    ),
+    radial-gradient(
+      circle at 88% 88%,
+      rgba(30, 58, 138, 0.1) 0%,
+      transparent 50%
+    ),
+    radial-gradient(circle, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    url("/image/bg.png");
+  background-size:
+    auto,
+    auto,
+    28px 28px,
+    cover;
+  background-position: center, center, center, center;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat;
   width: 100%;
   height: 100%;
   min-width: 100vw;
@@ -45,10 +73,10 @@ body:has(.auth-screen) .app-revealed {
 }
 
 .auth-bg::after {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(15, 23, 42, 0.25);
 }
 /* ══════════════════════════════════════
    CHOOSE SCREEN — centered card over bg
@@ -70,7 +98,7 @@ body:has(.auth-screen) .app-revealed {
   padding: 40px 36px;
   width: 100%;
   max-width: 380px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.35);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
   text-align: center;
 }
 
@@ -105,13 +133,13 @@ body:has(.auth-screen) .app-revealed {
   font-weight: 900;
   color: #fff;
   line-height: 1.2;
-  text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+  text-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
   margin-bottom: 12px;
 }
 
 .auth-brand p {
   font-size: 15px;
-  color: rgba(255,255,255,0.8);
+  color: rgba(255, 255, 255, 0.8);
   font-weight: 500;
 }
 
@@ -128,16 +156,26 @@ body:has(.auth-screen) .app-revealed {
   justify-content: center;
   padding: 48px 44px;
   overflow-y: auto;
-  box-shadow: -8px 0 40px rgba(0,0,0,0.2);
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.2);
 }
 
 /* LOGIN: form on RIGHT */
-.auth-screen.login .auth-brand      { order: 1; }
-.auth-screen.login .auth-form-side  { order: 2; box-shadow: -8px 0 40px rgba(0,0,0,0.2); }
+.auth-screen.login .auth-brand {
+  order: 1;
+}
+.auth-screen.login .auth-form-side {
+  order: 2;
+  box-shadow: -8px 0 40px rgba(0, 0, 0, 0.2);
+}
 
 /* REGISTER: form on LEFT */
-.auth-screen.register .auth-brand      { order: 2; }
-.auth-screen.register .auth-form-side  { order: 1; box-shadow: 8px 0 40px rgba(0,0,0,0.2); }
+.auth-screen.register .auth-brand {
+  order: 2;
+}
+.auth-screen.register .auth-form-side {
+  order: 1;
+  box-shadow: 8px 0 40px rgba(0, 0, 0, 0.2);
+}
 
 /* ── Form wrapper ── */
 .auth-form {
@@ -157,9 +195,9 @@ body:has(.auth-screen) .app-revealed {
 }
 
 .auth-form button.auth-btn-text-stroke {
-  color: #05328A !important;
+  color: #05328a !important;
   -webkit-text-stroke: 5px #fff;
-  font-family: 'Poetsen One', sans-serif !important;
+  font-family: "Poetsen One", sans-serif !important;
 }
 
 .auth-form .subtitle {
@@ -195,14 +233,14 @@ body:has(.auth-screen) .app-revealed {
   paint-order: stroke fill;
   line-height: 1.2;
   text-align: left;
-  font-family: 'poetsen one', sans-serif;
+  font-family: "poetsen one", sans-serif;
 }
 
 .auth-logo-row .logo-text p {
   font-size: 11px;
   color: var(--muted);
   text-align: left;
-  font-family: 'poetsen one', sans-serif;
+  font-family: "poetsen one", sans-serif;
 }
 
 /* ── Portal badge ── */
@@ -216,11 +254,21 @@ body:has(.auth-screen) .app-revealed {
   font-size: 12px;
   font-weight: 700;
 }
-.portal-badge.client { background:#dbeafe; border:1px solid #93c5fd; color:#1e40af; }
-.portal-badge.staff  { background:#f1f5f9; border:1px solid #cbd5e1; color:#0f172a; }
+.portal-badge.client {
+  background: #dbeafe;
+  border: 1px solid #93c5fd;
+  color: #1e40af;
+}
+.portal-badge.staff {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #0f172a;
+}
 
 /* ── Inputs ── */
-.input-group { margin-bottom: 13px; }
+.input-group {
+  margin-bottom: 13px;
+}
 
 .input-group input,
 .input-group select {
@@ -232,14 +280,16 @@ body:has(.auth-screen) .app-revealed {
   font-family: inherit;
   color: var(--text);
   background: #fff;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
 }
 
 .input-group input:focus,
 .input-group select:focus {
   border-color: var(--primary);
   outline: none;
-  box-shadow: 0 0 0 3px rgba(30,58,138,0.1);
+  box-shadow: 0 0 0 3px rgba(30, 58, 138, 0.1);
 }
 
 /* ── Buttons ── */
@@ -260,17 +310,31 @@ body:has(.auth-screen) .app-revealed {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  transition: background 0.2s, transform 0.1s;
+  transition:
+    background 0.2s,
+    transform 0.1s;
 }
 .btn-signin:hover,
 .auth-form button[type="submit"]:hover,
-.auth-form button[type="button"]:not(.btn-back):hover { background: var(--primary-dk); }
-.btn-signin:active { transform: scale(0.98); }
+.auth-form button[type="button"]:not(.btn-back):hover {
+  background: var(--primary-dk);
+}
+.btn-signin:active {
+  transform: scale(0.98);
+}
 
-.btn-client { background: #1e3a8a !important; }
-.btn-client:hover { background: #162d6e !important; }
-.btn-staff  { background: #0f172a !important; }
-.btn-staff:hover  { background: #020617 !important; }
+.btn-client {
+  background: #1e3a8a !important;
+}
+.btn-client:hover {
+  background: #162d6e !important;
+}
+.btn-staff {
+  background: #0f172a !important;
+}
+.btn-staff:hover {
+  background: #020617 !important;
+}
 
 /* ── Back button ── */
 .btn-back {
@@ -285,7 +349,9 @@ body:has(.auth-screen) .app-revealed {
   font-family: inherit !important;
   display: inline !important;
 }
-.btn-back:hover { text-decoration: underline; }
+.btn-back:hover {
+  text-decoration: underline;
+}
 
 /* ── Switch text ── */
 .switch-text {
@@ -294,8 +360,14 @@ body:has(.auth-screen) .app-revealed {
   color: var(--muted);
   text-align: center;
 }
-.switch-text a { color: var(--primary); text-decoration: none; font-weight: 700; }
-.switch-text a:hover { text-decoration: underline; }
+.switch-text a {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 700;
+}
+.switch-text a:hover {
+  text-decoration: underline;
+}
 
 /* ── Info box ── */
 .info-box {
@@ -328,7 +400,7 @@ body:has(.auth-screen) .app-revealed {
 }
 .emergency-divider::before,
 .emergency-divider::after {
-  content: '';
+  content: "";
   flex: 1;
   height: 1px;
   background: #e2e8f0;
@@ -342,14 +414,17 @@ body:has(.auth-screen) .app-revealed {
   letter-spacing: 0.02em;
   position: relative;
   overflow: hidden;
-  transition: background 0.2s, box-shadow 0.2s, transform 0.1s !important;
+  transition:
+    background 0.2s,
+    box-shadow 0.2s,
+    transform 0.1s !important;
 }
 
 .btn-emergency::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.12), transparent);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), transparent);
   pointer-events: none;
 }
 
@@ -364,9 +439,17 @@ body:has(.auth-screen) .app-revealed {
 
 /* Pulse animation for periodic attention draw */
 @keyframes emergency-pulse {
-  0%   { box-shadow: 0 4px 14px rgba(220,38,38,0.35); }
-  50%  { box-shadow: 0 0 0 6px rgba(220,38,38,0.2), 0 4px 14px rgba(220,38,38,0.4); }
-  100% { box-shadow: 0 4px 14px rgba(220,38,38,0.35); }
+  0% {
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+  }
+  50% {
+    box-shadow:
+      0 0 0 6px rgba(220, 38, 38, 0.2),
+      0 4px 14px rgba(220, 38, 38, 0.4);
+  }
+  100% {
+    box-shadow: 0 4px 14px rgba(220, 38, 38, 0.35);
+  }
 }
 
 .btn-emergency.pulse {
@@ -381,12 +464,26 @@ body:has(.auth-screen) .app-revealed {
 }
 
 @keyframes shake {
-  0%, 85%, 100% { transform: rotate(0deg); }
-  87%  { transform: rotate(-12deg); }
-  89%  { transform: rotate(12deg); }
-  91%  { transform: rotate(-10deg); }
-  93%  { transform: rotate(10deg); }
-  95%  { transform: rotate(0deg); }
+  0%,
+  85%,
+  100% {
+    transform: rotate(0deg);
+  }
+  87% {
+    transform: rotate(-12deg);
+  }
+  89% {
+    transform: rotate(12deg);
+  }
+  91% {
+    transform: rotate(-10deg);
+  }
+  93% {
+    transform: rotate(10deg);
+  }
+  95% {
+    transform: rotate(0deg);
+  }
 }
 
 /* Note below emergency button */
@@ -404,23 +501,41 @@ body:has(.auth-screen) .app-revealed {
    RESPONSIVE
 ══════════════════════════════════════ */
 @media (max-width: 768px) {
-  .auth-screen { flex-direction: column !important; position: fixed !important; inset: 0 !important; width: 100vw !important; height: 100vh !important; overflow: hidden !important; }
+  .auth-screen {
+    flex-direction: column !important;
+    position: fixed !important;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    overflow: hidden !important;
+  }
   .auth-screen.login .auth-brand,
   .auth-screen.login .auth-form-side,
   .auth-screen.register .auth-brand,
-  .auth-screen.register .auth-form-side { order: unset; }
+  .auth-screen.register .auth-form-side {
+    order: unset;
+  }
 
-  .auth-brand { min-height: 200px; padding: 28px 20px; }
-  .auth-brand h1 { font-size: 22px; }
+  .auth-brand {
+    min-height: 200px;
+    padding: 28px 20px;
+  }
+  .auth-brand h1 {
+    font-size: 22px;
+  }
 
   .auth-form-side {
     width: 100%;
     padding: 32px 24px;
-    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.1);
   }
 
-  .auth-form { max-width: 100%; }
-  .auth-choose-card { padding: 28px 20px; }
+  .auth-form {
+    max-width: 100%;
+  }
+  .auth-choose-card {
+    padding: 28px 20px;
+  }
 }
 
 .modal-backdrop {
@@ -463,7 +578,7 @@ body:has(.auth-screen) .app-revealed {
    Used by: Login.jsx, Register.jsx
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Poetsen+One&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poetsen+One&display=swap");
 
 /* ---------------------------------------------------------- */
 /* Floating-label inputs (Register — name/phone/email/pw)     */
@@ -481,7 +596,9 @@ body:has(.auth-screen) .app-revealed {
   color: #0f172a;
   background: transparent;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition:
+    border-color 0.2s,
+    box-shadow 0.2s;
   box-sizing: border-box;
   appearance: none;
 }
@@ -499,7 +616,7 @@ body:has(.auth-screen) .app-revealed {
   color: #94a3b8;
   pointer-events: none;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: 'Poetsen One', sans-serif;
+  font-family: "Poetsen One", sans-serif;
   background: #fff;
   padding: 0 4px;
   border-radius: 3px;
@@ -536,23 +653,22 @@ body:has(.auth-screen) .app-revealed {
   color: #fff !important;
   font-size: 15px;
   font-weight: 400;
-  font-family: 'Poetsen One', sans-serif;
+  font-family: "Poetsen One", sans-serif;
   margin: 0;
   -webkit-text-stroke: 4px #4f46e5;
   paint-order: stroke fill;
 }
 
 .auth-heading-stroke {
-  font-family: 'Poetsen One', sans-serif;
+  font-family: "Poetsen One", sans-serif;
   color: #fff;
-  -webkit-text-stroke: 5px #05328A;
+  -webkit-text-stroke: 5px #05328a;
   paint-order: stroke fill;
 }
 
-
 .auth-btn-text-stroke {
-  font-family: 'Poetsen One', sans-serif;
-  color: #05328A;
+  font-family: "Poetsen One", sans-serif;
+  color: #05328a;
   -webkit-text-stroke: 5px #fff;
   paint-order: stroke fill;
 }
@@ -566,12 +682,12 @@ body:has(.auth-screen) .app-revealed {
   border-radius: 9px;
   border: 1.5px solid #c7d2fe;
   background: #eef2ff;
-  color: #05328A;
+  color: #05328a;
   font-size: 12px;
   font-weight: 700;
   text-decoration: none;
   transition: all 0.15s;
-  font-family: 'Poetsen One', sans-serif;
+  font-family: "Poetsen One", sans-serif;
 }
 .ai-assessment-link:hover {
   background: #e0e7ff;
@@ -606,16 +722,22 @@ body:has(.auth-screen) .app-revealed {
   overflow: hidden;
 }
 .auth-bg {
-  background-size: cover !important;
-  background-position: center !important;
-  background-repeat: no-repeat !important;
+  background-size:
+    auto,
+    auto,
+    28px 28px,
+    cover !important;
+  background-position: center, center, center, center !important;
+  background-repeat: no-repeat, no-repeat, repeat, no-repeat !important;
 }
 
 /* ---------------------------------------------------------- */
 /* Register — responsive breakpoints                           */
 /* ---------------------------------------------------------- */
 @media (max-width: 768px) {
-  .auth-brand { display: none !important; }
+  .auth-brand {
+    display: none !important;
+  }
   .auth-form-wrapper {
     justify-content: center !important;
     padding: 16px !important;
@@ -628,42 +750,82 @@ body:has(.auth-screen) .app-revealed {
     border-radius: 16px !important;
     padding: 20px 18px 16px !important;
   }
-  .auth-logo-row { margin-bottom: 16px !important; }
-  .auth-logo-row h1 { font-size: 13px !important; }
+  .auth-logo-row {
+    margin-bottom: 16px !important;
+  }
+  .auth-logo-row h1 {
+    font-size: 13px !important;
+  }
 }
 
 @media (min-width: 769px) and (max-width: 1024px) {
-  .auth-brand { left: 65% !important; }
-  .auth-form-wrapper { padding: 24px 32px !important; }
-  .auth-form { max-width: 360px !important; }
+  .auth-brand {
+    left: 65% !important;
+  }
+  .auth-form-wrapper {
+    padding: 24px 32px !important;
+  }
+  .auth-form {
+    max-width: 360px !important;
+  }
 }
 
 @media (min-width: 1025px) and (max-width: 1440px) {
-  .auth-brand { left: 62% !important; }
+  .auth-brand {
+    left: 62% !important;
+  }
 }
 
 @media (min-width: 1441px) and (max-width: 1919px) {
-  .auth-brand { left: 65% !important; }
-  .auth-brand img { width: 110px !important; height: 110px !important; }
-  .auth-brand h1 { font-size: 34px !important; }
-  .auth-form-wrapper { padding: 24px 96px !important; }
-  .auth-form { max-width: 420px !important; padding: 28px 32px 24px !important; }
+  .auth-brand {
+    left: 65% !important;
+  }
+  .auth-brand img {
+    width: 110px !important;
+    height: 110px !important;
+  }
+  .auth-brand h1 {
+    font-size: 34px !important;
+  }
+  .auth-form-wrapper {
+    padding: 24px 96px !important;
+  }
+  .auth-form {
+    max-width: 420px !important;
+    padding: 28px 32px 24px !important;
+  }
 }
 
 @media (min-width: 1920px) {
-  .auth-brand { left: 68% !important; }
-  .auth-brand img { width: 130px !important; height: 130px !important; }
-  .auth-brand h1 { font-size: 40px !important; }
-  .auth-brand p { font-size: 18px !important; }
-  .auth-form-wrapper { padding: 24px 160px !important; }
-  .auth-form { max-width: 460px !important; padding: 32px 36px 28px !important; }
+  .auth-brand {
+    left: 68% !important;
+  }
+  .auth-brand img {
+    width: 130px !important;
+    height: 130px !important;
+  }
+  .auth-brand h1 {
+    font-size: 40px !important;
+  }
+  .auth-brand p {
+    font-size: 18px !important;
+  }
+  .auth-form-wrapper {
+    padding: 24px 160px !important;
+  }
+  .auth-form {
+    max-width: 460px !important;
+    padding: 32px 36px 28px !important;
+  }
 }
 
 /* ---------------------------------------------------------- */
 /* Login — responsive breakpoints                               */
 /* ---------------------------------------------------------- */
 @media (max-width: 768px) {
-  .auth-brand { display: none !important; }
+  .auth-brand {
+    display: none !important;
+  }
   .login-form-wrapper {
     justify-content: center !important;
     padding: 16px !important;
@@ -675,83 +837,196 @@ body:has(.auth-screen) .app-revealed {
   }
 }
 @media (min-width: 769px) and (max-width: 1024px) {
-  .auth-brand { left: 30% !important; }
-  .login-form-wrapper { padding: 24px 28px !important; }
-  .login-form-wrapper > div { max-width: 360px !important; }
+  .auth-brand {
+    left: 30% !important;
+  }
+  .login-form-wrapper {
+    padding: 24px 28px !important;
+  }
+  .login-form-wrapper > div {
+    max-width: 360px !important;
+  }
 }
 @media (min-width: 1025px) and (max-width: 1439px) {
-  .auth-brand { left: 32% !important; }
-  .login-form-wrapper { padding: 24px 56px !important; }
-  .login-form-wrapper > div { max-width: 400px !important; }
+  .auth-brand {
+    left: 32% !important;
+  }
+  .login-form-wrapper {
+    padding: 24px 56px !important;
+  }
+  .login-form-wrapper > div {
+    max-width: 400px !important;
+  }
 }
 @media (min-width: 1440px) and (max-width: 1919px) {
-  .auth-brand { left: 33% !important; }
-  .auth-brand img { width: 110px !important; height: 110px !important; }
-  .auth-brand h1 { font-size: 34px !important; }
-  .login-form-wrapper { padding: 24px 96px !important; }
-  .login-form-wrapper > div { max-width: 420px !important; padding: 36px 36px 28px !important; }
+  .auth-brand {
+    left: 33% !important;
+  }
+  .auth-brand img {
+    width: 110px !important;
+    height: 110px !important;
+  }
+  .auth-brand h1 {
+    font-size: 34px !important;
+  }
+  .login-form-wrapper {
+    padding: 24px 96px !important;
+  }
+  .login-form-wrapper > div {
+    max-width: 420px !important;
+    padding: 36px 36px 28px !important;
+  }
 }
 @media (min-width: 1920px) {
-  .auth-brand { left: 30% !important; }
-  .auth-brand img { width: 130px !important; height: 130px !important; }
-  .auth-brand h1 { font-size: 40px !important; }
-  .auth-brand p { font-size: 18px !important; }
-  .login-form-wrapper { padding: 24px 160px !important; }
-  .login-form-wrapper > div { max-width: 460px !important; padding: 40px 40px 32px !important; }
+  .auth-brand {
+    left: 30% !important;
+  }
+  .auth-brand img {
+    width: 130px !important;
+    height: 130px !important;
+  }
+  .auth-brand h1 {
+    font-size: 40px !important;
+  }
+  .auth-brand p {
+    font-size: 18px !important;
+  }
+  .login-form-wrapper {
+    padding: 24px 160px !important;
+  }
+  .login-form-wrapper > div {
+    max-width: 460px !important;
+    padding: 40px 40px 32px !important;
+  }
 }
 
 /* ---------------------------------------------------------- */
 /* Welcome popup (post-login) keyframes                        */
 /* ---------------------------------------------------------- */
 @keyframes welcomeSlideUp {
-  from { opacity: 0; transform: translateY(24px) scale(0.97); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 @keyframes avatarPop {
-  0%   { transform: scale(0); }
-  70%  { transform: scale(1.12); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 @keyframes checkDraw {
-  from { stroke-dashoffset: 60; }
-  to   { stroke-dashoffset: 0; }
+  from {
+    stroke-dashoffset: 60;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
 }
 @keyframes ringPulse {
-  0%   { transform: scale(1); opacity: 0.6; }
-  100% { transform: scale(1.5); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: scale(1.5);
+    opacity: 0;
+  }
 }
 @keyframes progressFill {
-  from { width: 0%; }
-  to   { width: 100%; }
+  from {
+    width: 0%;
+  }
+  to {
+    width: 100%;
+  }
 }
 
 /* ---------------------------------------------------------- */
 /* 2FA modal + OTP box keyframes                                */
 /* ---------------------------------------------------------- */
-@keyframes pinOverlayIn  { from { opacity: 0; } to { opacity: 1; } }
-@keyframes pinOverlayOut { from { opacity: 1; } to { opacity: 0; } }
+@keyframes pinOverlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes pinOverlayOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
 @keyframes pinModalIn {
-  from { opacity: 0; transform: translateY(24px) scale(0.95); }
-  to   { opacity: 1; transform: translateY(0) scale(1); }
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 @keyframes pinModalOut {
-  from { opacity: 1; transform: translateY(0) scale(1); }
-  to   { opacity: 0; transform: translateY(16px) scale(0.96); }
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(16px) scale(0.96);
+  }
 }
 @keyframes pinDigitPop {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.18); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 @keyframes pinShake {
-  0%, 100% { transform: translateX(0); }
-  20%      { transform: translateX(-8px); }
-  40%      { transform: translateX(8px); }
-  60%      { transform: translateX(-6px); }
-  80%      { transform: translateX(6px); }
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-8px);
+  }
+  40% {
+    transform: translateX(8px);
+  }
+  60% {
+    transform: translateX(-6px);
+  }
+  80% {
+    transform: translateX(6px);
+  }
 }
 @keyframes pinSuccessPulse {
-  0%   { transform: scale(1); }
-  50%  { transform: scale(1.1); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
