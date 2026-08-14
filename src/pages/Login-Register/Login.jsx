@@ -482,7 +482,18 @@ const Login = () => {
       )}
 
       <div className="auth-screen login" style={{ minHeight: "100vh", minWidth: "100vw" }}>
-        <div className="auth-bg" style={{ backgroundImage: "url('/image/bg.jpg')" }} />
+        <div className="auth-bg" style={{
+          backgroundColor: "#0f172a",
+          backgroundImage: `
+            radial-gradient(circle at 18% 12%, rgba(99,102,241,0.10) 0%, transparent 45%),
+            radial-gradient(circle at 88% 88%, rgba(30,58,138,0.10) 0%, transparent 50%),
+            radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px),
+            url('/image/bg.png')
+          `,
+          backgroundSize: "auto, auto, 28px 28px, cover",
+          backgroundPosition: "center, center, center, center",
+          backgroundRepeat: "no-repeat, no-repeat, repeat, no-repeat",
+        }} />
 
         {/* ── Branding left ── */}
         <div className="auth-brand auth-brand-pos">
