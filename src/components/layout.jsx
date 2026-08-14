@@ -1154,8 +1154,8 @@ const BranchPill = ({ branchId, branchName, isExpanded }) => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          height: 28,
-          marginBottom: 8,
+          height: 14,
+          marginBottom: 4,
         }}
       >
         <div
@@ -1179,10 +1179,11 @@ const BranchPill = ({ branchId, branchName, isExpanded }) => {
         borderRadius: 8,
         background: `${color}18`,
         border: `0.5px solid ${color}44`,
-        display: "flex",
+        display: "inline-flex",
         alignItems: "center",
         gap: 7,
         transition: "all 0.25s",
+        width: "fit-content",
       }}
     >
       <div
@@ -2307,7 +2308,7 @@ export const Layout = ({ children }) => {
   const avatarLetter = user.name?.charAt(0)?.toUpperCase() || "U";
   const totalUnread = easCount + msgCount + stockCount;
 
-  const SIDEBAR_W = sidebarPinned ? 220 : 62;
+  const SIDEBAR_W = sidebarPinned ? 200 : 62;
   const SIDEBAR_TRANSITION = "width 0.4s cubic-bezier(0.25,0.8,0.25,1)";
 
   // Polls for newly-approved pending user accounts and pops the "Account Approved" modal.
@@ -3310,7 +3311,7 @@ export const Layout = ({ children }) => {
               paddingRight: isExpanded ? 10 : 0,
               justifyContent: isExpanded ? "flex-start" : "center",
               marginTop: 8,
-              marginBottom: 16,
+              marginBottom: isExpanded ? 16 : 6,
               transition:
                 "padding 0.3s cubic-bezier(0.4,0,0.2,1), justify-content 0.3s",
             }}
