@@ -5838,7 +5838,7 @@ const PatientRecord = () => {
       {/* ── CONTENT ── */}
       <div
         className="content pr-page-content"
-        style={{ paddingTop: 70, marginTop: 0 }}
+        style={{ paddingTop: "var(--pr-content-pad-top, 70px)", marginTop: 0 }}
       >
         <div
           className="pr-stat-grid"

@@ -509,4 +509,11 @@ footer {
     margin: 0 !important;
     transform: none !important;
   }
+  .site-header.is-scrolled {
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    transform: none !important;
+  }
 }

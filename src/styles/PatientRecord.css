@@ -572,6 +572,9 @@
     width: 100% !important;
   }
 
+  :root {
+    --pr-content-pad-top: 0px;
+  }
   .content,
   .pr-page-content {
     padding-top: 0 !important;
