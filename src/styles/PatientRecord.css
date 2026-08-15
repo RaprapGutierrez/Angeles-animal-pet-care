@@ -663,3 +663,15 @@
     overflow-x: hidden !important;
   }
 }
+
+@media (max-width: 768px) {
+  .content {
+    padding-top: 0 !important;
+  }
+  .patient-record-topbar {
+    margin-bottom: 0 !important;
+  }
+  .pr-stat-grid {
+    margin-top: 0 !important;
+  }
+}
