@@ -499,6 +499,8 @@ footer {
 }
 
 @media (max-width: 768px) {
+  .site-header,
+  .site-header.is-scrolled,
   .site-header:not(.is-scrolled) {
     position: fixed !important;
     top: 0 !important;
@@ -512,19 +514,14 @@ footer {
     transform: none !important;
     box-sizing: border-box !important;
   }
-  .site-header.is-scrolled {
-    left: 0 !important;
-    right: 0 !important;
-    width: 100vw !important;
-    max-width: 100vw !important;
-    margin: 0 !important;
-    margin-left: calc(50% - 50vw) !important;
-    margin-right: calc(50% - 50vw) !important;
-    transform: none !important;
-    box-sizing: border-box !important;
-  }
-  .site-header.is-scrolled > div {
+  .site-header > div,
+  .site-header.is-scrolled > div,
+  .site-header:not(.is-scrolled) > div {
     border-radius: 0 !important;
     margin: 0 !important;
+    box-shadow: 0 4px 20px rgba(61, 47, 160, 0.07) !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
   }
 }
