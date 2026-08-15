@@ -288,19 +288,29 @@ body {
 .site-header {
   position: fixed !important;
   left: 50% !important;
-  transform: translatex(-50%) !important;
+  transform: translateX(-50%) !important;
   z-index: 9000 !important;
   width: 100% !important;
   max-width: 100% !important;
   isolation: isolate;
   transition:
-    width 0.3s,
-    max-width 0.3s,
-    top 0.3s;
+    width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    max-width 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    top 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .site-header.is-scrolled {
   width: 75% !important;
   max-width: 900px !important;
+}
+
+/* Smooths the inner bar (logo/nav row) as it shrinks alongside the
+ * outer .site-header — border-radius/box-shadow/margin there are set
+ * via inline style in JSX, which needs its own transition to animate. */
+.site-header > div {
+  transition:
+    border-radius 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+    margin 0.35s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 section,
@@ -373,6 +383,7 @@ footer {
   }
   .header-nav {
     display: none !important;
+    transition: opacity 0.25s ease;
   }
   .header-nav.open {
     display: flex !important;
