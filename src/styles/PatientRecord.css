@@ -582,7 +582,7 @@
   :root {
     --pr-content-pad-top: 0px;
   }
-  .content,
+  .content.pr-page-content,
   .pr-page-content {
     padding-top: 0 !important;
     padding-left: 12px !important;
