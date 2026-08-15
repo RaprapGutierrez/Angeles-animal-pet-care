@@ -5848,7 +5848,7 @@ const PatientRecord = () => {
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
             gap: 14,
-            marginBottom: 24,
+            marginBottom: "var(--pr-stat-gap-bottom, 24px)",
             marginTop: 0,
             overflowX: "hidden",
             width: "100%",

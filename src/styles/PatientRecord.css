@@ -584,7 +584,7 @@
   }
   .content.pr-page-content,
   .pr-page-content {
-    padding-top: 0 !important;
+    padding-top: 10 !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
     margin: 0 !important;
@@ -596,10 +596,13 @@
   .pr-page-content > *:first-child {
     margin-top: 0 !important;
   }
+  :root {
+    --pr-stat-gap-bottom: 20px;
+  }
   .pr-stat-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     margin-top: 0 !important;
-    margin-bottom: 0 !important;
+    margin-bottom: 20px !important;
     gap: 10px !important;
     overflow: visible !important;
     width: 100% !important;
