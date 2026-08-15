@@ -581,6 +581,7 @@
   .pr-stat-grid {
     grid-template-columns: repeat(2, 1fr) !important;
     margin-top: 0 !important;
+    margin-bottom: 0 !important;
     gap: 10px !important;
   }
   .patient-record-topbar {
@@ -589,6 +590,14 @@
   .patient-record-topbar + .content,
   .patient-record-topbar ~ .content {
     margin-top: 0px !important;
+  }
+  .stat-card-v2 {
+    padding: 14px !important;
+    gap: 8px !important;
+  }
+  .stat-card-v2 .stat-icon-v2 {
+    width: 38px !important;
+    height: 38px !important;
   }
 
   .fab-wrap {
