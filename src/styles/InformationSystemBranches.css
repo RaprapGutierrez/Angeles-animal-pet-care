@@ -516,4 +516,8 @@ footer {
     max-width: 100% !important;
     transform: none !important;
   }
+  .site-header.is-scrolled > div {
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
 }

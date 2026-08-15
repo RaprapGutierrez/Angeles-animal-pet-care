@@ -551,6 +551,10 @@
     min-width: 0 !important;
   }
 
+  :root {
+    --pr-topbar-top: 0px;
+    --pr-topbar-left: 0px;
+  }
   .patient-record-topbar {
     position: static !important;
     top: auto !important;
@@ -561,6 +565,9 @@
     margin: 0 0 12px !important;
     padding: 12px 16px !important;
     box-sizing: border-box !important;
+  }
+  .fab-wrap {
+    position: fixed !important;
   }
   .patient-record-topbar .topbar-title,
   .patient-record-topbar .topbar-actions {

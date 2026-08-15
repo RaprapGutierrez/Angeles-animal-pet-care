@@ -5617,9 +5617,11 @@ const PatientRecord = () => {
       <div
         className="topbar patient-record-topbar"
         style={{
+          "--pr-topbar-top": "68px",
+          "--pr-topbar-left": "var(--current-sidebar-w, 62px)",
           position: "fixed",
-          top: 68,
-          left: "var(--current-sidebar-w, 62px)",
+          top: "var(--pr-topbar-top)",
+          left: "var(--pr-topbar-left)",
           right: 0,
           zIndex: 40,
           background: "#fff",
