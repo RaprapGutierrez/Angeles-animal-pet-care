@@ -197,8 +197,12 @@
   }
 
   /* Since topbar is no longer fixed, remove the fixed-topbar padding reserved by .content */
+  .content.appt-content,
   .appt-content {
-    padding-top: 0 !important;
+    padding-top: 16px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    padding-bottom: 20px !important;
     margin: 0 !important;
   }
   .appt-content > *:first-child {
@@ -211,6 +215,7 @@
     gap: 10px !important;
     margin-bottom: 16px !important;
     margin-top: 0 !important;
+    margin-bottom: 20px !important;
   }
   .appt-stats-grid .stat-card-v2 {
     padding: 14px !important;
