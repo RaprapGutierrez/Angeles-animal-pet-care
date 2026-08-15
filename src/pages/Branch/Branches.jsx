@@ -775,7 +775,7 @@ const Branches = () => {
               ))}
             </div>
           ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12, alignItems: 'start' }}>
               {branches.map(b => {
                 const isExpanded = expandedId === b.id;
                 return (
@@ -888,7 +888,6 @@ const Branches = () => {
                 <h3 style={{ margin: 0 }}>{viewBranch.name}</h3>
                 <span className={`badge ${viewBranch.status === 'Active' ? 'badge-green' : 'badge-red'}`}>{viewBranch.status}</span>
               </div>
-              <button className="btn btn-ghost branches-btn-auto" onClick={() => { setViewBranch(null); openEdit(viewBranch); }}>Edit Branch</button>
               <button className="btn btn-primary branches-btn-auto" onClick={() => setViewBranch(null)}>Close</button>
             </div>
             <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -992,7 +991,6 @@ const Branches = () => {
               })()}
             </div>
             <div className="modal-footer">
-              <button className="btn btn-ghost branches-btn-auto" onClick={() => { setViewBranch(null); openEdit(viewBranch); }}>Edit Branch</button>
               <button className="btn btn-primary branches-btn-auto" onClick={() => setViewBranch(null)}>Close</button>
             </div>
           </div>
@@ -1058,7 +1056,7 @@ const Branches = () => {
               {editBranch && (
                 <div className="modal-header">
                   <h3>Edit Branch</h3>
-                  <button className="btn btn-ghost btn-icon branches-btn-auto" onClick={() => setViewBranch(null)}>✕</button>
+                  <button className="btn btn-ghost btn-icon branches-btn-auto" onClick={handleModalClose}>✕</button>
                 </div>
               )}
               {!editBranch && (

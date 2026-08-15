@@ -1011,7 +1011,7 @@ const Dashboard = () => {
                   lineHeight: 1.2,
                 }}
               >
-                Good day,{" "}
+                {greeting},{" "}
                 <span
                   style={{
                     background: "linear-gradient(90deg,#7dd3fc,#bae6fd)",

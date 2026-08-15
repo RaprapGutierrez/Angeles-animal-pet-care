@@ -14,6 +14,34 @@ function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
+/* ── Reads the logged-in user from sessionStorage (set by sb.signIn) so the
+ * public Information System header can show "Dashboard" instead of "Sign In"
+ * for a user who's still logged in, without requiring another login. ── */
+function getSessionUser() {
+  try {
+    const raw = sessionStorage.getItem("sb_user");
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed?.id) return null;
+    const meta = parsed.user_metadata || {};
+    const appMeta = parsed.app_metadata || {};
+    const firstName = meta.first_name || "";
+    const lastName = meta.last_name || "";
+    const name =
+      firstName || lastName
+        ? `${firstName} ${lastName}`.trim()
+        : parsed.email?.split("@")[0] || "Account";
+    const role = appMeta.role || meta.role || "Employee";
+    const dashboardPath =
+      String(role).toLowerCase() === "customer"
+        ? "/customer/dashboard"
+        : "/dashboard";
+    return { name, role, dashboardPath };
+  } catch {
+    return null;
+  }
+}
+
 /* ── Dog / Cat SVG icons (same paths used in CustomerAIChat pet-type picker) ── */
 const DogIcon = ({ size = 18, color = "currentColor" }) => (
   <svg
@@ -1536,6 +1564,7 @@ function FixedPortal({ children }) {
 function Header({ onFAQClick }) {
   const [activeSection, setActiveSection] = useState("home");
   const scrolled = activeSection !== "home";
+  const [sessionUser] = useState(() => getSessionUser());
 
   useEffect(() => {
     const sections = [
@@ -1817,31 +1846,81 @@ function Header({ onFAQClick }) {
             >
               FAQ
             </button>
-            <button
-              className="pill"
-              onClick={() => (window.location.href = "/login")}
-              style={{
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#fff",
-                background: T.primary,
-                padding: "7px 16px",
-                borderRadius: 9,
-                border: "none",
-                transition: "opacity .2s, transform .2s",
-                fontFamily: "'Poetsen One', sans-serif",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.opacity = ".85";
-                e.currentTarget.style.transform = "translateY(-1px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = "1";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              Sign In
-            </button>
+            {sessionUser ? (
+              <button
+                className="pill"
+                onClick={() =>
+                  (window.location.href = sessionUser.dashboardPath)
+                }
+                title="Go to your dashboard"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#fff",
+                  background: T.primary,
+                  padding: "5px 14px 5px 5px",
+                  borderRadius: 999,
+                  border: "none",
+                  transition: "opacity .2s, transform .2s",
+                  fontFamily: "'Poetsen One', sans-serif",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = ".85";
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                <span
+                  style={{
+                    width: 26,
+                    height: 26,
+                    borderRadius: "50%",
+                    background: "rgba(255,255,255,.2)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 12,
+                    fontWeight: 800,
+                    flexShrink: 0,
+                  }}
+                >
+                  {sessionUser.name.charAt(0).toUpperCase()}
+                </span>
+                {sessionUser.name}
+              </button>
+            ) : (
+              <button
+                className="pill"
+                onClick={() => (window.location.href = "/login")}
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#fff",
+                  background: T.primary,
+                  padding: "7px 16px",
+                  borderRadius: 9,
+                  border: "none",
+                  transition: "opacity .2s, transform .2s",
+                  fontFamily: "'Poetsen One', sans-serif",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.opacity = ".85";
+                  e.currentTarget.style.transform = "translateY(-1px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.opacity = "1";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                Sign In
+              </button>
+            )}
           </nav>
         </div>
       </div>

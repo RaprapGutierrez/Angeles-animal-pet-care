@@ -3969,6 +3969,40 @@ export const Layout = ({ children }) => {
               }}
             >
               <button
+                onClick={() => window.open("/", "_blank", "noopener,noreferrer")}
+                title="View Information System"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "6px 12px",
+                  borderRadius: 8,
+                  border: "1px solid var(--border)",
+                  background: "transparent",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  color: "var(--text)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <line x1="2" y1="12" x2="22" y2="12" />
+                  <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+                </svg>
+                Info Site
+              </button>
+              <button
                 onClick={() => setMobileSidebarOpen((v) => !v)}
                 style={{
                   display: "none",

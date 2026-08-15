@@ -76,7 +76,6 @@ body:has(.auth-screen) .app-revealed {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(15, 23, 42, 0.25);
 }
 /* ══════════════════════════════════════
    CHOOSE SCREEN — centered card over bg
