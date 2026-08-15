@@ -3779,25 +3779,21 @@ const PatientRecord = () => {
       parallelTasks.push(occupyRoom(form.room, form.name, form.condition));
     if (pendingVax.length > 0)
       parallelTasks.push(
-        supabase
-          .from(T_VACCINATIONS)
-          .insert(
-            pendingVax.map(({ _key, ...v }) => ({
-              ...v,
-              patient_id: patientId,
-            })),
-          ),
+        supabase.from(T_VACCINATIONS).insert(
+          pendingVax.map(({ _key, ...v }) => ({
+            ...v,
+            patient_id: patientId,
+          })),
+        ),
       );
     if (pendingTreat.length > 0)
       parallelTasks.push(
-        supabase
-          .from(T_TREATMENTS)
-          .insert(
-            pendingTreat.map(({ _key, ...t }) => ({
-              ...t,
-              patient_id: patientId,
-            })),
-          ),
+        supabase.from(T_TREATMENTS).insert(
+          pendingTreat.map(({ _key, ...t }) => ({
+            ...t,
+            patient_id: patientId,
+          })),
+        ),
       );
     if (parallelTasks.length > 0) await Promise.all(parallelTasks);
     if (ownerUserId) {
@@ -5840,7 +5836,10 @@ const PatientRecord = () => {
         </div>
       </div>
       {/* ── CONTENT ── */}
-      <div className="content" style={{ paddingTop: 70, marginTop: 0 }}>
+      <div
+        className="content pr-page-content"
+        style={{ paddingTop: 70, marginTop: 0 }}
+      >
         <div
           className="pr-stat-grid"
           style={{
