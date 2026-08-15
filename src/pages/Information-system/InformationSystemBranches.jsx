@@ -14,24 +14,27 @@ function cn(...classes) {
   return classes.filter(Boolean).join(" ");
 }
 
-/* ── Reads the logged-in user from sessionStorage (set by sb.signIn) so the
- * public Information System header can show "Dashboard" instead of "Sign In"
- * for a user who's still logged in, without requiring another login. ── */
+/* ── Reads the logged-in user from the same "hospital_jwt" token that
+ * App.jsx's getRole() and Layout.jsx's readUserInfo() use, so the public
+ * Information System header shows the account instead of "Sign In" for a
+ * user who's still logged in, without requiring another login. ── */
 function getSessionUser() {
   try {
-    const raw = sessionStorage.getItem("sb_user");
-    if (!raw) return null;
-    const parsed = JSON.parse(raw);
-    if (!parsed?.id) return null;
-    const meta = parsed.user_metadata || {};
-    const appMeta = parsed.app_metadata || {};
+    const token = localStorage.getItem("hospital_jwt");
+    if (!token) return null;
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    if (payload.exp && payload.exp < Math.floor(Date.now() / 1000)) {
+      return null;
+    }
+    const meta = payload.user_metadata || {};
+    const appMeta = payload.app_metadata || {};
     const firstName = meta.first_name || "";
     const lastName = meta.last_name || "";
     const name =
       firstName || lastName
         ? `${firstName} ${lastName}`.trim()
-        : parsed.email?.split("@")[0] || "Account";
-    const role = appMeta.role || meta.role || "Employee";
+        : payload.email?.split("@")[0] || "Account";
+    const role = appMeta.role || meta.role || payload.role || "Employee";
     const dashboardPath =
       String(role).toLowerCase() === "customer"
         ? "/customer/dashboard"

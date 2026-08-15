@@ -4052,7 +4052,7 @@ export const Layout = ({ children }) => {
             >
               {/* Go to Info Site */}
               <button
-                onClick={() => window.open("/info", "_blank", "noopener,noreferrer")}
+                onClick={() => { window.location.href = "/info"; }}
                 title="View the public Information System site"
                 style={{
                   display: "flex",
