@@ -1029,7 +1029,7 @@ const Inventory = () => {
         )}
 
         {/* Stat cards */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(195px,1fr))', gap: 14, marginBottom: 24 }}>
+        <div className="inv-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(195px,1fr))', gap: 14, marginBottom: 24 }}>
           {loading ? [1, 2, 3, 4].map(i => (
             <div key={i} style={{ background: '#fff', border: '1.5px solid var(--border)', borderRadius: 16, padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div className="skel" style={{ width: 46, height: 46, borderRadius: 12 }} />

@@ -4052,7 +4052,10 @@ export const Layout = ({ children }) => {
             >
               {/* Go to Info Site */}
               <button
-                onClick={() => { window.location.href = "/info"; }}
+                className="info-site-btn"
+                onClick={() => {
+                  window.location.href = "/info";
+                }}
                 title="View the public Information System site"
                 style={{
                   display: "flex",
@@ -4093,7 +4096,7 @@ export const Layout = ({ children }) => {
                   <line x1="2" y1="12" x2="22" y2="12" />
                   <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                 </svg>
-                Go to Info Site
+                <span className="info-site-btn-label">Go to Info Site</span>
               </button>
 
               {/* Bell */}

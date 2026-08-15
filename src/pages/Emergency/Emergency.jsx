@@ -1080,7 +1080,7 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
         </div>
 
         {/* ── Stats ── */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: 10, marginBottom: 24 }}>
+        <div className="emg-stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: 10, marginBottom: 24 }}>
           {[
             { label: "Total Alerts", value: visibleAlerts.length, color: "#6366f1", bg: "#eef2ff", border: "#c7d2fe" },
             { label: "Pending", value: pending.length, color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
@@ -1221,21 +1221,31 @@ const AdminView = ({ alerts, loading, onRefresh, onUpdateStatus, userBranch, bra
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /><polyline points="10 9 9 9 8 9" /></svg>
               Alert History ({filteredHistoryAlerts.length}{filteredHistoryAlerts.length !== historyAlerts.length ? ` of ${historyAlerts.length}` : ''})
             </h3>
-            <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
-              <select value={historyStatusFilter} onChange={e => setHistoryStatusFilter(e.target.value)}
-                style={{ fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 7, border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--text)", fontFamily: "inherit", outline: "none", cursor: "pointer" }}>
-                <option value="">All Statuses</option>
-                <option value="responding">Responding</option>
-                <option value="resolved">Resolved</option>
-              </select>
-              <select value={historyTypeFilter} onChange={e => setHistoryTypeFilter(e.target.value)}
-                style={{ fontSize: 12, fontWeight: 600, padding: "6px 10px", borderRadius: 7, border: "1.5px solid var(--border)", background: "var(--card)", color: "var(--text)", fontFamily: "inherit", outline: "none", cursor: "pointer", maxWidth: 220 }}>
-                <option value="">All Types</option>
-                {historyTypeOptions.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+            <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ width: 160 }}>
+                <CustomSelect
+                  value={historyStatusFilter}
+                  onChange={setHistoryStatusFilter}
+                  placeholder="All Statuses"
+                  accent="#dc2626"
+                  options={[
+                    { value: "responding", label: "Responding" },
+                    { value: "resolved", label: "Resolved" },
+                  ]}
+                />
+              </div>
+              <div style={{ width: 200 }}>
+                <CustomSelect
+                  value={historyTypeFilter}
+                  onChange={setHistoryTypeFilter}
+                  placeholder="All Types"
+                  accent="#dc2626"
+                  options={historyTypeOptions.map(t => ({ value: t, label: t }))}
+                />
+              </div>
               {(historyStatusFilter || historyTypeFilter) && (
                 <button onClick={() => { setHistoryStatusFilter(""); setHistoryTypeFilter(""); }}
-                  style={{ fontSize: 11, fontWeight: 700, color: "var(--royal)", background: "none", border: "1px solid var(--royal)", borderRadius: 20, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit" }}>
+                  style={{ fontSize: 11, fontWeight: 700, color: "var(--royal)", background: "none", border: "1px solid var(--royal)", borderRadius: 20, padding: "3px 10px", cursor: "pointer", fontFamily: "inherit", flexShrink: 0 }}>
                   ✕ Clear filters
                 </button>
               )}
@@ -1310,7 +1320,7 @@ const StaffView = ({ alerts, loading, sending, onSend, onExit, onUpdateStatus, u
           <img src="/image/emergency_alert_system.png" alt="Emergency Alert System" style={{ width: "100%", height: "auto", display: "block", borderRadius: 14 }} />
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: 10, marginBottom: 24 }}>
+        <div className="emg-stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))", gap: 10, marginBottom: 24 }}>
           {[
             { label: "Total Alerts", value: branchAlerts.length, color: "#6366f1", bg: "#eef2ff", border: "#c7d2fe" },
             { label: "Pending", value: branchAlerts.filter(a => (a.status || "pending") === "pending").length, color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },

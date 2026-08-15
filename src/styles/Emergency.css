@@ -1,12 +1,18 @@
 .skel {
-  background: linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
   background-size: 600px 100%;
   animation: shimmer 1.4s infinite linear;
   border-radius: 8px;
   display: block;
 }
-.send-alert-btn:not(:disabled):hover { opacity: 0.88; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(220,38,38,0.3); }
-.send-alert-btn { transition: all 0.18s; }
+.send-alert-btn:not(:disabled):hover {
+  opacity: 0.88;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3);
+}
+.send-alert-btn {
+  transition: all 0.18s;
+}
 
 .emg-page {
   width: 100%;
@@ -52,18 +58,32 @@
 }
 
 @keyframes shimmer {
-  0%   { background-position: -600px 0 }
-  100% { background-position:  600px 0 }
+  0% {
+    background-position: -600px 0;
+  }
+  100% {
+    background-position: 600px 0;
+  }
 }
 @keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-
 @media (min-width: 769px) {
-  .emergency-topbar { left: var(--current-sidebar-w, 62px) !important; }
-  .emergency-cont { padding: 24px 28px !important; padding-top: 110px !important; }
+  .emergency-topbar {
+    left: var(--current-sidebar-w, 62px) !important;
+  }
+  .emergency-cont {
+    padding: 24px 28px !important;
+    padding-top: 110px !important;
+  }
 }
 
 @media (max-width: 768px) {
@@ -73,7 +93,6 @@
     max-width: 100vw !important;
   }
 }
-
 
 @media (max-width: 768px) {
   .emergency-topbar {
@@ -131,5 +150,27 @@
   }
   .emg-panel > div[style*="max-height"] {
     max-height: 320px !important;
+  }
+
+  /* Stat cards: 2 per row on mobile */
+  .emg-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+  .emg-stats-grid > div {
+    padding: 14px 14px !important;
+  }
+  .emg-stats-grid > div > div:nth-child(2) {
+    font-size: 24px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .emg-stats-grid {
+    gap: 6px !important;
+  }
+  .emg-stats-grid > div {
+    padding: 12px !important;
   }
 }

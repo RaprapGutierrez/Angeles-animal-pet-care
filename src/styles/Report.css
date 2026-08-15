@@ -1,37 +1,67 @@
 @keyframes reportFadeUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .fade-in {
   animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 @keyframes reportFadeIn {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 @keyframes reportBarGrow {
-  from { transform: scaleY(0); opacity: 0; }
-  to   { transform: scaleY(1); opacity: 1; }
+  from {
+    transform: scaleY(0);
+    opacity: 0;
+  }
+  to {
+    transform: scaleY(1);
+    opacity: 1;
+  }
 }
 @keyframes reportSpin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 @keyframes reportShimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position: 200% center; }
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
 }
 
 .report-stat-card {
   animation: reportFadeUp 0.38s ease both;
-  transition: box-shadow 0.2s, transform 0.2s;
+  transition:
+    box-shadow 0.2s,
+    transform 0.2s;
 }
 .report-stat-card:hover {
   transform: translateY(-3px);
-  box-shadow: 0 8px 28px rgba(30,58,138,0.10) !important;
+  box-shadow: 0 8px 28px rgba(30, 58, 138, 0.1) !important;
 }
 .report-chart-card {
   animation: reportFadeIn 0.45s ease both;
@@ -74,7 +104,7 @@
   display: inline-block;
 }
 .export-spin-light {
-  border-color: rgba(255,255,255,0.5);
+  border-color: rgba(255, 255, 255, 0.5);
   border-top-color: #fff;
 }
 
@@ -102,5 +132,29 @@
   }
   .report-topbar > div:last-child > div {
     width: 100% !important;
+  }
+
+  /* Stat cards: 2 per row on mobile, tighter spacing */
+  .report-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+  }
+  .report-stats-grid > div {
+    padding: 14px !important;
+    gap: 8px !important;
+  }
+  .report-stats-grid h3 {
+    font-size: 20px !important;
+    margin: 3px 0 4px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .report-stats-grid {
+    gap: 8px !important;
+  }
+  .report-stats-grid > div {
+    padding: 12px !important;
   }
 }
