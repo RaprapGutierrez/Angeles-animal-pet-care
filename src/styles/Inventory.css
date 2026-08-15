@@ -272,14 +272,17 @@
     width: 100% !important;
   }
 
-  .content {
-    padding-top: 0 !important;
+  .content.inv-page-content,
+  .inv-page-content {
+    padding-top: 16px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    padding-bottom: 20px !important;
     margin: 0 !important;
   }
-  .content > *:first-child {
+  .inv-page-content > *:first-child {
     margin-top: 0 !important;
   }
-
   /* Stat cards: 2 per row on mobile, tighter spacing */
   .inv-stats-grid {
     grid-template-columns: repeat(2, 1fr) !important;

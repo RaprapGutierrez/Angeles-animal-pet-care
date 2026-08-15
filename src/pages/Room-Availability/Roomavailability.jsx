@@ -2749,7 +2749,7 @@ const RoomAvailability = () => {
       </div>
 
       {/* ── CONTENT ── */}
-      <div className="content">
+      <div className="content room-content">
         {/* Stat Cards */}
         <div
           className="room-stats-grid"

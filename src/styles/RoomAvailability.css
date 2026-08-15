@@ -323,11 +323,15 @@
     justify-content: flex-end !important;
   }
 
-  .content {
-    padding-top: 0 !important;
+  .content.room-content,
+  .room-content {
+    padding-top: 16px !important;
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+    padding-bottom: 20px !important;
     margin: 0 !important;
   }
-  .content > *:first-child {
+  .room-content > *:first-child {
     margin-top: 0 !important;
   }
 
