@@ -580,11 +580,11 @@
   }
 
   :root {
-    --pr-content-pad-top: 0px;
+    --pr-content-pad-top: 10px;
   }
   .content.pr-page-content,
   .pr-page-content {
-    padding-top: 10 !important;
+    padding-top: 10px !important;
     padding-left: 12px !important;
     padding-right: 12px !important;
     margin: 0 !important;
