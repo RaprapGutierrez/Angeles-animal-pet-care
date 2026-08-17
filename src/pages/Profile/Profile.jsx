@@ -1875,8 +1875,7 @@ const Profile = () => {
                   width: "100%",
                   borderCollapse: "collapse",
                   fontSize: 13,
-                  tableLayout: "auto",
-                  minWidth: 860,
+                  minWidth: 780,
                 }}
               >
                 <thead>
@@ -1934,7 +1933,6 @@ const Profile = () => {
                             padding: "12px 14px",
                             borderBottom: `1px solid ${T.border}`,
                             verticalAlign: "middle",
-                            whiteSpace: "nowrap",
                           }}
                         >
                           <div
@@ -1974,7 +1972,6 @@ const Profile = () => {
                             verticalAlign: "middle",
                             color: T.muted,
                             fontWeight: 600,
-                            whiteSpace: "nowrap",
                           }}
                         >
                           {a.vet || "—"}
@@ -2008,7 +2005,6 @@ const Profile = () => {
                             padding: "12px 14px",
                             borderBottom: `1px solid ${T.border}`,
                             verticalAlign: "middle",
-                            whiteSpace: "nowrap",
                           }}
                         >
                           {a.purpose || "—"}
