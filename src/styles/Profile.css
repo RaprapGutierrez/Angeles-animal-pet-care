@@ -125,42 +125,35 @@
    the page itself goes single-column. */
 @media (max-width: 900px) {
   .schedule-table-wrap {
-    overflow-x: visible !important;
+    width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
   }
+
   .schedule-table-wrap table {
-    min-width: 0 !important;
+    width: 100% !important;
+    min-width: 780px !important;
     table-layout: auto !important;
   }
-  .schedule-table-wrap colgroup {
-    display: none;
-  }
+
   .schedule-table-wrap thead {
-    display: none;
+    display: table-header-group !important;
   }
+
   .schedule-table-wrap tbody tr {
-    display: block;
-    padding: 10px 4px;
-    border-bottom: 1px solid var(--border, #e2e8f0);
+    display: table-row !important;
+    padding: 0 !important;
   }
+
   .schedule-table-wrap tbody td {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    padding: 6px 0 !important;
-    border-bottom: none !important;
-    max-width: none !important;
-    white-space: normal !important;
-    text-align: right;
+    display: table-cell !important;
+    padding: 12px 14px !important;
+    white-space: nowrap !important;
+    text-align: left !important;
+    border-bottom: 1px solid var(--border, #e2e8f0) !important;
   }
+
   .schedule-table-wrap tbody td::before {
-    content: attr(data-label);
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--muted, #64748b);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    text-align: left;
-    flex-shrink: 0;
+    display: none !important;
   }
 }
