@@ -1875,19 +1875,10 @@ const Profile = () => {
                   width: "100%",
                   borderCollapse: "collapse",
                   fontSize: 13,
-                  tableLayout: "fixed",
-                  minWidth: 1010,
+                  tableLayout: "auto",
+                  minWidth: 860,
                 }}
               >
-                <colgroup>
-                  <col style={{ width: "140px" }} />
-                  <col style={{ width: "160px" }} />
-                  <col style={{ width: "130px" }} />
-                  <col style={{ width: "100px" }} />
-                  <col style={{ width: "160px" }} />
-                  <col style={{ width: "120px" }} />
-                  <col style={{ width: "200px" }} />
-                </colgroup>
                 <thead>
                   <tr>
                     {[
@@ -1939,20 +1930,17 @@ const Profile = () => {
                       >
                         <td
                           data-label="Pet"
-                          title={a.patient || ""}
                           style={{
                             padding: "12px 14px",
                             borderBottom: `1px solid ${T.border}`,
                             verticalAlign: "middle",
+                            whiteSpace: "nowrap",
                           }}
                         >
                           <div
                             style={{
                               fontWeight: 700,
                               color: isToday ? T.royal : T.text,
-                              whiteSpace: "nowrap",
-                              textOverflow: "ellipsis",
-                              overflow: "hidden",
                             }}
                           >
                             {a.patient || "—"}
@@ -1980,7 +1968,6 @@ const Profile = () => {
                         </td>
                         <td
                           data-label="Veterinarian"
-                          title={a.vet || ""}
                           style={{
                             padding: "12px 14px",
                             borderBottom: `1px solid ${T.border}`,
@@ -1988,8 +1975,6 @@ const Profile = () => {
                             color: T.muted,
                             fontWeight: 600,
                             whiteSpace: "nowrap",
-                            textOverflow: "ellipsis",
-                            overflow: "hidden",
                           }}
                         >
                           {a.vet || "—"}
@@ -2019,14 +2004,11 @@ const Profile = () => {
                         </td>
                         <td
                           data-label="Purpose"
-                          title={a.purpose || ""}
                           style={{
                             padding: "12px 14px",
                             borderBottom: `1px solid ${T.border}`,
                             verticalAlign: "middle",
                             whiteSpace: "nowrap",
-                            textOverflow: "ellipsis",
-                            overflow: "hidden",
                           }}
                         >
                           {a.purpose || "—"}
