@@ -118,6 +118,12 @@
     flex: 1;
     justify-content: center;
   }
+}
+
+/* Card-stack the schedule table earlier than the general page breakpoint,
+   so medium-width viewports don't render a cramped, clipped table before
+   the page itself goes single-column. */
+@media (max-width: 900px) {
   .schedule-table-wrap {
     overflow-x: visible !important;
   }

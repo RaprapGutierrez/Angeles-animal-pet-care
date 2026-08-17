@@ -1866,24 +1866,27 @@ const Profile = () => {
               </p>
             </div>
           ) : (
-            <div className="schedule-table-wrap" style={{ overflowX: "auto" }}>
+            <div
+              className="schedule-table-wrap"
+              style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}
+            >
               <table
                 style={{
                   width: "100%",
                   borderCollapse: "collapse",
                   fontSize: 13,
                   tableLayout: "fixed",
-                  minWidth: 760,
+                  minWidth: 860,
                 }}
               >
                 <colgroup>
-                  <col style={{ width: "13%" }} />
-                  <col style={{ width: "14%" }} />
-                  <col style={{ width: "13%" }} />
-                  <col style={{ width: "10%" }} />
-                  <col style={{ width: "13%" }} />
-                  <col style={{ width: "12%" }} />
-                  <col style={{ width: "25%" }} />
+                  <col style={{ width: 110 }} />
+                  <col style={{ width: 130 }} />
+                  <col style={{ width: 120 }} />
+                  <col style={{ width: 90 }} />
+                  <col style={{ width: 120 }} />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 190 }} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -1940,17 +1943,14 @@ const Profile = () => {
                             padding: "12px 14px",
                             borderBottom: `1px solid ${T.border}`,
                             verticalAlign: "middle",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
                           }}
                         >
                           <div
                             style={{
                               fontWeight: 700,
                               color: isToday ? T.royal : T.text,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
+                              whiteSpace: "normal",
+                              wordBreak: "break-word",
                             }}
                           >
                             {a.patient || "—"}
@@ -1984,9 +1984,8 @@ const Profile = () => {
                             verticalAlign: "middle",
                             color: T.muted,
                             fontWeight: 600,
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
                           }}
                         >
                           {a.vet || "—"}
@@ -2020,34 +2019,11 @@ const Profile = () => {
                             padding: "12px 14px",
                             borderBottom: `1px solid ${T.border}`,
                             verticalAlign: "middle",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
+                            whiteSpace: "normal",
+                            wordBreak: "break-word",
                           }}
                         >
                           {a.purpose || "—"}
-                        </td>
-                        <td
-                          data-label="Status"
-                          style={{
-                            padding: "12px 14px",
-                            borderBottom: `1px solid ${T.border}`,
-                            verticalAlign: "middle",
-                          }}
-                        >
-                          <span
-                            style={{
-                              fontSize: 11,
-                              fontWeight: 700,
-                              padding: "3px 10px",
-                              borderRadius: 20,
-                              background: st.bg,
-                              color: st.color,
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {st.label}
-                          </span>
                         </td>
                         <td
                           data-label="Notes"
