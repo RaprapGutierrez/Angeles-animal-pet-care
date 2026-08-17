@@ -1,11 +1,42 @@
-@keyframes fadeIn  { from { opacity:0; transform:translateY(8px);  } to { opacity:1; transform:translateY(0); } }
-@keyframes slideUp { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
-@keyframes spin    { from { transform:rotate(0deg); } to { transform:rotate(360deg); } }
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
 
-.profile-page { animation: fadeIn .3s ease; }
+.profile-page {
+  animation: fadeIn 0.3s ease;
+}
 
-.appt-row { transition: background .15s; }
-.appt-row:hover { background: rgba(148,163,184,0.12) !important; }
+.appt-row {
+  transition: background 0.15s;
+}
+.appt-row:hover {
+  background: rgba(148, 163, 184, 0.12) !important;
+}
 
 .edit-inp {
   padding: 9px 12px;
@@ -18,14 +49,16 @@
   outline: none;
   width: 100%;
   box-sizing: border-box;
-  transition: border-color .15s;
+  transition: border-color 0.15s;
 }
 .edit-inp:focus {
   border-color: var(--royal, #2563eb);
-  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
-.avatar-wrapper:hover .avatar-overlay { opacity: 1 !important; }
+.avatar-wrapper:hover .avatar-overlay {
+  opacity: 1 !important;
+}
 
 .profile-grid-2col {
   display: grid;
@@ -85,5 +118,43 @@
     flex: 1;
     justify-content: center;
   }
-  table { min-width: 640px; }
+  .schedule-table-wrap {
+    overflow-x: visible !important;
+  }
+  .schedule-table-wrap table {
+    min-width: 0 !important;
+    table-layout: auto !important;
+  }
+  .schedule-table-wrap colgroup {
+    display: none;
+  }
+  .schedule-table-wrap thead {
+    display: none;
+  }
+  .schedule-table-wrap tbody tr {
+    display: block;
+    padding: 10px 4px;
+    border-bottom: 1px solid var(--border, #e2e8f0);
+  }
+  .schedule-table-wrap tbody td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 0 !important;
+    border-bottom: none !important;
+    max-width: none !important;
+    white-space: normal !important;
+    text-align: right;
+  }
+  .schedule-table-wrap tbody td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-align: left;
+    flex-shrink: 0;
+  }
 }
