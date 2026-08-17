@@ -1944,8 +1944,6 @@ const Profile = () => {
                             padding: "12px 14px",
                             borderBottom: `1px solid ${T.border}`,
                             verticalAlign: "middle",
-                            maxWidth: 0,
-                            overflow: "hidden",
                           }}
                         >
                           <div
@@ -1992,7 +1990,6 @@ const Profile = () => {
                             whiteSpace: "nowrap",
                             textOverflow: "ellipsis",
                             overflow: "hidden",
-                            maxWidth: 0,
                           }}
                         >
                           {a.vet || "—"}
@@ -2030,10 +2027,32 @@ const Profile = () => {
                             whiteSpace: "nowrap",
                             textOverflow: "ellipsis",
                             overflow: "hidden",
-                            maxWidth: 0,
                           }}
                         >
                           {a.purpose || "—"}
+                        </td>
+                        <td
+                          data-label="Status"
+                          style={{
+                            padding: "12px 14px",
+                            borderBottom: `1px solid ${T.border}`,
+                            verticalAlign: "middle",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: "inline-block",
+                              padding: "4px 10px",
+                              borderRadius: 20,
+                              fontSize: 11,
+                              fontWeight: 700,
+                              background: st.bg,
+                              color: st.color,
+                            }}
+                          >
+                            {st.label}
+                          </span>
                         </td>
                         <td
                           data-label="Notes"
