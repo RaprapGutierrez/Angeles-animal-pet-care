@@ -1876,17 +1876,17 @@ const Profile = () => {
                   borderCollapse: "collapse",
                   fontSize: 13,
                   tableLayout: "fixed",
-                  minWidth: 860,
+                  minWidth: 1010,
                 }}
               >
                 <colgroup>
-                  <col style={{ width: 130 }} />
-                  <col style={{ width: 140 }} />
-                  <col style={{ width: 120 }} />
-                  <col style={{ width: 90 }} />
-                  <col style={{ width: 140 }} />
-                  <col style={{ width: 100 }} />
-                  <col style={{ width: 170 }} />
+                  <col style={{ width: "140px" }} />
+                  <col style={{ width: "160px" }} />
+                  <col style={{ width: "130px" }} />
+                  <col style={{ width: "100px" }} />
+                  <col style={{ width: "160px" }} />
+                  <col style={{ width: "120px" }} />
+                  <col style={{ width: "200px" }} />
                 </colgroup>
                 <thead>
                   <tr>
