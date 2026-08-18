@@ -724,7 +724,18 @@ const Register = () => {
         />
 
         {/* ── Branding right ── */}
-        <div className="auth-brand auth-brand-pos-right">
+        <div
+          className="auth-brand auth-brand-pos-right"
+          style={{
+            background: "rgba(255,255,255,0.08)",
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
+            border: "1px solid rgba(255,255,255,0.18)",
+            borderRadius: 24,
+            padding: "36px 44px",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+          }}
+        >
           <img
             src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
             alt="Logo"
