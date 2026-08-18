@@ -1985,7 +1985,6 @@ const Profile = () => {
                             whiteSpace: "nowrap",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
-                            maxWidth: 0,
                           }}
                         >
                           {a.vet || "—"}
