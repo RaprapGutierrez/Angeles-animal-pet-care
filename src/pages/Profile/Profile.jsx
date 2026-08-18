@@ -1928,7 +1928,7 @@ const Profile = () => {
                     return (
                       <tr
                         key={a.id}
-                        className="appt-row"
+                        className="profile-schedule-row"
                         style={{
                           background: isToday
                             ? "#eff6ff"
