@@ -1875,7 +1875,6 @@ const Profile = () => {
                   width: "100%",
                   borderCollapse: "collapse",
                   fontSize: 13,
-                  minWidth: 780,
                   tableLayout: "fixed",
                 }}
               >
