@@ -1876,8 +1876,18 @@ const Profile = () => {
                   borderCollapse: "collapse",
                   fontSize: 13,
                   minWidth: 780,
+                  tableLayout: "fixed",
                 }}
               >
+                <colgroup>
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "16%" }} />
+                  <col style={{ width: "13%" }} />
+                  <col style={{ width: "9%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "12%" }} />
+                  <col style={{ width: "22%" }} />
+                </colgroup>
                 <thead>
                   <tr>
                     {[
