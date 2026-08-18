@@ -1876,6 +1876,7 @@ const Profile = () => {
                   borderCollapse: "collapse",
                   fontSize: 13,
                   tableLayout: "fixed",
+                  minWidth: 700,
                 }}
               >
                 <colgroup>

@@ -60,6 +60,21 @@
   opacity: 1 !important;
 }
 
+.schedule-table-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border, #cbd5e1) transparent;
+}
+.schedule-table-wrap::-webkit-scrollbar {
+  height: 8px;
+}
+.schedule-table-wrap::-webkit-scrollbar-thumb {
+  background: var(--border, #cbd5e1);
+  border-radius: 4px;
+}
+.schedule-table-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 .profile-grid-2col {
   display: grid;
   grid-template-columns: 1fr 1fr;
