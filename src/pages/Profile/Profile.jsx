@@ -1880,13 +1880,13 @@ const Profile = () => {
                 }}
               >
                 <colgroup>
-                  <col style={{ width: "14%" }} />
-                  <col style={{ width: "16%" }} />
                   <col style={{ width: "13%" }} />
+                  <col style={{ width: "17%" }} />
+                  <col style={{ width: "11%" }} />
                   <col style={{ width: "9%" }} />
-                  <col style={{ width: "14%" }} />
                   <col style={{ width: "12%" }} />
-                  <col style={{ width: "22%" }} />
+                  <col style={{ width: "14%" }} />
+                  <col style={{ width: "24%" }} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -1982,6 +1982,10 @@ const Profile = () => {
                             verticalAlign: "middle",
                             color: T.muted,
                             fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: 0,
                           }}
                         >
                           {a.vet || "—"}
