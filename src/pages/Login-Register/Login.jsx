@@ -1138,9 +1138,13 @@ const Login = () => {
             backdropFilter: "blur(16px)",
             WebkitBackdropFilter: "blur(16px)",
             border: "1px solid rgba(255,255,255,0.18)",
-            borderRadius: 24,
-            padding: "36px 44px",
+            borderRadius: 20,
+            padding: "20px 28px",
             boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+            width: "fit-content",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
           }}
         >
           <img
