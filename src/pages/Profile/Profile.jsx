@@ -1982,6 +1982,10 @@ const Profile = () => {
                             verticalAlign: "middle",
                             color: T.muted,
                             fontWeight: 600,
+                            whiteSpace: "nowrap",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            maxWidth: 0,
                           }}
                         >
                           {a.vet || "—"}
