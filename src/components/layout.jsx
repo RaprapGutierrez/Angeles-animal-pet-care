@@ -2514,10 +2514,12 @@ export const Layout = ({ children }) => {
     // === FUNCTION: fetchStockAlerts ===
     const fetchStockAlerts = async () => {
       try {
-        const { data } = await supabase
-          .from("inventory")
-          .select("*")
-          .limit(200);
+        const branchName = BRANCH_DISPLAY_NAMES[user.branchId] || user.branch;
+        let stockQuery = supabase.from("inventory").select("*").limit(200);
+        if (branchName) {
+          stockQuery = stockQuery.eq("branch", branchName);
+        }
+        const { data } = await stockQuery;
         if (data) {
           // Different parts of the app have referred to these columns by
           // different names (qty vs stock, threshold vs reorder_level) —
