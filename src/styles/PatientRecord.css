@@ -398,6 +398,22 @@
   outline: none;
 }
 
+.pr-search-input {
+  color: var(--text);
+}
+.pr-search-input::placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+.pr-search-input::-webkit-input-placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+.pr-search-input::-moz-placeholder {
+  color: #94a3b8;
+  opacity: 1;
+}
+
 .pr-card {
   background: var(--card);
   border-radius: var(--radius-lg);

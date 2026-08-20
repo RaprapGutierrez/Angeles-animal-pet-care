@@ -399,12 +399,14 @@ const RoomSelect = ({ value, onChange, rooms, accent = "#6366f1" }) => {
       const spaceBelow = window.innerHeight - rect.bottom;
       const dropHeight = Math.min((rooms.length + 1) * 38, 260);
       const showAbove = spaceBelow < dropHeight + 10;
+      const dropWidth = Math.max(rect.width, 200);
+      const maxLeft = window.innerWidth - dropWidth - 8;
       setDropPos({
         top: showAbove
           ? rect.top + window.scrollY - dropHeight - 6
           : rect.bottom + window.scrollY + 6,
-        left: rect.left + window.scrollX,
-        width: rect.width,
+        left: Math.min(rect.left + window.scrollX, maxLeft + window.scrollX),
+        width: dropWidth,
       });
     }
     setOpen((o) => !o);
@@ -1149,12 +1151,14 @@ const CustomSelect = ({
       const spaceBelow = window.innerHeight - rect.bottom;
       const dropHeight = Math.min((options.length + 1) * 38, 240);
       const showAbove = spaceBelow < dropHeight + 10;
+      const dropWidth = Math.max(rect.width, 180);
+      const maxLeft = window.innerWidth - dropWidth - 8;
       setDropPos({
         top: showAbove
           ? rect.top + window.scrollY - dropHeight - 6
           : rect.bottom + window.scrollY + 6,
-        left: rect.left + window.scrollX,
-        width: rect.width,
+        left: Math.min(rect.left + window.scrollX, maxLeft + window.scrollX),
+        width: dropWidth,
       });
     }
     setOpen((o) => !o);
@@ -5684,12 +5688,6 @@ const PatientRecord = () => {
                 filter: "brightness(0) saturate(100%) invert(40%)",
               }}
             />
-            <style>{`
-              .pr-search-input::placeholder {
-                color: #94a3b8;
-                opacity: 1;
-              }
-            `}</style>
             <input
               type="text"
               className="pr-search-input"
