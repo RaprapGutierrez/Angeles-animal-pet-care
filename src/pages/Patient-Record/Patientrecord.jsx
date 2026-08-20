@@ -80,6 +80,22 @@ const VACCINE_OPTIONS = [
 ];
 const VET_OPTIONS = ["Dr. Santos", "Dr. Reyes", "Dr. Cruz", "Dr. Garcia"];
 
+const CONDITION_OPTIONS = [
+  "Routine Checkup",
+  "Vaccination Visit",
+  "Skin Infection / Allergy",
+  "Vomiting / Diarrhea",
+  "Wound Care",
+  "Post-Op Recovery / Follow-up",
+  "Fever / Lethargy",
+  "Parasite Infestation (Fleas / Ticks / Worms)",
+  "Respiratory Issue (Cough / Cold)",
+  "Eye / Ear Infection",
+  "Dental Issue",
+  "Injury / Trauma",
+  "Other",
+];
+
 const AGE_OPTIONS = [
   "Under 1 month (Newborn)",
   "1-3 months (Puppy/Kitten)",
@@ -3055,6 +3071,7 @@ const PatientRecord = () => {
     room: "",
   });
   const [addPatientErrors, setAddPatientErrors] = useState({});
+  const [conditionSelect, setConditionSelect] = useState("");
   const [rxForm, setRxForm] = useState({
     medicine: "",
     concentration: "",
@@ -3543,6 +3560,7 @@ const PatientRecord = () => {
       health: "Good",
       room: "",
     });
+    setConditionSelect("");
     setAddPatientErrors({});
     setPendingVax([]);
     setPendingTreat([]);
@@ -6825,27 +6843,6 @@ const PatientRecord = () => {
                   </p>
                 </div>
               </div>
-              <div
-                style={{
-                  padding: "0 24px",
-                  borderBottom: "1px solid var(--border)",
-                  flexShrink: 0,
-                }}
-              >
-                <TabBar
-                  tabs={ADD_TABS}
-                  active={activeTab}
-                  onSelect={(t) => {
-                    setActiveTab(t);
-                    setShowAddVaxForm(false);
-                    setShowAddTreatForm(false);
-                  }}
-                  counts={{
-                    vaccination: pendingVax.length,
-                    treatment: pendingTreat.length,
-                  }}
-                />
-              </div>
               <div className="pr-modal-body">
                 {activeTab === "info" && <OwnerStepUI />}
                 {activeTab === "info" && ownerIsConfirmed && (
@@ -7688,34 +7685,50 @@ const PatientRecord = () => {
                           Initial Condition / Diagnosis
                         </span>
                       </div>
-                      <div style={{ padding: "12px 16px", minHeight: 70 }}>
-                        <textarea
-                          value={form.condition}
-                          onChange={(e) => {
-                            setForm({ ...form, condition: e.target.value });
-                            e.target.style.height = "auto";
-                            e.target.style.height =
-                              e.target.scrollHeight + "px";
+                      <div style={{ padding: "12px 16px" }}>
+                        <CustomSelect
+                          value={conditionSelect}
+                          onChange={(val) => {
+                            setConditionSelect(val);
+                            if (val === "Other") {
+                              setForm({ ...form, condition: "" });
+                            } else {
+                              setForm({ ...form, condition: val });
+                            }
                           }}
-                          placeholder="Describe the patient's condition, presenting symptoms, or initial diagnosis..."
-                          rows={1}
-                          style={{
-                            width: "100%",
-                            border: "none",
-                            background: "transparent",
-                            fontSize: 13,
-                            color: "var(--text)",
-                            outline: "none",
-                            resize: "none",
-                            overflow: "hidden",
-                            minHeight: 60,
-                            fontFamily: "inherit",
-                            lineHeight: 1.8,
-                            boxSizing: "border-box",
-                            backgroundImage:
-                              "repeating-linear-gradient(transparent, transparent 27px, rgba(147,197,253,0.25) 27px, rgba(147,197,253,0.25) 28px)",
-                          }}
+                          placeholder="Select a condition"
+                          options={CONDITION_OPTIONS}
                         />
+                        {conditionSelect === "Other" && (
+                          <textarea
+                            value={form.condition}
+                            onChange={(e) => {
+                              setForm({ ...form, condition: e.target.value });
+                              e.target.style.height = "auto";
+                              e.target.style.height =
+                                e.target.scrollHeight + "px";
+                            }}
+                            placeholder="Describe the patient's condition, presenting symptoms, or initial diagnosis..."
+                            rows={1}
+                            style={{
+                              width: "100%",
+                              border: "1.5px solid #dde3ec",
+                              borderRadius: 9,
+                              background: "transparent",
+                              fontSize: 13,
+                              color: "var(--text)",
+                              outline: "none",
+                              resize: "none",
+                              overflow: "hidden",
+                              minHeight: 60,
+                              marginTop: 10,
+                              padding: "8px 12px",
+                              fontFamily: "inherit",
+                              lineHeight: 1.8,
+                              boxSizing: "border-box",
+                            }}
+                          />
+                        )}
                       </div>
                     </div>
 
@@ -7739,110 +7752,6 @@ const PatientRecord = () => {
                         Angeles Animal Care Hospital
                       </p>
                     </div>
-                  </div>
-                )}
-                {activeTab === "vaccination" && (
-                  <div style={{ paddingTop: 4 }}>
-                    <SectionHeader
-                      color="#16a34a"
-                      label="Vaccinations"
-                      showForm={showAddVaxForm}
-                      onAdd={() => setShowAddVaxForm(true)}
-                      onCancelForm={() => setShowAddVaxForm(false)}
-                    />
-                    {showAddVaxForm && (
-                      <div className="pr-form-box">
-                        <VaxFields form={addVaxForm} setForm={setAddVaxForm} />
-                        <div
-                          style={{
-                            display: "flex",
-                            justifyContent: "flex-end",
-                            gap: 8,
-                            marginTop: 8,
-                          }}
-                        >
-                          <button
-                            className="btn btn-ghost pr-btn-auto"
-                            onClick={() => setShowAddVaxForm(false)}
-                          >
-                            Cancel
-                          </button>
-                          <button
-                            className="btn btn-primary pr-btn-auto"
-                            onClick={addPendingVax}
-                          >
-                            Add to List
-                          </button>
-                        </div>
-                      </div>
-                    )}
-                    {pendingVax.length === 0 && !showAddVaxForm && (
-                      <p
-                        style={{
-                          color: "var(--muted)",
-                          fontSize: 13,
-                          textAlign: "center",
-                          padding: "28px 0",
-                        }}
-                      >
-                        No vaccinations added yet.
-                      </p>
-                    )}
-                    {pendingVax.length > 0 && (
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 12,
-                        }}
-                      >
-                        {pendingVax.map((v) => (
-                          <div key={v._key} className="vax-card">
-                            <h4
-                              style={{
-                                margin: "0 0 4px",
-                                fontSize: 14,
-                                fontWeight: 800,
-                                color: "#14532d",
-                                paddingRight: 60,
-                              }}
-                            >
-                              {v.name}
-                            </h4>
-                            {v.given_by && (
-                              <p
-                                style={{
-                                  margin: "0 0 8px",
-                                  fontSize: 12,
-                                  color: "#16a34a",
-                                }}
-                              >
-                                By: {v.given_by}
-                              </p>
-                            )}
-                            <div style={{ fontSize: 12, color: "#166534" }}>
-                              Given: {v.date_given}
-                              {v.next_due ? ` · Due: ${v.next_due}` : ""}
-                            </div>
-                            <button
-                              onClick={() => removePendingVax(v._key)}
-                              style={{
-                                marginTop: 8,
-                                background: "none",
-                                border: "none",
-                                color: "#ef4444",
-                                cursor: "pointer",
-                                fontSize: 12,
-                                fontWeight: 600,
-                                fontFamily: "inherit",
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
                 )}
                 {activeTab === "treatment" && (
@@ -8015,9 +7924,7 @@ const PatientRecord = () => {
                         filter: "brightness(0) invert(1)",
                       }}
                     />
-                    {savingPatient
-                      ? "Filing Record..."
-                      : `File Record${pendingVax.length + pendingTreat.length > 0 ? ` + ${pendingVax.length + pendingTreat.length} Record(s)` : ""}`}
+                    {savingPatient ? "Filing Record..." : "File Record"}
                   </button>
                 )}
               </div>
