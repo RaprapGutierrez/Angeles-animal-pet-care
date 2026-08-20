@@ -398,20 +398,24 @@
   outline: none;
 }
 
-.pr-search-input {
-  color: var(--text);
+input.pr-search-input {
+  color: var(--text) !important;
 }
-.pr-search-input::placeholder {
-  color: #94a3b8;
-  opacity: 1;
+input.pr-search-input::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
 }
-.pr-search-input::-webkit-input-placeholder {
-  color: #94a3b8;
-  opacity: 1;
+input.pr-search-input::-webkit-input-placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
 }
-.pr-search-input::-moz-placeholder {
-  color: #94a3b8;
-  opacity: 1;
+input.pr-search-input::-moz-placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+input.pr-search-input:-ms-input-placeholder {
+  color: #94a3b8 !important;
 }
 
 .pr-card {
