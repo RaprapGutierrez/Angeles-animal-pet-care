@@ -659,6 +659,14 @@ const PointOfSale = () => {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
+  // Open the client list at the same time as the search box shows up,
+  // instead of waiting for the user to click/focus it first.
+  useEffect(() => {
+    if (clientType === "registered" && !selectedClient) {
+      setShowDropdown(true);
+    }
+  }, [clientType, selectedClient]);
+
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     let query = supabase
@@ -976,7 +984,7 @@ const PointOfSale = () => {
     cont: {
       padding: "24px 28px",
       paddingTop:
-        typeof window !== "undefined" && window.innerWidth <= 768 ? 0 : 110,
+        typeof window !== "undefined" && window.innerWidth <= 768 ? 0 : 76,
       width: "100%",
       boxSizing: "border-box",
     },
@@ -1506,6 +1514,7 @@ const PointOfSale = () => {
                     onClick={() => {
                       setClientType(key);
                       clearClient();
+                      if (key === "registered") setShowDropdown(true);
                     }}
                     style={{
                       flex: 1,
@@ -2307,7 +2316,7 @@ const PointOfSale = () => {
               </div>
 
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                {["Cash", "Card", "GCash"].map((m) => (
+                {["Cash", "Card", "QR"].map((m) => (
                   <button
                     key={m}
                     onClick={() => setPayMethod(m)}

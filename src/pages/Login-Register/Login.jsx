@@ -541,6 +541,7 @@ const Login = () => {
   const [modal, setModal] = useState(null);
   const [welcome, setWelcome] = useState(null);
   const [forgotIsAdmin, setForgotIsAdmin] = useState(false);
+  const [forgotIsCustomer, setForgotIsCustomer] = useState(false);
   // Track focus for input highlight
   const [focusedField, setFocusedField] = useState(null);
   const navigate = useNavigate();
@@ -680,6 +681,7 @@ const Login = () => {
     setForgotIsAdmin(
       ["admin", "super_admin"].includes((profile.role || "").toLowerCase()),
     );
+    setForgotIsCustomer((profile.role || "").toLowerCase() === "customer");
     setForgotStep("password");
   };
 
@@ -696,7 +698,7 @@ const Login = () => {
     setForgotSending(true);
     const em = forgotEmail.trim().toLowerCase();
 
-    if (forgotIsAdmin) {
+    if (forgotIsAdmin || forgotIsCustomer) {
       const { data, error } = await supabase.functions.invoke(
         "admin-reset-password",
         {
@@ -857,7 +859,7 @@ const Login = () => {
                 }}
               >
                 {forgotStep === "sent"
-                  ? forgotIsAdmin
+                  ? forgotIsAdmin || forgotIsCustomer
                     ? "Password Updated"
                     : "Request Submitted"
                   : "Forgot Password"}
@@ -930,9 +932,9 @@ const Login = () => {
                       textAlign: "center",
                     }}
                   >
-                    {forgotIsAdmin
+                    {forgotIsAdmin || forgotIsCustomer
                       ? "Enter your new password. It will be applied immediately."
-                      : "Enter the new password you'd like. It will only take effect once an admin approves this request — until then, keep using your current password to log in."}
+                      : "Enter the new password you'd like. It will only take effect once an admin or manager approves this request — until then, keep using your current password to log in."}{" "}
                   </p>
                   <input
                     type="password"
@@ -1007,7 +1009,7 @@ const Login = () => {
                       lineHeight: 1.6,
                     }}
                   >
-                    {forgotIsAdmin ? (
+                    {forgotIsAdmin || forgotIsCustomer ? (
                       "Your password has been updated. You can now log in with your new password."
                     ) : (
                       <>
@@ -1094,12 +1096,12 @@ const Login = () => {
                     }}
                   >
                     {forgotSending
-                      ? forgotIsAdmin
+                      ? forgotIsAdmin || forgotIsCustomer
                         ? "Updating…"
                         : "Submitting…"
                       : forgotStep === "email"
                         ? "Continue"
-                        : forgotIsAdmin
+                        : forgotIsAdmin || forgotIsCustomer
                           ? "Update Password"
                           : "Submit Request"}
                   </button>
@@ -1139,11 +1141,12 @@ const Login = () => {
             WebkitBackdropFilter: "blur(20px)",
             border: "1px solid rgba(147,197,253,0.35)",
             borderRadius: 20,
-            padding: "24px 32px",
+            padding: "20px 28px",
             boxShadow:
               "0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05) inset",
             width: "fit-content",
-            display: "flex",
+            maxWidth: "fit-content",
+            display: "inline-flex",
             flexDirection: "column",
             alignItems: "center",
           }}
@@ -1422,6 +1425,8 @@ const Login = () => {
                 setForgotNewPwd("");
                 setForgotConfirmPwd("");
                 setForgotError("");
+                setForgotIsAdmin(false);
+                setForgotIsCustomer(false);
                 setShowForgot(true);
               }}
               style={{

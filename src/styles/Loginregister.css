@@ -636,6 +636,10 @@ body:has(.auth-screen) .app-revealed {
   transform: translate(-50%, -50%);
   z-index: 5;
   text-align: center;
+  width: fit-content !important;
+  max-width: fit-content !important;
+  flex: none !important;
+  padding: 20px 28px !important;
 }
 
 .auth-brand-logo {
@@ -705,6 +709,10 @@ body:has(.auth-screen) .app-revealed {
   transform: translate(50%, -50%) !important;
   z-index: 5 !important;
   text-align: center !important;
+  width: fit-content !important;
+  max-width: fit-content !important;
+  flex: none !important;
+  padding: 20px 28px !important;
 }
 
 /* ---------------------------------------------------------- */

@@ -732,11 +732,12 @@ const Register = () => {
             WebkitBackdropFilter: "blur(20px)",
             border: "1px solid rgba(147,197,253,0.35)",
             borderRadius: 20,
-            padding: "24px 32px",
+            padding: "20px 28px",
             boxShadow:
               "0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.05) inset",
             width: "fit-content",
-            display: "flex",
+            maxWidth: "fit-content",
+            display: "inline-flex",
             flexDirection: "column",
             alignItems: "center",
           }}

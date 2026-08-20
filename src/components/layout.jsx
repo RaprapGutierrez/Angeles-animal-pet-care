@@ -3302,6 +3302,7 @@ export const Layout = ({ children }) => {
 
           {/* ── Logo row ── */}
           <div
+            onClick={togglePin}
             style={{
               display: "flex",
               alignItems: "center",
@@ -3312,12 +3313,12 @@ export const Layout = ({ children }) => {
               justifyContent: isExpanded ? "flex-start" : "center",
               marginTop: 4,
               marginBottom: isExpanded ? 16 : 2,
+              cursor: "pointer",
               transition:
                 "padding 0.3s cubic-bezier(0.4,0,0.2,1), justify-content 0.3s",
             }}
           >
             <div
-              onClick={togglePin}
               style={{
                 width: 38,
                 height: 38,

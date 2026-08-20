@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Layout from "../../components/layout";
-import { supabase } from "../../js/Utils/supabase";
+import { supabase, supabaseAdmin } from "../../js/Utils/supabase";
 import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
 import "../../styles/ManagerControl.css";
 
@@ -434,6 +434,7 @@ const ManagerControl = () => {
 
   const [users, setUsers] = useState([]);
   const [pending, setPending] = useState([]);
+  const [pwdRequests, setPwdRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("users");
   const [search, setSearch] = useState("");
@@ -554,11 +555,107 @@ const ManagerControl = () => {
     if (!error) setPending(data || []);
   }, [user, seeAllBranches, branchLabel]);
 
+  // ── Fetch password change requests — branch-scoped ────────────────────────
+  const fetchPwdRequests = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("forgot_password_requests")
+      .select("*")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false });
+    let rows = data || [];
+    if (!seeAllBranches && user.branchId && rows.length) {
+      const { data: profs } = await supabase
+        .from("profiles")
+        .select("id, branch_id")
+        .in("id", rows.map((r) => r.user_id).filter(Boolean));
+      const branchById = new Map((profs || []).map((p) => [p.id, p.branch_id]));
+      rows = rows.filter((r) => branchById.get(r.user_id) === user.branchId);
+    }
+    setPwdRequests(rows);
+  }, [user, seeAllBranches]);
+
+  const approvePwdRequest = (req) => {
+    setConfirm({
+      title: "Approve Password Change",
+      message: `Apply the new password requested by ${req.email}?`,
+      type: "success",
+      confirmLabel: "Approve",
+      onConfirm: async () => {
+        setConfirm(null);
+        if (!seeAllBranches && user?.branchId) {
+          const { data: prof } = await supabase
+            .from("profiles")
+            .select("branch_id")
+            .eq("id", req.user_id)
+            .single();
+          if (!prof || prof.branch_id !== user.branchId) {
+            setSuccessModal({
+              error: true,
+              message:
+                "You don't have permission to approve a password change for a user outside your branch.",
+            });
+            setPwdRequests((prev) => prev.filter((r) => r.id !== req.id));
+            return;
+          }
+        }
+        const { error } = await supabaseAdmin.auth.admin.updateUserById(
+          req.user_id,
+          { password: req.new_password },
+        );
+        if (error) {
+          setSuccessModal({ error: true, message: error.message });
+          return;
+        }
+        await supabase
+          .from("forgot_password_requests")
+          .update({
+            status: "approved",
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: user.id,
+          })
+          .eq("id", req.id);
+        setPwdRequests((prev) => prev.filter((r) => r.id !== req.id));
+        await supabase.from("activity_logs").insert([
+          {
+            user_id: user.id,
+            user_name: user.fullName || user.email,
+            user_role: user.role,
+            action: "Approved password change",
+            details: `Password updated for ${req.email}`,
+          },
+        ]);
+      },
+    });
+  };
+
+  const rejectPwdRequest = (req) => {
+    setConfirm({
+      title: "Reject Request",
+      message: `Reject the password change request from ${req.email}?`,
+      type: "danger",
+      confirmLabel: "Reject",
+      onConfirm: async () => {
+        setConfirm(null);
+        await supabase
+          .from("forgot_password_requests")
+          .update({
+            status: "rejected",
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: user.id,
+          })
+          .eq("id", req.id);
+        setPwdRequests((prev) => prev.filter((r) => r.id !== req.id));
+      },
+    });
+  };
+
   useEffect(() => {
     if (userLoading || !user) return;
     fetchUsers();
     fetchPending();
     fetchDeletedUsers();
+    fetchPwdRequests();
 
     const pendingSub = supabase
       .channel(`realtime-pending-manager-${user.id}`)
@@ -1655,6 +1752,10 @@ const ManagerControl = () => {
                   key: "pending",
                   label: `Pending Requests${pending.length > 0 ? ` (${pending.length})` : ""}`,
                 },
+                {
+                  key: "pwdrequests",
+                  label: `Password Requests${pwdRequests.length > 0 ? ` (${pwdRequests.length})` : ""}`,
+                },
                 { key: "logs", label: "Access Logs" },
               ].map((t) => (
                 <div
@@ -2321,6 +2422,136 @@ const ManagerControl = () => {
                           >
                             Requested {fmtDate(req.created_at)} · {req.branch}
                           </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* ── Password Requests tab ── */}
+            {tab === "pwdrequests" && (
+              <div style={{ padding: 24 }}>
+                <div style={{ marginBottom: 20 }}>
+                  <h3
+                    style={{ fontSize: 15, fontWeight: 700, margin: "0 0 4px" }}
+                  >
+                    Password Change Requests
+                  </h3>
+                  <p style={{ fontSize: 13, color: "var(--muted)", margin: 0 }}>
+                    Employees submit a new password here; it only takes effect
+                    once you approve it.
+                  </p>
+                </div>
+                {pwdRequests.length === 0 ? (
+                  <div style={{ padding: "40px 0", textAlign: "center" }}>
+                    <div
+                      style={{
+                        width: 56,
+                        height: 56,
+                        borderRadius: "50%",
+                        background: "#f0fdf4",
+                        border: "1.5px solid #86efac",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        margin: "0 auto 12px",
+                      }}
+                    >
+                      <svg
+                        width="26"
+                        height="26"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#16a34a"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                    <p style={{ color: "var(--muted)", fontSize: 14 }}>
+                      No pending password requests.
+                    </p>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                    }}
+                  >
+                    {pwdRequests.map((req) => (
+                      <div
+                        key={req.id}
+                        style={{
+                          background: "#fffbeb",
+                          border: "1.5px solid #fde68a",
+                          borderRadius: 12,
+                          padding: "16px 18px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 12,
+                          flexWrap: "wrap",
+                        }}
+                      >
+                        <div>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: 14,
+                              fontWeight: 700,
+                              color: "#1e293b",
+                            }}
+                          >
+                            {req.email}
+                          </p>
+                          <p
+                            style={{
+                              margin: "2px 0 0",
+                              fontSize: 11,
+                              color: "#94a3b8",
+                            }}
+                          >
+                            Requested {fmtDate(req.created_at)}
+                          </p>
+                        </div>
+                        <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
+                          <button
+                            onClick={() => approvePwdRequest(req)}
+                            style={{
+                              padding: "7px 16px",
+                              borderRadius: 8,
+                              border: "none",
+                              background: "#16a34a",
+                              color: "#fff",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              fontFamily: "inherit",
+                            }}
+                          >
+                            ✓ Approve
+                          </button>
+                          <button
+                            onClick={() => rejectPwdRequest(req)}
+                            style={{
+                              padding: "7px 16px",
+                              borderRadius: 8,
+                              border: "1px solid #fca5a5",
+                              background: "#fef2f2",
+                              color: "#dc2626",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              cursor: "pointer",
+                              fontFamily: "inherit",
+                            }}
+                          >
+                            ✕ Reject
+                          </button>
                         </div>
                       </div>
                     ))}
