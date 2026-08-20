@@ -1472,7 +1472,9 @@ const NotifDropdown = ({
       );
     }
     if (activeTab === "stock") {
-      const isLow = item.stock <= item.reorder_level;
+      const stockQty = item.stock ?? item.qty ?? 0;
+      const reorderAt = item.reorder_level ?? item.threshold ?? 10;
+      const isLow = stockQty <= Math.max(0, reorderAt - 5);
       return (
         <div
           key={item.id}
@@ -1503,8 +1505,8 @@ const NotifDropdown = ({
             </span>
           </div>
           <p style={{ fontSize: 11, color: "#64748b", margin: 0 }}>
-            Stock: <strong style={{ color: "#dc2626" }}>{item.stock}</strong> /
-            Reorder at: {item.reorder_level}
+            Stock: <strong style={{ color: "#dc2626" }}>{stockQty}</strong> /
+            Reorder at: {reorderAt}
           </p>
           {item.branch && (
             <span
@@ -2515,10 +2517,18 @@ export const Layout = ({ children }) => {
         const { data } = await supabase
           .from("inventory")
           .select("*")
-          .order("qty", { ascending: true })
-          .limit(20);
+          .limit(200);
         if (data) {
-          const lowItems = data.filter((i) => i.qty <= (i.threshold ?? 10));
+          // Different parts of the app have referred to these columns by
+          // different names (qty vs stock, threshold vs reorder_level) —
+          // read both so alerts match the number shown on the Inventory page.
+          const getQty = (i) => Number(i.stock ?? i.qty ?? 0);
+          const getReorder = (i) =>
+            Number(i.reorder_level ?? i.threshold ?? 10);
+          const lowItems = data
+            .filter((i) => getQty(i) <= getReorder(i))
+            .sort((a, b) => getQty(a) - getQty(b))
+            .slice(0, 20);
           setStockAlerts(lowItems);
           setStockCount(lowItems.length);
           if (!isFirstLoad.current.stock) {
@@ -2527,7 +2537,7 @@ export const Layout = ({ children }) => {
                 pushToast(
                   "stock",
                   `Low Stock: ${item.name}`,
-                  `Only ${item.qty} left (reorder at ${item.threshold ?? 10})${item.supplier ? ` • ${item.supplier}` : ""}`,
+                  `Only ${getQty(item)} left (reorder at ${getReorder(item)})${item.supplier ? ` • ${item.supplier}` : ""}`,
                 );
               }
             });
