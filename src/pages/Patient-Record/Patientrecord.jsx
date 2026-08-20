@@ -5666,8 +5666,15 @@ const PatientRecord = () => {
                 filter: "brightness(0) saturate(100%) invert(40%)",
               }}
             />
+            <style>{`
+              .pr-search-input::placeholder {
+                color: #94a3b8;
+                opacity: 1;
+              }
+            `}</style>
             <input
               type="text"
+              className="pr-search-input"
               placeholder="Search patient, owner, species..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
@@ -6818,29 +6825,27 @@ const PatientRecord = () => {
                   </p>
                 </div>
               </div>
-              {ownerIsConfirmed && (
-                <div
-                  style={{
-                    padding: "0 24px",
-                    borderBottom: "1px solid var(--border)",
-                    flexShrink: 0,
+              <div
+                style={{
+                  padding: "0 24px",
+                  borderBottom: "1px solid var(--border)",
+                  flexShrink: 0,
+                }}
+              >
+                <TabBar
+                  tabs={ADD_TABS}
+                  active={activeTab}
+                  onSelect={(t) => {
+                    setActiveTab(t);
+                    setShowAddVaxForm(false);
+                    setShowAddTreatForm(false);
                   }}
-                >
-                  <TabBar
-                    tabs={ADD_TABS}
-                    active={activeTab}
-                    onSelect={(t) => {
-                      setActiveTab(t);
-                      setShowAddVaxForm(false);
-                      setShowAddTreatForm(false);
-                    }}
-                    counts={{
-                      vaccination: pendingVax.length,
-                      treatment: pendingTreat.length,
-                    }}
-                  />
-                </div>
-              )}
+                  counts={{
+                    vaccination: pendingVax.length,
+                    treatment: pendingTreat.length,
+                  }}
+                />
+              </div>
               <div className="pr-modal-body">
                 {activeTab === "info" && <OwnerStepUI />}
                 {activeTab === "info" && ownerIsConfirmed && (
@@ -7686,10 +7691,14 @@ const PatientRecord = () => {
                       <div style={{ padding: "12px 16px", minHeight: 70 }}>
                         <textarea
                           value={form.condition}
-                          onChange={(e) =>
-                            setForm({ ...form, condition: e.target.value })
-                          }
+                          onChange={(e) => {
+                            setForm({ ...form, condition: e.target.value });
+                            e.target.style.height = "auto";
+                            e.target.style.height =
+                              e.target.scrollHeight + "px";
+                          }}
                           placeholder="Describe the patient's condition, presenting symptoms, or initial diagnosis..."
+                          rows={1}
                           style={{
                             width: "100%",
                             border: "none",
@@ -7697,7 +7706,8 @@ const PatientRecord = () => {
                             fontSize: 13,
                             color: "var(--text)",
                             outline: "none",
-                            resize: "vertical",
+                            resize: "none",
+                            overflow: "hidden",
                             minHeight: 60,
                             fontFamily: "inherit",
                             lineHeight: 1.8,
@@ -7731,7 +7741,7 @@ const PatientRecord = () => {
                     </div>
                   </div>
                 )}
-                {activeTab === "vaccination" && ownerIsConfirmed && (
+                {activeTab === "vaccination" && (
                   <div style={{ paddingTop: 4 }}>
                     <SectionHeader
                       color="#16a34a"
@@ -7835,7 +7845,7 @@ const PatientRecord = () => {
                     )}
                   </div>
                 )}
-                {activeTab === "treatment" && ownerIsConfirmed && (
+                {activeTab === "treatment" && (
                   <div style={{ paddingTop: 4 }}>
                     <SectionHeader
                       color="#d97706"
