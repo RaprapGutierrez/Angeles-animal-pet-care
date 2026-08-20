@@ -2385,42 +2385,57 @@ export const Layout = ({ children }) => {
     // === FUNCTION: fetchMessages ===
     const fetchMessages = async () => {
       try {
-        const branchName = BRANCH_DISPLAY_NAMES[user.branchId] || user.branch;
-        let msgQuery = supabase
-          .from("messages")
-          .select("*, sender:sender_id(first_name, last_name, email)")
-          .eq("read", false)
-          .order("created_at", { ascending: false })
-          .limit(20);
-        if (branchName) {
-          msgQuery = msgQuery.eq("branch", branchName);
+        const [{ data: sameData }, { data: crossData }] = await Promise.all([
+          supabase
+            .from("messages")
+            .select("*, sender:sender_id(first_name, last_name, email)")
+            .eq("receiver_id", user.id)
+            .eq("is_read", false)
+            .order("created_at", { ascending: false })
+            .limit(20),
+          supabase
+            .from("cross_branch_messages")
+            .select("*")
+            .eq("recipient_id", user.id)
+            .eq("is_read", false)
+            .order("created_at", { ascending: false })
+            .limit(20),
+        ]);
+
+        const enrichedSame = (sameData || []).map((m) => ({
+          ...m,
+          sender_name: m.sender
+            ? `${m.sender.first_name || ""} ${m.sender.last_name || ""}`.trim()
+            : null,
+          sender_email: m.sender?.email || null,
+        }));
+        const enrichedCross = (crossData || []).map((m) => ({
+          ...m,
+          message: m.content,
+          sender_name: m.sender_name || null,
+          sender_email: null,
+        }));
+
+        const enriched = [...enrichedSame, ...enrichedCross].sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at),
+        );
+
+        setMsgAlerts(enriched);
+        setMsgCount(enriched.length);
+        if (!isFirstLoad.current.msg) {
+          enriched.forEach((m) => {
+            if (!prevMsgIds.current.has(m.id)) {
+              const sender = m.sender_name || m.sender_email || "Someone";
+              pushToast(
+                "message",
+                `New message from ${sender}`,
+                m.content?.slice(0, 80) || m.message?.slice(0, 80) || "",
+              );
+            }
+          });
         }
-        const { data } = await msgQuery;
-        if (data) {
-          const enriched = data.map((m) => ({
-            ...m,
-            sender_name: m.sender
-              ? `${m.sender.first_name || ""} ${m.sender.last_name || ""}`.trim()
-              : null,
-            sender_email: m.sender?.email || null,
-          }));
-          setMsgAlerts(enriched);
-          setMsgCount(data.length);
-          if (!isFirstLoad.current.msg) {
-            enriched.forEach((m) => {
-              if (!prevMsgIds.current.has(m.id)) {
-                const sender = m.sender_name || m.sender_email || "Someone";
-                pushToast(
-                  "message",
-                  `New message from ${sender}`,
-                  m.content?.slice(0, 80) || m.message?.slice(0, 80) || "",
-                );
-              }
-            });
-          }
-          isFirstLoad.current.msg = false;
-          prevMsgIds.current = new Set(enriched.map((m) => m.id));
-        }
+        isFirstLoad.current.msg = false;
+        prevMsgIds.current = new Set(enriched.map((m) => m.id));
       } catch (e) {
         console.error("Messages fetch error:", e);
       }

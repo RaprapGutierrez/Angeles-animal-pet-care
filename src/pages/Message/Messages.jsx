@@ -1950,13 +1950,22 @@ const Messages = () => {
                     {badge > 0 && (
                       <div
                         style={{
-                          width: 8,
-                          height: 8,
-                          borderRadius: "50%",
+                          minWidth: 20,
+                          height: 20,
+                          borderRadius: 20,
                           background: "#6366f1",
+                          color: "#fff",
+                          fontSize: 10.5,
+                          fontWeight: 800,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          padding: "0 6px",
                           flexShrink: 0,
                         }}
-                      />
+                      >
+                        {badge > 9 ? "9+" : badge}
+                      </div>
                     )}
                   </div>
                 );

@@ -520,25 +520,33 @@ const Dashboard = () => {
       const transactionsQ = applyFilter(
         supabase.from("transactions").select("total").gte("created_at", today),
       );
-      const messagesQ = applyFilter(
-        supabase
-          .from("messages")
-          .select("id", { count: "exact", head: true })
-          .eq("is_read", false),
-      );
-
       const addBranchOverride = (q) => {
         if (seeAllBranches && branchFilter)
           return q.eq("branch_id", branchFilter);
         return q;
       };
 
-      const [patients, inventory, transactions, messages] = await Promise.all([
+      const [patients, inventory, transactions] = await Promise.all([
         addBranchOverride(patientsQ),
         addBranchOverride(inventoryQ),
         addBranchOverride(transactionsQ),
-        addBranchOverride(messagesQ),
       ]);
+
+      const [{ count: sameUnread }, { count: crossUnread }] = await Promise.all(
+        [
+          supabase
+            .from("messages")
+            .select("id", { count: "exact", head: true })
+            .eq("receiver_id", user.id)
+            .eq("is_read", false),
+          supabase
+            .from("cross_branch_messages")
+            .select("id", { count: "exact", head: true })
+            .eq("recipient_id", user.id)
+            .eq("is_read", false),
+        ],
+      );
+      const messages = { count: (sameUnread || 0) + (crossUnread || 0) };
 
       const todaySales = (transactions.data || []).reduce(
         (s, t) => s + Number(t.total || 0),
