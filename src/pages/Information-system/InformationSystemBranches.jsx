@@ -4202,18 +4202,23 @@ function Footer({ onRegionClick }) {
             </p>
           </div>
           <div style={{ display: "flex", gap: 16 }}>
-            {["Privacy Policy", "Terms of Service"].map((l) => (
+            {[
+              { label: "Privacy Policy", href: "/privacy-policy" },
+              { label: "Terms of Service", href: "/terms-of-service" },
+            ].map(({ label, href }) => (
               <a
-                key={l}
-                href="#"
+                key={label}
+                href={href}
                 style={{
                   fontSize: 12,
                   opacity: 0.5,
                   color: "#fff",
                   textDecoration: "none",
                 }}
+                onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
+                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
               >
-                {l}
+                {label}
               </a>
             ))}
           </div>
