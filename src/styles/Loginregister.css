@@ -638,6 +638,9 @@ body:has(.auth-screen) .app-revealed {
   text-align: center;
   width: fit-content !important;
   max-width: fit-content !important;
+  height: fit-content !important;
+  max-height: fit-content !important;
+  min-height: 0 !important;
   flex: none !important;
   padding: 20px 28px !important;
 }
@@ -711,6 +714,9 @@ body:has(.auth-screen) .app-revealed {
   text-align: center !important;
   width: fit-content !important;
   max-width: fit-content !important;
+  height: fit-content !important;
+  max-height: fit-content !important;
+  min-height: 0 !important;
   flex: none !important;
   padding: 20px 28px !important;
 }

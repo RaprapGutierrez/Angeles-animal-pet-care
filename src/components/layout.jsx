@@ -1179,11 +1179,11 @@ const BranchPill = ({ branchId, branchName, isExpanded }) => {
         borderRadius: 8,
         background: `${color}18`,
         border: `0.5px solid ${color}44`,
-        display: "inline-flex",
+        display: "flex",
         alignItems: "center",
         gap: 7,
         transition: "all 0.25s",
-        width: "fit-content",
+        width: "auto",
       }}
     >
       <div
