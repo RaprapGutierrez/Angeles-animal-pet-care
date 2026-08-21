@@ -2358,6 +2358,10 @@ const AdminSecurity = () => {
   };
 
   const saveRole = async () => {
+    if (!isSuperAdmin) {
+      alert("Only Super Admin can create or edit roles.");
+      return;
+    }
     const errs = validateRoleForm();
     if (Object.keys(errs).length) {
       setRoleFormErrors(errs);
@@ -2386,6 +2390,10 @@ const AdminSecurity = () => {
   };
 
   const handleDeleteRole = (r) => {
+    if (!isSuperAdmin) {
+      alert("Only Super Admin can delete roles.");
+      return;
+    }
     setConfirm({
       title: "Delete Role",
       message: `Delete the "${r.role}" role?`,
@@ -4377,23 +4385,25 @@ const AdminSecurity = () => {
                       deleted.
                     </p>
                   </div>
-                  <button
-                    className="btn btn-primary"
-                    style={{
-                      ...S.btn,
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                    onClick={() => {
-                      setEditRoleTarget(null);
-                      setRoleForm(BLANK_ROLE_FORM);
-                      setRoleFormErrors({});
-                      setShowRoleModal(true);
-                    }}
-                  >
-                    <span style={{ fontSize: 18 }}>+</span> New Role
-                  </button>
+                  {isSuperAdmin && (
+                    <button
+                      className="btn btn-primary"
+                      style={{
+                        ...S.btn,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                      }}
+                      onClick={() => {
+                        setEditRoleTarget(null);
+                        setRoleForm(BLANK_ROLE_FORM);
+                        setRoleFormErrors({});
+                        setShowRoleModal(true);
+                      }}
+                    >
+                      <span style={{ fontSize: 18 }}>+</span> New Role
+                    </button>
+                  )}
                 </div>
                 {rolesLoading ? (
                   <div
@@ -4566,7 +4576,7 @@ const AdminSecurity = () => {
                                 >
                                   System
                                 </span>
-                              ) : (
+                              ) : isSuperAdmin ? (
                                 <>
                                   <button
                                     className="btn btn-ghost btn-sm"
@@ -4599,7 +4609,7 @@ const AdminSecurity = () => {
                                     Delete
                                   </button>
                                 </>
-                              )}
+                              ) : null}
                             </div>
                           </div>
                           <h3

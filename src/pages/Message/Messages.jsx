@@ -1346,8 +1346,8 @@ const Messages = () => {
     const allowed =
       senderRole === "super_admin" ||
       recipientRole === "super_admin" ||
-      canMessageCrossBranch(
-        { role: currentUser.role, branch: currentUser.branch },
+      isMessageableTarget(
+        { role: senderRole, branch: normBranch(currentUser.branch) },
         { role: recipientRole, branch: normBranch(selected.branch || "") },
       );
 
