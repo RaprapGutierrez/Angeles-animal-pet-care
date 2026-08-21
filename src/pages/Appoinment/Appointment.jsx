@@ -36,6 +36,23 @@ const TIMES = [
   "03:00 PM",
   "04:00 PM",
 ];
+
+// ── Vet availability defaults — editable by Admin/Super Admin via the Vet Schedules modal ──
+const DEFAULT_VET_SCHEDULE = {
+  "Dr. Santos": [1, 3, 5], // Mon, Wed, Fri
+  "Dr. Reyes": [2, 4, 6], // Tue, Thu, Sat
+  "Dr. Cruz": [1, 2, 3, 4, 5], // Mon–Fri
+  "Dr. Garcia": [3, 4, 5, 6], // Wed–Sat
+};
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+// ── Vet time-of-day availability defaults — which slots each vet actually works ──
+const DEFAULT_VET_TIME_SCHEDULE = {
+  "Dr. Santos": ["08:00 AM", "09:00 AM", "10:00 AM", "11:00 AM", "01:00 PM"],
+  "Dr. Reyes": ["08:00 AM", "09:00 AM", "10:00 AM"],
+  "Dr. Cruz": TIMES,
+  "Dr. Garcia": ["09:00 AM", "10:00 AM", "02:00 PM", "03:00 PM"],
+};
 const today = new Date().toISOString().split("T")[0];
 const ROWS_PER_PAGE = 10;
 const EMPTY = {
@@ -81,13 +98,23 @@ const CustomSelect = ({
   options,
   placeholder = "—",
   accent = "#6366f1",
+  searchable = false,
 }) => {
   const [open, setOpen] = React.useState(false);
   const [dropPos, setDropPos] = React.useState({ top: 0, left: 0, width: 0 });
+  const [searchTerm, setSearchTerm] = React.useState("");
   const triggerRef = React.useRef(null);
   const ref = React.useRef(null);
   const selected = options.find((o) => (o.value ?? o) === value);
   const label = selected ? (selected.label ?? selected) : placeholder;
+  const filteredOptions =
+    searchable && searchTerm
+      ? options.filter((o) =>
+          String(o.label ?? o)
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()),
+        )
+      : options;
 
   React.useEffect(() => {
     const handler = (e) => {
@@ -104,6 +131,7 @@ const CustomSelect = ({
   }, []);
 
   const handleOpen = () => {
+    if (!open) setSearchTerm("");
     if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
@@ -141,122 +169,158 @@ const CustomSelect = ({
               boxShadow:
                 "0 16px 40px rgba(0,0,0,0.13), 0 4px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06)",
               border: "1.5px solid #e8edf4",
-              maxHeight: 260,
-              overflowY: "auto",
-              padding: "5px",
+              maxHeight: 300,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
             }}
           >
-            {[{ value: "", label: placeholder }, ...options].map((opt, i) => {
-              const optVal = opt.value ?? opt;
-              const optLabel = opt.label ?? opt;
-              const isSelected = optVal === value;
-              const isEmpty = optVal === "";
-              return (
-                <div
-                  key={i}
-                  onClick={() => {
-                    if ((!opt.disabled && optVal !== "") || optVal === "") {
-                      onChange(optVal);
-                      setOpen(false);
-                    }
-                  }}
+            {searchable && (
+              <div
+                style={{
+                  padding: "6px 6px 4px",
+                  borderBottom: "1px solid #f1f5f9",
+                  flexShrink: 0,
+                }}
+              >
+                <input
+                  autoFocus
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Search…"
                   style={{
-                    padding: "8px 10px",
-                    fontSize: 13,
-                    fontWeight: isSelected ? 700 : 500,
-                    color: opt.disabled
-                      ? "#cbd5e1"
-                      : isEmpty
-                        ? "#b0bac9"
-                        : isSelected
-                          ? accent
-                          : "var(--text)",
-                    cursor: opt.disabled
-                      ? "not-allowed"
-                      : isEmpty
-                        ? "default"
-                        : "pointer",
-                    transition: "background 0.12s, color 0.12s",
-                    background: isSelected ? `${accent}12` : "transparent",
+                    width: "100%",
+                    padding: "7px 10px",
                     borderRadius: 8,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    gap: 8,
-                    opacity: opt.disabled ? 0.45 : 1,
-                    marginBottom: 1,
+                    border: "1.5px solid #e2e8f0",
+                    fontSize: 13,
+                    outline: "none",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                    color: "var(--text)",
+                    background: "#fff",
                   }}
-                  onMouseEnter={(e) => {
-                    if (!isSelected && !opt.disabled && !isEmpty)
-                      e.currentTarget.style.background = "#f4f6fa";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (!isSelected)
-                      e.currentTarget.style.background = isSelected
-                        ? `${accent}12`
-                        : "transparent";
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      minWidth: 0,
-                    }}
-                  >
-                    {!isEmpty && (
-                      <div
-                        style={{
-                          width: 6,
-                          height: 6,
-                          borderRadius: "50%",
-                          flexShrink: 0,
-                          background: isSelected ? accent : "transparent",
-                          border: `1.5px solid ${isSelected ? accent : opt.disabled ? "#e2e8f0" : "#cbd5e1"}`,
-                          transition: "background 0.15s, border-color 0.15s",
-                        }}
-                      />
-                    )}
-                    <span
-                      style={{
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {optLabel}
-                    </span>
-                  </div>
-                  {isSelected && !isEmpty && (
+                />
+              </div>
+            )}
+            <div style={{ overflowY: "auto", padding: "5px" }}>
+              {[{ value: "", label: placeholder }, ...filteredOptions].map(
+                (opt, i) => {
+                  const optVal = opt.value ?? opt;
+                  const optLabel = opt.label ?? opt;
+                  const isSelected = optVal === value;
+                  const isEmpty = optVal === "";
+                  return (
                     <div
+                      key={i}
+                      onClick={() => {
+                        if ((!opt.disabled && optVal !== "") || optVal === "") {
+                          onChange(optVal);
+                          setOpen(false);
+                        }
+                      }}
                       style={{
-                        width: 18,
-                        height: 18,
-                        borderRadius: 5,
-                        background: accent,
+                        padding: "8px 10px",
+                        fontSize: 13,
+                        fontWeight: isSelected ? 700 : 500,
+                        color: opt.disabled
+                          ? "#cbd5e1"
+                          : isEmpty
+                            ? "#b0bac9"
+                            : isSelected
+                              ? accent
+                              : "var(--text)",
+                        cursor: opt.disabled
+                          ? "not-allowed"
+                          : isEmpty
+                            ? "default"
+                            : "pointer",
+                        transition: "background 0.12s, color 0.12s",
+                        background: isSelected ? `${accent}12` : "transparent",
+                        borderRadius: 8,
                         display: "flex",
                         alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
+                        justifyContent: "space-between",
+                        gap: 8,
+                        opacity: opt.disabled ? 0.45 : 1,
+                        marginBottom: 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected && !opt.disabled && !isEmpty)
+                          e.currentTarget.style.background = "#f4f6fa";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected)
+                          e.currentTarget.style.background = isSelected
+                            ? `${accent}12`
+                            : "transparent";
                       }}
                     >
-                      <svg
-                        width="9"
-                        height="9"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#fff"
-                        strokeWidth="3.5"
-                        strokeLinecap="round"
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          minWidth: 0,
+                        }}
                       >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
+                        {!isEmpty && (
+                          <div
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              flexShrink: 0,
+                              background: isSelected ? accent : "transparent",
+                              border: `1.5px solid ${isSelected ? accent : opt.disabled ? "#e2e8f0" : "#cbd5e1"}`,
+                              transition:
+                                "background 0.15s, border-color 0.15s",
+                            }}
+                          />
+                        )}
+                        <span
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {optLabel}
+                        </span>
+                      </div>
+                      {isSelected && !isEmpty && (
+                        <div
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: 5,
+                            background: accent,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#fff"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
+                  );
+                },
+              )}
+            </div>
           </div>,
           document.body,
         )
@@ -1160,6 +1224,103 @@ const Appointment = () => {
   const [form, setForm] = useState(EMPTY);
   const [bookStep, setBookStep] = useState("service");
 
+  // ── Vet schedules (days & hours) — everyone can view, only Admin/Super Admin can edit ──
+  const [vetSchedule, setVetSchedule] = useState(DEFAULT_VET_SCHEDULE);
+  const [vetTimeSchedule, setVetTimeSchedule] = useState(
+    DEFAULT_VET_TIME_SCHEDULE,
+  );
+  const [showVetSchedule, setShowVetSchedule] = useState(false);
+  const [vetScheduleDraft, setVetScheduleDraft] = useState(null);
+  const [savingVetSchedule, setSavingVetSchedule] = useState(false);
+
+  const fetchVetSchedules = async () => {
+    const { data, error } = await supabase.from("vet_schedules").select("*");
+    if (error || !data || data.length === 0) return;
+    const days = {};
+    const times = {};
+    data.forEach((row) => {
+      days[row.vet] = row.days || [];
+      times[row.vet] = row.times || [];
+    });
+    setVetSchedule((prev) => ({ ...prev, ...days }));
+    setVetTimeSchedule((prev) => ({ ...prev, ...times }));
+  };
+
+  useEffect(() => {
+    fetchVetSchedules();
+    const ch = supabase
+      .channel("staff-vet-schedules-rt")
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "vet_schedules" },
+        () => fetchVetSchedules(),
+      )
+      .subscribe();
+    return () => {
+      supabase.removeChannel(ch);
+    };
+  }, []);
+
+  const isVetAvailableOnDate = (vet, dateStr) => {
+    if (!vet || !dateStr) return true;
+    const sched = vetSchedule[vet];
+    if (!sched) return true;
+    const day = new Date(dateStr + "T00:00:00").getDay();
+    return sched.includes(day);
+  };
+  const isVetAvailableAtTime = (vet, time) => {
+    if (!vet || !time) return true;
+    const sched = vetTimeSchedule[vet];
+    if (!sched) return true;
+    return sched.includes(time);
+  };
+
+  const openVetSchedule = () => {
+    setVetScheduleDraft({
+      days: JSON.parse(JSON.stringify(vetSchedule)),
+      times: JSON.parse(JSON.stringify(vetTimeSchedule)),
+    });
+    setShowVetSchedule(true);
+  };
+  const saveVetSchedule = async () => {
+    if (!vetScheduleDraft) return;
+    setSavingVetSchedule(true);
+    const rows = VETS.map((vet) => ({
+      vet,
+      days: vetScheduleDraft.days[vet] || [],
+      times: vetScheduleDraft.times[vet] || [],
+    }));
+    const { error } = await supabase
+      .from("vet_schedules")
+      .upsert(rows, { onConflict: "vet" });
+    setSavingVetSchedule(false);
+    if (error) {
+      showAlert("Error", error.message);
+      return;
+    }
+    setVetSchedule(vetScheduleDraft.days);
+    setVetTimeSchedule(vetScheduleDraft.times);
+    setShowVetSchedule(false);
+    showToast("✓ Veterinarian schedules updated", "success");
+  };
+  const toggleDraftDay = (vet, day) => {
+    setVetScheduleDraft((prev) => {
+      const cur = prev.days[vet] || [];
+      const next = cur.includes(day)
+        ? cur.filter((d) => d !== day)
+        : [...cur, day].sort((a, b) => a - b);
+      return { ...prev, days: { ...prev.days, [vet]: next } };
+    });
+  };
+  const toggleDraftTime = (vet, time) => {
+    setVetScheduleDraft((prev) => {
+      const cur = prev.times[vet] || [];
+      const next = cur.includes(time)
+        ? cur.filter((t) => t !== time)
+        : [...cur, time].sort((a, b) => TIMES.indexOf(a) - TIMES.indexOf(b));
+      return { ...prev, times: { ...prev.times, [vet]: next } };
+    });
+  };
   // ── Multi-pet booking (new appointments only; editing stays single-pet) ──
   const EMPTY_PET_APPT = {
     mode: "new",
@@ -1461,7 +1622,16 @@ const Appointment = () => {
     if (ownerUserId) q = q.eq("owner_user_id", ownerUserId);
     else q = q.eq("owner", ownerName);
     const { data, error } = await q.order("name");
-    if (!error) setExistingPatients(data || []);
+    if (!error) {
+      const seen = new Set();
+      const deduped = (data || []).filter((p) => {
+        const key = p.id ?? `${p.name}__${p.species}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      });
+      setExistingPatients(deduped);
+    }
     setLoadingExistingPatients(false);
   };
 
@@ -1513,8 +1683,16 @@ const Appointment = () => {
   }, [user]);
 
   useEffect(() => {
-    if (!form.date || !form.time) {
+    if (!form.date || !form.time || !form.vet) {
       setConflictType(null);
+      return;
+    }
+    if (!isVetAvailableOnDate(form.vet, form.date)) {
+      setConflictType("vet-day");
+      return;
+    }
+    if (!isVetAvailableAtTime(form.vet, form.time)) {
+      setConflictType("vet-time");
       return;
     }
     const excludeId = editMode ? selectedAppt?.id : null;
@@ -1522,12 +1700,12 @@ const Appointment = () => {
       (a) =>
         a.date === form.date &&
         a.time === form.time &&
+        a.vet === form.vet &&
         ["Pending", "Confirmed"].includes(a.status) &&
         a.id !== excludeId,
     );
     setConflictType(slotTaken ? "time" : null);
-  }, [form.date, form.time, appts, editMode, selectedAppt]);
-
+  }, [form.date, form.time, form.vet, appts, editMode, selectedAppt]);
   useEffect(() => {
     setCurrentPage(1);
   }, [search, filterDate, filterStatus, sortField, sortDir]);
@@ -1846,17 +2024,22 @@ const Appointment = () => {
   const removeExtraPet = (idx) =>
     setExtraPets((prev) => prev.filter((_, i) => i !== idx));
 
-  const isSlotTakenAppt = (date, time, excludeIdx) => {
-    if (!date || !time) return false;
+  const isSlotTakenAppt = (date, time, excludeIdx, vet) => {
+    if (!date || !time || !vet) return false;
+    if (!isVetAvailableOnDate(vet, date) || !isVetAvailableAtTime(vet, time))
+      return true;
     const usedFromExisting = appts.some(
       (a) =>
         a.date === date &&
         a.time === time &&
+        a.vet === vet &&
         ["Pending", "Confirmed"].includes(a.status),
     );
-    const usedFromMain = form.date === date && form.time === time;
+    const usedFromMain =
+      form.date === date && form.time === time && form.vet === vet;
     const usedFromBatch = extraPets.some(
-      (p, i) => i !== excludeIdx && p.date === date && p.time === time,
+      (p, i) =>
+        i !== excludeIdx && p.date === date && p.time === time && p.vet === vet,
     );
     return usedFromExisting || usedFromMain || usedFromBatch;
   };
@@ -1952,7 +2135,7 @@ const Appointment = () => {
           );
           return;
         }
-        if (isSlotTakenAppt(p.date, p.time, extraPets.indexOf(p))) {
+        if (isSlotTakenAppt(p.date, p.time, extraPets.indexOf(p), p.vet)) {
           showAlert(
             "Time Slot Unavailable",
             `The slot on ${p.date} at ${p.time} is already booked.`,
@@ -3196,6 +3379,228 @@ const Appointment = () => {
         </div>
       )}
 
+      {showVetSchedule && vetScheduleDraft && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--card)",
+              borderRadius: 14,
+              width: "100%",
+              maxWidth: 640,
+              maxHeight: "85vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                background: "linear-gradient(135deg,#0f172a,#1e3a8a)",
+                padding: "16px 20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: "#fff",
+                  }}
+                >
+                  Veterinarian Schedules
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.75)",
+                  }}
+                >
+                  {isAdmin
+                    ? "Set which days & times each vet is available. Editable by Admin only."
+                    : "Days & times each vet is available."}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowVetSchedule(false)}
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  border: "none",
+                  borderRadius: 8,
+                  width: 30,
+                  height: 30,
+                  cursor: "pointer",
+                  color: "#fff",
+                  flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ overflowY: "auto", flex: 1, padding: "16px 20px" }}>
+              {VETS.map((vet) => (
+                <div
+                  key={vet}
+                  style={{
+                    border: "1.5px solid var(--border)",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    marginBottom: 14,
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: "0 0 10px",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: "var(--text)",
+                    }}
+                  >
+                    {vet}
+                  </p>
+
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.6px",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Available Days
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      marginBottom: 12,
+                    }}
+                  >
+                    {DAY_NAMES.map((label, dIdx) => {
+                      const active = (
+                        vetScheduleDraft.days[vet] || []
+                      ).includes(dIdx);
+                      return (
+                        <button
+                          key={label}
+                          type="button"
+                          disabled={!isAdmin}
+                          onClick={() => toggleDraftDay(vet, dIdx)}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            border: `1.5px solid ${active ? "#1e3a8a" : "var(--border)"}`,
+                            background: active ? "#dbeafe" : "transparent",
+                            color: active ? "#1e3a8a" : "var(--muted)",
+                            cursor: isAdmin ? "pointer" : "default",
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.6px",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Available Times
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {TIMES.map((t) => {
+                      const active = (
+                        vetScheduleDraft.times[vet] || []
+                      ).includes(t);
+                      return (
+                        <button
+                          key={t}
+                          type="button"
+                          disabled={!isAdmin}
+                          onClick={() => toggleDraftTime(vet, t)}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            border: `1.5px solid ${active ? "#16a34a" : "var(--border)"}`,
+                            background: active ? "#dcfce7" : "transparent",
+                            color: active ? "#15803d" : "var(--muted)",
+                            cursor: isAdmin ? "pointer" : "default",
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          {t}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                padding: "14px 20px",
+                borderTop: "1px solid var(--border)",
+              }}
+            >
+              <button
+                className="btn btn-ghost"
+                style={S.btn}
+                onClick={() => setShowVetSchedule(false)}
+              >
+                {isAdmin ? "Cancel" : "Close"}
+              </button>
+              {isAdmin && (
+                <button
+                  className="btn"
+                  style={{
+                    ...S.btn,
+                    background: "#1e3a8a",
+                    color: "#fff",
+                    border: "none",
+                  }}
+                  onClick={saveVetSchedule}
+                >
+                  Save Schedule
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         className="toast-stack"
         style={{
@@ -3373,6 +3778,40 @@ const Appointment = () => {
             </svg>
             Reviews
           </button>
+          <button
+            className="appt-reviews-btn"
+            onClick={openVetSchedule}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              padding: "7px 16px",
+              borderRadius: 8,
+              border: "1.5px solid #bfdbfe",
+              background: "#eff6ff",
+              color: "#1e40af",
+              fontSize: 13,
+              fontWeight: 600,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+            >
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+              <line x1="16" y1="2" x2="16" y2="6" />
+              <line x1="8" y1="2" x2="8" y2="6" />
+              <line x1="3" y1="10" x2="21" y2="10" />
+            </svg>
+            Vet Schedules
+          </button>{" "}
           <div
             className="fab-wrap"
             style={{
@@ -5249,6 +5688,7 @@ const Appointment = () => {
                               );
                             }}
                             placeholder="— Select customer —"
+                            searchable
                             options={customers.map((c) => ({
                               value: c.id,
                               label: `${c.first_name} ${c.last_name}${c.phone ? ` — ${c.phone}` : ""}`,
@@ -5698,10 +6138,38 @@ const Appointment = () => {
                         </div>
                         <CustomSelect
                           value={form.vet}
-                          onChange={(val) => setForm({ ...form, vet: val })}
+                          onChange={(val) =>
+                            setForm({ ...form, vet: val, time: "" })
+                          }
                           placeholder="— Select Veterinarian —"
                           options={VETS}
                         />
+                        {form.vet && vetSchedule[form.vet] && (
+                          <p
+                            style={{
+                              margin: "6px 0 0",
+                              fontSize: 10,
+                              color: "var(--muted)",
+                            }}
+                          >
+                            Available days:{" "}
+                            {vetSchedule[form.vet]
+                              .map((d) => DAY_NAMES[d])
+                              .join(", ")}
+                          </p>
+                        )}
+                        {form.vet && vetTimeSchedule[form.vet] && (
+                          <p
+                            style={{
+                              margin: "2px 0 0",
+                              fontSize: 10,
+                              color: "var(--muted)",
+                            }}
+                          >
+                            Available times:{" "}
+                            {vetTimeSchedule[form.vet].join(", ")}
+                          </p>
+                        )}
                         {form.purpose === "Imaging" && (
                           <>
                             <div
@@ -5747,7 +6215,7 @@ const Appointment = () => {
                 {/* ── Extra pets (additional appointments for the same owner) ── */}
                 {!editMode &&
                   extraPets.map((p, idx) => {
-                    const pTaken = isSlotTakenAppt(p.date, p.time, idx);
+                    const pTaken = isSlotTakenAppt(p.date, p.time, idx, p.vet);
                     return (
                       <div
                         key={idx}
@@ -6147,12 +6615,21 @@ const Appointment = () => {
                               }
                               placeholder="— Select Time —"
                               options={TIMES.map((t) => {
+                                const vetTimeBlocked =
+                                  p.vet && !isVetAvailableAtTime(p.vet, t);
                                 const taken =
-                                  p.date && isSlotTakenAppt(p.date, t, idx);
+                                  !vetTimeBlocked &&
+                                  p.date &&
+                                  p.vet &&
+                                  isSlotTakenAppt(p.date, t, idx, p.vet);
+                                let label = t;
+                                if (vetTimeBlocked)
+                                  label = `${t} — Not this vet's hours`;
+                                else if (taken) label = `${t} — Taken`;
                                 return {
                                   value: t,
-                                  label: taken ? `${t} — Taken` : t,
-                                  disabled: taken,
+                                  label,
+                                  disabled: vetTimeBlocked || taken,
                                 };
                               })}
                             />
@@ -6322,20 +6799,26 @@ const Appointment = () => {
                             const excludeId = editMode
                               ? selectedAppt?.id
                               : null;
+                            const vetTimeBlocked =
+                              form.vet && !isVetAvailableAtTime(form.vet, t);
                             const isBooked =
+                              !vetTimeBlocked &&
                               form.date &&
+                              form.vet &&
                               appts.some(
                                 (a) =>
                                   a.date === form.date &&
                                   a.time === t &&
+                                  a.vet === form.vet &&
                                   ["Pending", "Confirmed"].includes(a.status) &&
                                   a.id !== excludeId,
                               );
-                            return {
-                              value: t,
-                              label: isBooked ? `${t} — Taken` : t,
-                              disabled: isBooked,
-                            };
+                            const disabled = vetTimeBlocked || isBooked;
+                            let label = t;
+                            if (vetTimeBlocked)
+                              label = `${t} — Not this vet's hours`;
+                            else if (isBooked) label = `${t} — Taken`;
+                            return { value: t, label, disabled };
                           })}
                         />
                         {form.date && (
@@ -6359,14 +6842,16 @@ const Appointment = () => {
                                 flexShrink: 0,
                               }}
                             />
-                            Slots marked "Taken" are booked for {form.date}
+                            {form.vet
+                              ? `Slots marked "Taken" are already booked for ${form.vet} on ${form.date}`
+                              : `Select a veterinarian to see their availability for ${form.date}`}
                           </div>
                         )}
                       </div>
                     </div>
 
                     {/* Conflict banner */}
-                    {conflictType === "time" && (
+                    {conflictType && (
                       <div
                         style={{
                           background: "#fee2e2",
@@ -6411,7 +6896,11 @@ const Appointment = () => {
                               fontSize: 12,
                             }}
                           >
-                            Time Slot Already Taken
+                            {conflictType === "vet-day"
+                              ? "Vet Unavailable This Day"
+                              : conflictType === "vet-time"
+                                ? "Outside Vet's Hours"
+                                : "Time Slot Already Taken"}
                           </p>
                           <p
                             style={{
@@ -6420,7 +6909,11 @@ const Appointment = () => {
                               fontSize: 11,
                             }}
                           >
-                            Please select a different time.
+                            {conflictType === "vet-day"
+                              ? `${form.vet} doesn't work on this day. Available days: ${(vetSchedule[form.vet] || []).map((d) => DAY_NAMES[d]).join(", ") || "—"}.`
+                              : conflictType === "vet-time"
+                                ? `${form.vet} isn't available at this time. Available times: ${(vetTimeSchedule[form.vet] || []).join(", ") || "—"}.`
+                                : "Please select a different time."}
                           </p>
                         </div>
                       </div>

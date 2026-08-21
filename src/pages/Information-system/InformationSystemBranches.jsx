@@ -3939,114 +3939,8 @@ function FAQSection({ faqRef }) {
   );
 }
 
-/* ── Legal Modal (Privacy Policy / Terms of Service) ── */
-const LEGAL_CONTENT = {
-  privacy: {
-    title: "Privacy Policy",
-    body: `Angeles Animal Care Hospital ("we", "our", "us") respects your privacy...
-[full text as above]`,
-  },
-  terms: {
-    title: "Terms of Service",
-    body: `Welcome to Angeles Animal Care Hospital...
-[full text as above]`,
-  },
-};
-
-function LegalModal({ type, onClose }) {
-  if (!type) return null;
-  const content = LEGAL_CONTENT[type];
-  return (
-    <div
-      onClick={onClose}
-      style={{
-        position: "fixed",
-        inset: 0,
-        zIndex: 9500,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: 16,
-        background: "rgba(26,19,64,.45)",
-        backdropFilter: "blur(6px)",
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        className="anim-scale-in"
-        style={{
-          position: "relative",
-          width: "100%",
-          maxWidth: 640,
-          maxHeight: "80vh",
-          display: "flex",
-          flexDirection: "column",
-          background: T.card,
-          borderRadius: 20,
-          boxShadow: "0 32px 80px rgba(0,0,0,.25)",
-          overflow: "hidden",
-        }}
-      >
-        <div style={{ height: 5, background: T.primary, flexShrink: 0 }} />
-        <div
-          style={{
-            padding: "20px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            borderBottom: `1px solid ${T.border}`,
-            flexShrink: 0,
-          }}
-        >
-          <h2
-            style={{
-              fontSize: 20,
-              color: T.fg,
-              fontFamily: "'Poetsen One', sans-serif",
-              margin: 0,
-            }}
-          >
-            {content.title}
-          </h2>
-          <button
-            onClick={onClose}
-            style={{
-              width: 32,
-              height: 32,
-              borderRadius: 8,
-              border: `1px solid ${T.border}`,
-              background: T.muted,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: T.mutedFg,
-              flexShrink: 0,
-            }}
-          >
-            <X className="" style={{ width: 14, height: 14 }} />
-          </button>
-        </div>
-        <div style={{ padding: "24px", overflowY: "auto" }}>
-          <p
-            style={{
-              fontSize: 13.5,
-              color: T.mutedFg,
-              lineHeight: 1.8,
-              whiteSpace: "pre-line",
-              margin: 0,
-            }}
-          >
-            {content.body}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /* ── Footer ── */
-function Footer({ onRegionClick, onLegalClick }) {
+function Footer({ onRegionClick }) {
   const byRegion = useMemo(() => {
     const map = {};
     BRANCHES.forEach((b) => {
@@ -4307,32 +4201,6 @@ function Footer({ onRegionClick, onLegalClick }) {
               rights reserved.
             </p>
           </div>
-          <div style={{ display: "flex", gap: 16 }}>
-            {[
-              { label: "Privacy Policy", type: "privacy" },
-              { label: "Terms of Service", type: "terms" },
-            ].map(({ label, type }) => (
-              <a
-                key={label}
-                href="#"
-                onClick={(e) => {
-                  e.preventDefault();
-                  onLegalClick?.(type);
-                }}
-                style={{
-                  fontSize: 12,
-                  opacity: 0.5,
-                  color: "#fff",
-                  textDecoration: "none",
-                  cursor: "pointer",
-                }}
-                onMouseEnter={(e) => (e.currentTarget.style.opacity = "0.8")}
-                onMouseLeave={(e) => (e.currentTarget.style.opacity = "0.5")}
-              >
-                {label}
-              </a>
-            ))}
-          </div>
         </div>
       </div>
     </footer>
@@ -4398,7 +4266,6 @@ export default function InformationSystem() {
   const [type, setType] = useState("All");
   const [loading, setLoading] = useState(true);
   const [selectedBranch, setSelectedBranch] = useState(null);
-  const [legalModal, setLegalModal] = useState(null);
 
   const [scrolled, setScrolled] = useState(false);
   const faqRef = useRef(null);
@@ -4465,11 +4332,6 @@ export default function InformationSystem() {
           />
         </FixedPortal>
       )}
-      {legalModal && (
-        <FixedPortal>
-          <LegalModal type={legalModal} onClose={() => setLegalModal(null)} />
-        </FixedPortal>
-      )}{" "}
       <FixedPortal>
         <button
           onClick={() =>
@@ -4736,7 +4598,6 @@ export default function InformationSystem() {
             block: "start",
           });
         }}
-        onLegalClick={(type) => setLegalModal(type)}
       />
     </div>
   );

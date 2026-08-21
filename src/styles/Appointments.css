@@ -271,6 +271,25 @@
   }
 }
 
+/* ── Tighten gap between fixed topbar and page content ── */
+@media (min-width: 769px) {
+  .content.appt-content,
+  .appt-content {
+    padding-top: 96px !important;
+  }
+  .appt-content > *:first-child {
+    margin-top: 0 !important;
+  }
+}
+
+/* ── Fix invisible/low-contrast placeholder text in search inputs ── */
+.appt-card input::placeholder,
+.appt-topbar input::placeholder,
+.appt-input::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
 @keyframes shimmer {
   0% {
     background-position: -600px 0;
@@ -279,7 +298,6 @@
     background-position: 600px 0;
   }
 }
-
 @keyframes fadeSlideUp {
   from {
     opacity: 0;
