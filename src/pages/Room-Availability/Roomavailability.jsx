@@ -2791,7 +2791,7 @@ const RoomAvailability = () => {
       </div>
 
       {/* ── CONTENT ── */}
-      <div className="content room-content" style={{ paddingTop: 0 }}>
+      <div className="content room-content" style={{ paddingTop: 24 }}>
         {/* Stat Cards */}
         <div
           className="room-stats-grid"
@@ -2799,6 +2799,7 @@ const RoomAvailability = () => {
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit,minmax(195px,1fr))",
             gap: 14,
+            marginTop: 12,
             marginBottom: 20,
           }}
         >

@@ -600,6 +600,58 @@ const Dashboard = () => {
     if (!userLoading && user) fetchDashboard();
   }, [userLoading, user, branchFilter]);
 
+  // ── Keep "Unread Messages" live: recompute whenever a message of ours
+  // gets inserted or flipped to read (e.g. from the Messages page) ──
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const recomputeUnread = async () => {
+      const [{ count: sameUnread }, { count: crossUnread }] =
+        await Promise.all([
+          supabase
+            .from("messages")
+            .select("id", { count: "exact", head: true })
+            .eq("receiver_id", user.id)
+            .eq("is_read", false),
+          supabase
+            .from("cross_branch_messages")
+            .select("id", { count: "exact", head: true })
+            .eq("recipient_id", user.id)
+            .eq("is_read", false),
+        ]);
+      setStats((prev) => ({
+        ...prev,
+        messages: (sameUnread || 0) + (crossUnread || 0),
+      }));
+    };
+
+    const ch = supabase
+      .channel(`dash-unread-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "messages",
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        () => recomputeUnread(),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cross_branch_messages",
+          filter: `recipient_id=eq.${user.id}`,
+        },
+        () => recomputeUnread(),
+      )
+      .subscribe();
+
+    return () => supabase.removeChannel(ch);
+  }, [user?.id]);
+
   // ── Stat cards ────────────────────────────────────────────────────────────
   const STAT_CARDS = useMemo(() => {
     const cardPatients = {
