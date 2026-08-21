@@ -4044,6 +4044,12 @@ const Emergency = ({ guestMode = false }) => {
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "emergency_alerts" },
         (payload) => {
+          const belongsToUser =
+            isAdmin ||
+            !userBranch ||
+            normalizeBranchName(payload.new.branch) ===
+              normalizeBranchName(userBranch);
+          if (!belongsToUser) return;
           setAlerts((prev) => {
             const exists = prev.some((a) => a.id === payload.new.id);
             if (exists) return prev;

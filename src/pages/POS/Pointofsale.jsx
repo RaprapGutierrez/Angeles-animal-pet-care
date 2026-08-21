@@ -659,14 +659,6 @@ const PointOfSale = () => {
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
-  // Open the client list at the same time as the search box shows up,
-  // instead of waiting for the user to click/focus it first.
-  useEffect(() => {
-    if (clientType === "registered" && !selectedClient) {
-      setShowDropdown(true);
-    }
-  }, [clientType, selectedClient]);
-
   const fetchProducts = useCallback(async () => {
     setLoading(true);
     let query = supabase
@@ -1528,7 +1520,6 @@ const PointOfSale = () => {
                     onClick={() => {
                       setClientType(key);
                       clearClient();
-                      if (key === "registered") setShowDropdown(true);
                     }}
                     style={{
                       flex: 1,
