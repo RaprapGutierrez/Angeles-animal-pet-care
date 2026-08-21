@@ -879,6 +879,7 @@ const RoomFormModal = ({
   saving,
   existingNumbers = [],
   validateRoom,
+  unassignedPatients = [],
 }) => {
   const isEdit = !!editRoom;
   const isFormValid = () => validateRoom(form, isEdit, existingNumbers).valid;
@@ -1593,37 +1594,39 @@ const RoomFormModal = ({
                 Current Occupant
               </span>
             </div>
-            <div
-              style={{
-                padding: "10px 16px",
-                borderBottom: "1px solid #e2e8f0",
-              }}
-            >
+            {isEdit && (
               <div
                 style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "#94a3b8",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.8px",
-                  marginBottom: 6,
+                  padding: "10px 16px",
+                  borderBottom: "1px solid #e2e8f0",
                 }}
               >
-                Patient Name{" "}
-                {form.status === "Occupied" && (
-                  <span style={{ color: "#ef4444" }}>*</span>
-                )}
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#94a3b8",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.8px",
+                    marginBottom: 6,
+                  }}
+                >
+                  Patient Name{" "}
+                  {form.status === "Occupied" && (
+                    <span style={{ color: "#ef4444" }}>*</span>
+                  )}
+                </div>
+                <CustomSelect
+                  value={form.patient || ""}
+                  onChange={(val) => setForm({ ...form, patient: val })}
+                  placeholder="Select unassigned patient"
+                  options={unassignedPatients.map((p) => ({
+                    value: p.name,
+                    label: p.name,
+                  }))}
+                />
               </div>
-              <input
-                type="text"
-                value={form.patient || ""}
-                onChange={(e) =>
-                  setForm({ ...form, patient: sanitizeName(e.target.value) })
-                }
-                placeholder="Leave blank if unoccupied"
-                style={fieldStyle}
-              />
-            </div>
+            )}
             <div style={{ padding: "10px 16px" }}>
               <div
                 style={{
@@ -2122,6 +2125,34 @@ const RoomAvailability = () => {
     discharge_date: "",
   });
   const [saving, setSaving] = useState(false);
+  const [unassignedPatients, setUnassignedPatients] = useState([]);
+
+  const fetchUnassignedPatients = async () => {
+    const assignedNames = rooms
+      .filter((r) => r.status === "Occupied" && r.patient)
+      .map((r) => r.patient.toLowerCase().trim());
+    const { data: appts } = await supabase
+      .from("appointments")
+      .select("id, pet_name, status")
+      .in("status", ["Completed", "Done"]);
+    const { data: walkins } = await supabase
+      .from("walkins")
+      .select("id, pet_name, status")
+      .in("status", ["Completed", "Done"]);
+    const combined = [...(appts || []), ...(walkins || [])];
+    const unique = Array.from(
+      new Map(
+        combined
+          .filter(
+            (p) =>
+              p.pet_name &&
+              !assignedNames.includes(p.pet_name.toLowerCase().trim()),
+          )
+          .map((p) => [p.pet_name.toLowerCase().trim(), { name: p.pet_name }]),
+      ).values(),
+    );
+    setUnassignedPatients(unique);
+  };
   const [confirm, setConfirm] = useState({ show: false });
   const [deletedRooms, setDeletedRooms] = useState([]);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
@@ -2286,6 +2317,7 @@ const RoomAvailability = () => {
     setForm({ ...room });
     setFormOriginal({ ...room });
     setFormRoom(room);
+    fetchUnassignedPatients();
   };
 
   const hasUnsavedRoomEdits = () => {
@@ -2749,7 +2781,7 @@ const RoomAvailability = () => {
       </div>
 
       {/* ── CONTENT ── */}
-      <div className="content room-content">
+      <div className="content room-content" style={{ paddingTop: 0 }}>
         {/* Stat Cards */}
         <div
           className="room-stats-grid"
@@ -3276,6 +3308,7 @@ const RoomAvailability = () => {
           saving={saving}
           existingNumbers={rooms.map((r) => r.number)}
           validateRoom={validateRoom}
+          unassignedPatients={unassignedPatients}
         />
       )}
 

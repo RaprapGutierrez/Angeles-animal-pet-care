@@ -1174,9 +1174,9 @@ const BranchPill = ({ branchId, branchName, isExpanded }) => {
   return (
     <div
       style={{
-        margin: "0 8px 10px",
-        padding: "6px 10px",
-        borderRadius: 8,
+        margin: "0 8px 6px",
+        padding: "5px 10px",
+        borderRadius: 4,
         background: `${color}18`,
         border: `0.5px solid ${color}44`,
         display: "flex",
@@ -1238,6 +1238,7 @@ const NotifDropdown = ({
   stockCount,
   onAlertClick,
   onClose,
+  onNavigate,
 }) => {
   const tabIcons = {
     emergency: (
@@ -1408,6 +1409,10 @@ const NotifDropdown = ({
       return (
         <div
           key={item.id}
+          onClick={() => {
+            onNavigate?.("/messages", { state: { openWith: item.sender_id } });
+            onClose?.();
+          }}
           style={{
             padding: "12px 14px",
             borderBottom: "1px solid #f1f5f9",
@@ -1478,7 +1483,19 @@ const NotifDropdown = ({
       return (
         <div
           key={item.id}
-          style={{ padding: "12px 14px", borderBottom: "1px solid #f1f5f9" }}
+          onClick={() => {
+            onNavigate?.("/inventory");
+            onClose?.();
+          }}
+          style={{
+            padding: "12px 14px",
+            borderBottom: "1px solid #f1f5f9",
+            cursor: "pointer",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "transparent")
+          }
         >
           <div
             style={{
@@ -2097,6 +2114,7 @@ export const Layout = ({ children }) => {
   const [showNotifDrop, setShowNotifDrop] = useState(false);
   const [showAvatar, setShowAvatar] = useState(false);
   const [activeTab, setActiveTab] = useState("emergency");
+  const [custActiveTab, setCustActiveTab] = useState("appointments");
   const [selectedAlert, setSelectedAlert] = useState(null);
 
   // ── Sidebar: hover-to-expand ──
@@ -4233,181 +4251,208 @@ export const Layout = ({ children }) => {
                     >
                       <div
                         style={{
-                          padding: "14px 16px",
+                          padding: "14px 16px 0",
                           borderBottom: "1px solid var(--border)",
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
                         }}
                       >
-                        <h4
-                          style={{
-                            margin: 0,
-                            fontSize: 14,
-                            fontWeight: 800,
-                            color: "var(--text)",
-                          }}
-                        >
-                          My Appointments
-                        </h4>
-                        <button
-                          onClick={() => setShowNotifDrop(false)}
-                          style={{
-                            background: "none",
-                            border: "none",
-                            cursor: "pointer",
-                            color: "#94a3b8",
-                            display: "flex",
-                          }}
-                        >
-                          <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                          >
-                            <line x1="18" y1="6" x2="6" y2="18" />
-                            <line x1="6" y1="6" x2="18" y2="18" />
-                          </svg>
-                        </button>
-                      </div>
-                      <div style={{ maxHeight: 440, overflowY: "auto" }}>
-                        {/* ── Emergency reports box ── */}
                         <div
                           style={{
-                            padding: "10px 14px 4px",
-                            background: "#fef2f2",
-                            borderBottom: "1px solid #fecaca",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            marginBottom: 10,
                           }}
                         >
-                          <h5
+                          <h4
                             style={{
                               margin: 0,
-                              fontSize: 11,
+                              fontSize: 14,
                               fontWeight: 800,
-                              color: "#991b1b",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.04em",
+                              color: "var(--text)",
                             }}
                           >
-                            🚨 My Emergency Reports
-                          </h5>
-                        </div>
-                        {custAlerts.length === 0 ? (
-                          <div
+                            Notifications
+                          </h4>
+                          <button
+                            onClick={() => setShowNotifDrop(false)}
                             style={{
-                              padding: "16px",
-                              textAlign: "center",
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
                               color: "#94a3b8",
-                              borderBottom: "1px solid var(--border)",
+                              display: "flex",
                             }}
                           >
-                            <p
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                            >
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                          </button>
+                        </div>
+                        <div style={{ display: "flex", gap: 2 }}>
+                          {[
+                            {
+                              key: "appointments",
+                              label: "Appointments",
+                              count: custApptCount,
+                              color: "#2563eb",
+                            },
+                            {
+                              key: "emergency",
+                              label: "Emergency",
+                              count: custAlertCount,
+                              color: "#ef4444",
+                            },
+                          ].map((tab) => (
+                            <button
+                              key={tab.key}
+                              onClick={() => setCustActiveTab(tab.key)}
                               style={{
-                                fontSize: 12,
-                                fontWeight: 600,
-                                margin: 0,
+                                flex: 1,
+                                padding: "6px 4px",
+                                border: "none",
+                                borderBottom:
+                                  custActiveTab === tab.key
+                                    ? `2px solid ${tab.color}`
+                                    : "2px solid transparent",
+                                background: "transparent",
+                                cursor: "pointer",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color:
+                                  custActiveTab === tab.key
+                                    ? tab.color
+                                    : "#94a3b8",
+                                fontFamily: "inherit",
+                                transition: "all 0.15s",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                gap: 4,
                               }}
                             >
-                              No emergency reports yet
-                            </p>
-                          </div>
-                        ) : (
-                          custAlerts.map((a) => {
-                            const statusColor =
-                              a.status === "responding"
-                                ? "#1d4ed8"
-                                : a.status === "resolved"
-                                  ? "#16a34a"
-                                  : "#d97706";
-                            const statusBg =
-                              a.status === "responding"
-                                ? "#dbeafe"
-                                : a.status === "resolved"
-                                  ? "#dcfce7"
-                                  : "#fef3c7";
-                            return (
-                              <div
-                                key={a.id}
+                              {tab.label}
+                              {tab.count > 0 && (
+                                <span
+                                  style={{
+                                    background: tab.color,
+                                    color: "#fff",
+                                    borderRadius: "50%",
+                                    width: 16,
+                                    height: 16,
+                                    fontSize: 9,
+                                    fontWeight: 800,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                  }}
+                                >
+                                  {tab.count > 9 ? "9+" : tab.count}
+                                </span>
+                              )}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div style={{ maxHeight: 400, overflowY: "auto" }}>
+                        {custActiveTab === "emergency" ? (
+                          custAlerts.length === 0 ? (
+                            <div
+                              style={{
+                                padding: "32px 16px",
+                                textAlign: "center",
+                                color: "#94a3b8",
+                              }}
+                            >
+                              <p
                                 style={{
-                                  padding: "12px 14px",
-                                  borderBottom: "1px solid #f1f5f9",
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  margin: 0,
                                 }}
                               >
+                                No emergency reports yet
+                              </p>
+                            </div>
+                          ) : (
+                            custAlerts.map((a) => {
+                              const statusColor =
+                                a.status === "responding"
+                                  ? "#1d4ed8"
+                                  : a.status === "resolved"
+                                    ? "#16a34a"
+                                    : "#d97706";
+                              const statusBg =
+                                a.status === "responding"
+                                  ? "#dbeafe"
+                                  : a.status === "resolved"
+                                    ? "#dcfce7"
+                                    : "#fef3c7";
+                              return (
                                 <div
+                                  key={a.id}
                                   style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: "center",
-                                    marginBottom: 4,
+                                    padding: "12px 14px",
+                                    borderBottom: "1px solid #f1f5f9",
                                   }}
                                 >
-                                  <span
+                                  <div
                                     style={{
-                                      fontSize: 12,
-                                      fontWeight: 700,
-                                      color: "#1e293b",
+                                      display: "flex",
+                                      justifyContent: "space-between",
+                                      alignItems: "center",
+                                      marginBottom: 4,
                                     }}
                                   >
-                                    {a.type || "Emergency"}
-                                  </span>
-                                  <span
+                                    <span
+                                      style={{
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        color: "#1e293b",
+                                      }}
+                                    >
+                                      {a.type || "Emergency"}
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: 9,
+                                        fontWeight: 800,
+                                        color: statusColor,
+                                        background: statusBg,
+                                        borderRadius: 6,
+                                        padding: "2px 7px",
+                                        textTransform: "capitalize",
+                                      }}
+                                    >
+                                      {a.status}
+                                    </span>
+                                  </div>
+                                  <p
                                     style={{
-                                      fontSize: 9,
-                                      fontWeight: 800,
-                                      color: statusColor,
-                                      background: statusBg,
-                                      borderRadius: 6,
-                                      padding: "2px 7px",
-                                      textTransform: "capitalize",
+                                      fontSize: 11,
+                                      color: "#64748b",
+                                      margin: 0,
                                     }}
                                   >
-                                    {a.status}
-                                  </span>
+                                    {a.branch || ""}
+                                    {a.branch && a.description ? " • " : ""}
+                                    {a.description
+                                      ? a.description.slice(0, 60)
+                                      : ""}
+                                  </p>
                                 </div>
-                                <p
-                                  style={{
-                                    fontSize: 11,
-                                    color: "#64748b",
-                                    margin: 0,
-                                  }}
-                                >
-                                  {a.branch || ""}
-                                  {a.branch && a.description ? " • " : ""}
-                                  {a.description
-                                    ? a.description.slice(0, 60)
-                                    : ""}
-                                </p>
-                              </div>
-                            );
-                          })
-                        )}
-
-                        {/* ── Appointments box ── */}
-                        <div
-                          style={{
-                            padding: "10px 14px 4px",
-                            background: "var(--bg)",
-                            borderBottom: "1px solid var(--border)",
-                          }}
-                        >
-                          <h5
-                            style={{
-                              margin: 0,
-                              fontSize: 11,
-                              fontWeight: 800,
-                              color: "#64748b",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.04em",
-                            }}
-                          >
-                            My Appointments
-                          </h5>
-                        </div>
-                        {custAppts.length === 0 ? (
+                              );
+                            })
+                          )
+                        ) : custAppts.length === 0 ? (
                           <div
                             style={{
                               padding: "32px 16px",
@@ -4484,6 +4529,7 @@ export const Layout = ({ children }) => {
                       stockCount={stockCount}
                       onAlertClick={setSelectedAlert}
                       onClose={() => setShowNotifDrop(false)}
+                      onNavigate={navigate}
                     />
                   ))}
               </div>

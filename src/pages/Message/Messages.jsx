@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useMemo,
 } from "react";
+import { useLocation } from "react-router-dom";
 import Layout from "../../components/layout";
 import { supabase } from "../../js/Utils/supabase";
 import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
@@ -826,6 +827,7 @@ const ConversationMenu = ({ onDelete, onClear }) => {
 const Messages = () => {
   const { user, seeAllBranches, loading: userLoading } = useCurrentUser();
   const onlineIds = usePresence(user?.id);
+  const location = useLocation();
 
   const [clients, setClients] = useState([]);
   const [crossContacts, setCrossContacts] = useState([]);
@@ -1584,6 +1586,40 @@ const Messages = () => {
       ),
     [clients, crossContacts],
   );
+
+  // ── Opened from a notification bell click (Layout passes {state:{openWith}}) ──
+  // Selecting the conversation here triggers fetchMessages + the mark-as-read
+  // calls in the "subscribe to active conversation" effect above, which is what
+  // actually clears the unread badge/count everywhere else in the app.
+  const openWithHandled = useRef(false);
+  useEffect(() => {
+    const openWithId = location.state?.openWith;
+    if (!openWithId || openWithHandled.current || !currentUser?.id) return;
+    openWithHandled.current = true;
+
+    const existing = mergedContacts.find((c) => c.id === openWithId);
+    if (existing) {
+      setSelected(existing);
+      setMobileView("chat");
+      return;
+    }
+
+    // Not in the sidebar list yet (e.g. very first message) — fetch the profile directly
+    supabase
+      .from(PROFILES_TABLE)
+      .select("id,first_name,last_name,email,role,branch_id")
+      .eq("id", openWithId)
+      .single()
+      .then(({ data }) => {
+        if (!data) return;
+        setSelected({
+          ...data,
+          full_name: toFullName(data),
+          branch: normBranch(data.branch_id || ""),
+        });
+        setMobileView("chat");
+      });
+  }, [location.state, currentUser?.id, mergedContacts]);
   const filteredClients = mergedContacts.filter(
     (c) =>
       !search ||
