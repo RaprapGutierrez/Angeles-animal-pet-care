@@ -2791,7 +2791,7 @@ const RoomAvailability = () => {
       </div>
 
       {/* ── CONTENT ── */}
-      <div className="content room-content" style={{ paddingTop: 24 }}>
+      <div className="content room-content" style={{ paddingTop: 35 }}>
         {/* Stat Cards */}
         <div
           className="room-stats-grid"
