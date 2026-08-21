@@ -736,10 +736,17 @@ const PointOfSale = () => {
     fetchTransactions();
 
     const inventoryChannel = supabase
-      .channel("pos-inventory-realtime")
+      .channel(`pos-inventory-realtime-${user?.branchId || "all"}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "inventory" },
+        {
+          event: "*",
+          schema: "public",
+          table: "inventory",
+          ...(user?.branchId
+            ? { filter: `branch_id=eq.${user.branchId}` }
+            : {}),
+        },
         () => fetchProducts(),
       )
       .subscribe();
@@ -762,10 +769,17 @@ const PointOfSale = () => {
   useEffect(() => {
     if (userLoading || !user) return;
     const txChannel = supabase
-      .channel("pos-transactions-realtime")
+      .channel(`pos-transactions-realtime-${user?.branchId || "all"}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "transactions" },
+        {
+          event: "*",
+          schema: "public",
+          table: "transactions",
+          ...(user?.branchId
+            ? { filter: `branch_id=eq.${user.branchId}` }
+            : {}),
+        },
         () => fetchTransactions(),
       )
       .subscribe();

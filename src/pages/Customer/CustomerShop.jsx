@@ -99,7 +99,14 @@ const CustomerShop = () => {
       .channel(`customer-shop-inventory-${user?.branchId || "all"}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: T_INVENTORY },
+        {
+          event: "*",
+          schema: "public",
+          table: T_INVENTORY,
+          ...(user?.branchId
+            ? { filter: `branch_id=eq.${user.branchId}` }
+            : {}),
+        },
         () => {
           fetchProducts();
         },
@@ -107,10 +114,15 @@ const CustomerShop = () => {
       .subscribe();
 
     const txChannel = supabase
-      .channel(`customer-shop-transactions-${user?.branchId || "all"}`)
+      .channel(`customer-shop-transactions-${user?.id || "anon"}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: T_TRANSACTIONS },
+        {
+          event: "*",
+          schema: "public",
+          table: T_TRANSACTIONS,
+          ...(user?.id ? { filter: `client_id=eq.${user.id}` } : {}),
+        },
         () => {
           if (showReceipts) fetchReceipts();
         },
