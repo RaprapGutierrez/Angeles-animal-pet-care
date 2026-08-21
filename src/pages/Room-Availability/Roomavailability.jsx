@@ -1622,9 +1622,15 @@ const RoomFormModal = ({
                   placeholder="Select unassigned patient"
                   options={unassignedPatients.map((p) => ({
                     value: p.name,
-                    label: p.name,
+                    label: `${p.name}${p.owner ? ` — ${p.owner}` : ""} (${p.status})`,
                   }))}
                 />
+                {unassignedPatients.length === 0 && (
+                  <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 6 }}>
+                    No pending/confirmed appointments are waiting on a room
+                    right now.
+                  </div>
+                )}
               </div>
             )}
             <div style={{ padding: "10px 16px" }}>
@@ -2128,29 +2134,33 @@ const RoomAvailability = () => {
   const [unassignedPatients, setUnassignedPatients] = useState([]);
 
   const fetchUnassignedPatients = async () => {
-    const assignedNames = rooms
-      .filter((r) => r.status === "Occupied" && r.patient)
-      .map((r) => r.patient.toLowerCase().trim());
-    const { data: appts } = await supabase
+    // Pull appointments that are NOT yet complete/cancelled (still active) and
+    // don't already have a room. Completed/Cancelled visits never need a room.
+    let q = supabase
       .from("appointments")
-      .select("id, pet_name, status")
-      .in("status", ["Completed", "Done"]);
-    const { data: walkins } = await supabase
-      .from("walkins")
-      .select("id, pet_name, status")
-      .in("status", ["Completed", "Done"]);
-    const combined = [...(appts || []), ...(walkins || [])];
-    const unique = Array.from(
-      new Map(
-        combined
-          .filter(
-            (p) =>
-              p.pet_name &&
-              !assignedNames.includes(p.pet_name.toLowerCase().trim()),
-          )
-          .map((p) => [p.pet_name.toLowerCase().trim(), { name: p.pet_name }]),
-      ).values(),
-    );
+      .select("id, patient, owner, status, room, branch_id")
+      .in("status", ["Pending", "Confirmed"])
+      .or("room.is.null,room.eq.");
+    if (user?.branchId && !seeAllBranches) q = q.eq("branch_id", user.branchId);
+    const { data, error } = await q;
+    if (error) {
+      console.error("Unassigned patients fetch error:", error.message);
+      setUnassignedPatients([]);
+      return;
+    }
+    const seen = new Set();
+    const unique = (data || [])
+      .filter(
+        (a) =>
+          a.patient &&
+          !seen.has(a.patient.toLowerCase().trim()) &&
+          seen.add(a.patient.toLowerCase().trim()),
+      )
+      .map((a) => ({
+        name: a.patient,
+        owner: a.owner,
+        status: a.status,
+      }));
     setUnassignedPatients(unique);
   };
   const [confirm, setConfirm] = useState({ show: false });

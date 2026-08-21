@@ -1175,13 +1175,13 @@ const BranchPill = ({ branchId, branchName, isExpanded }) => {
     <div
       style={{
         margin: "0 8px 6px",
-        padding: "5px 10px",
-        borderRadius: 4,
+        padding: "4px 8px",
+        borderRadius: 2,
         background: `${color}18`,
         border: `0.5px solid ${color}44`,
         display: "flex",
         alignItems: "center",
-        gap: 7,
+        gap: 6,
         transition: "all 0.25s",
         width: "auto",
       }}
