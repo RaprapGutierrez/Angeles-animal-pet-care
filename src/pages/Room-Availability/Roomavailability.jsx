@@ -2799,7 +2799,7 @@ const RoomAvailability = () => {
             display: "grid",
             gridTemplateColumns: "repeat(auto-fit,minmax(195px,1fr))",
             gap: 14,
-            marginTop: 35,
+            marginTop: 38,
             marginBottom: 20,
           }}
         >
