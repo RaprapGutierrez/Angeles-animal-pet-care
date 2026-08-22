@@ -617,12 +617,61 @@ const PointOfSale = () => {
 
   const [confirmVoid, setConfirmVoid] = useState({ show: false, txId: null });
 
-  const printReceiptText = (text) => {
+  const generateReceiptHTML = (tx) => {
+    const dashLine =
+      '<div style="border-top:1px dashed #999;margin:8px 0;"></div>';
+
+    const itemsHTML = (tx.items || [])
+      .map(
+        (i) => `
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;padding:2px 0;">
+          <span style="text-transform:uppercase;">${i.name}</span>
+          <span>₱${(i.qty * i.price).toFixed(2)}</span>
+        </div>`,
+      )
+      .join("");
+
+    return `
+      <div style="width:280px;margin:0 auto;font-family:'Courier New',monospace;color:#111;font-size:12px;line-height:1.5;">
+        <div style="text-align:center;">
+          <div style="width:56px;height:56px;border-radius:50%;border:2px solid #1e3a8a;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:24px;color:#1e3a8a;font-weight:800;">🐾</div>
+          <div style="font-weight:800;font-size:14px;">Angeles Animal Care Hospital</div>
+          <div style="font-size:10.5px;color:#444;">Tarlac City, Central Luzon</div>
+        </div>
+        ${dashLine}
+        <div style="text-align:center;font-weight:800;letter-spacing:1px;font-size:12px;">*** SALES RECEIPT ***</div>
+        ${dashLine}
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;">
+          <span>DATE: ${new Date().toLocaleDateString()}</span>
+          <span>TIME: ${new Date().toLocaleTimeString()}</span>
+        </div>
+        <div style="margin-top:6px;font-size:11.5px;">
+          CLIENT: ${tx.client}${tx._isWalkin ? " (Walk-in)" : ""}<br/>
+          ${tx._walkinContact ? `CONTACT: ${tx._walkinContact}<br/>` : ""}
+        </div>
+        ${dashLine}
+        ${itemsHTML}
+        ${dashLine}
+        <div style="display:flex;justify-content:space-between;"><span>SUBTOTAL</span><span>₱${Number(tx.subtotal).toFixed(2)}</span></div>
+        ${
+          Number(tx.discount) > 0
+            ? `<div style="display:flex;justify-content:space-between;"><span>DISCOUNT (${tx.discount}%)</span><span>-₱${((tx.subtotal * tx.discount) / 100).toFixed(2)}</span></div>`
+            : ""
+        }
+        <div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px;margin-top:4px;"><span>TOTAL</span><span>₱${Number(tx.total).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-top:2px;"><span>PAYMENT</span><span>${tx.payment}</span></div>
+        ${dashLine}
+        <div style="text-align:center;font-weight:700;">Thank you for trusting us<br/>with Animal Care!</div>
+      </div>
+    `;
+  };
+
+  const printReceiptHTML = (html) => {
     const w = window.open("", "PRINT", "height=650,width=420");
     if (!w) return;
     w.document.write(`<html><head><title>Receipt</title><style>
-      body{font-family:monospace;font-size:12px;white-space:pre-wrap;padding:16px;}
-    </style></head><body>${text.replace(/</g, "&lt;")}</body></html>`);
+      body{font-family:'Courier New',monospace;padding:20px;background:#fff;}
+    </style></head><body>${html}</body></html>`);
     w.document.close();
     w.focus();
     w.print();
@@ -1162,6 +1211,7 @@ const PointOfSale = () => {
                 />
                 <input
                   type="text"
+                  className="pos-search-input"
                   placeholder="Search products..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
@@ -1646,6 +1696,7 @@ const PointOfSale = () => {
                       </svg>
                       <input
                         type="text"
+                        className="pos-search-input"
                         placeholder="Search client name or email..."
                         value={clientSearch}
                         onChange={(e) => {
@@ -2321,7 +2372,7 @@ const PointOfSale = () => {
               </div>
 
               <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                {["Cash", "Card", "QR"].map((m) => (
+                {["Cash"].map((m) => (
                   <button
                     key={m}
                     onClick={() => setPayMethod(m)}
@@ -2529,27 +2580,21 @@ const PointOfSale = () => {
             <div className="modal-body">
               <div
                 style={{
-                  fontFamily: "monospace",
-                  fontSize: 12,
-                  background: "var(--bg)",
+                  background: "#fff",
                   borderRadius: 8,
-                  padding: 16,
+                  padding: "20px 16px",
                   border: "1px dashed var(--border)",
-                  whiteSpace: "pre-wrap",
                 }}
-              >
-                {`Angeles Animal Care Hospital\n============================\nClient: ${lastTx.client}${lastTx._isWalkin ? " (Walk-in)" : ""}\n${lastTx._walkinContact ? `Contact: ${lastTx._walkinContact}\n` : ""}Date:   ${new Date().toLocaleDateString()}\n----------------------------\n${(lastTx.items || []).map((i) => `${i.name.substring(0, 20).padEnd(20)} x${i.qty}\n  @ ₱${Number(i.price).toFixed(2)} = ₱${(i.qty * i.price).toFixed(2)}`).join("\n")}\n----------------------------\nSubtotal:     ₱${Number(lastTx.subtotal).toFixed(2)}\nDiscount:     -₱${((lastTx.subtotal * lastTx.discount) / 100).toFixed(2)}\n============================\nTOTAL:        ₱${Number(lastTx.total).toFixed(2)}\nPayment:      ${lastTx.payment}\n============================\nThank you!`}
-              </div>
+                dangerouslySetInnerHTML={{
+                  __html: generateReceiptHTML(lastTx),
+                }}
+              />
             </div>
             <div className="modal-footer">
               <button
                 className="btn btn-ghost"
                 style={S.btn}
-                onClick={() =>
-                  printReceiptText(
-                    `Angeles Animal Care Hospital\n============================\nClient: ${lastTx.client}${lastTx._isWalkin ? " (Walk-in)" : ""}\n${lastTx._walkinContact ? `Contact: ${lastTx._walkinContact}\n` : ""}Date:   ${new Date().toLocaleDateString()}\n----------------------------\n${(lastTx.items || []).map((i) => `${i.name.substring(0, 20).padEnd(20)} x${i.qty}\n  @ ₱${Number(i.price).toFixed(2)} = ₱${(i.qty * i.price).toFixed(2)}`).join("\n")}\n----------------------------\nSubtotal:     ₱${Number(lastTx.subtotal).toFixed(2)}\nDiscount:     -₱${((lastTx.subtotal * lastTx.discount) / 100).toFixed(2)}\n============================\nTOTAL:        ₱${Number(lastTx.total).toFixed(2)}\nPayment:      ${lastTx.payment}\n============================\nThank you!`,
-                  )
-                }
+                onClick={() => printReceiptHTML(generateReceiptHTML(lastTx))}
               >
                 Print
               </button>

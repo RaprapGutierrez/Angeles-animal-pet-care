@@ -1,40 +1,73 @@
 @keyframes posSlideIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes posPulse {
-  0%   { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
-  70%  { box-shadow: 0 0 0 8px rgba(59,130,246,0); }
-  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgba(59, 130, 246, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
 }
 @keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes shimmer {
-  0%   { background-position: -600px 0; }
-  100% { background-position: 600px 0; }
+  0% {
+    background-position: -600px 0;
+  }
+  100% {
+    background-position: 600px 0;
+  }
 }
 
-.cart-item-enter { animation: posSlideIn 0.22s ease both; }
+.cart-item-enter {
+  animation: posSlideIn 0.22s ease both;
+}
 
-.qty-btn { transition: all 0.15s; }
+.qty-btn {
+  transition: all 0.15s;
+}
 .qty-btn:hover {
   background: var(--royal) !important;
   color: #fff !important;
   border-color: var(--royal) !important;
 }
-.qty-btn:active { transform: scale(0.84) !important; }
+.qty-btn:active {
+  transform: scale(0.84) !important;
+}
 
-.product-card { transition: all 0.18s cubic-bezier(.4,0,.2,1); cursor: pointer; }
+.product-card {
+  transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+  cursor: pointer;
+}
 .product-card:hover {
   border-color: var(--royal) !important;
   background: #f0f5ff !important;
   transform: translateY(-3px);
-  box-shadow: 0 6px 20px rgba(59,130,246,0.13) !important;
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.13) !important;
 }
 
-.client-option:hover { background: #f0f5ff !important; }
+.client-option:hover {
+  background: #f0f5ff !important;
+}
 
 .cat-pill {
   padding: 6px 14px;
@@ -49,38 +82,56 @@
   color: var(--muted);
   white-space: nowrap;
 }
-.cat-pill.active { background: var(--royal); color: #fff; border-color: var(--royal); }
-.cat-pill:hover:not(.active) { border-color: var(--royal); color: var(--royal); }
+.cat-pill.active {
+  background: var(--royal);
+  color: #fff;
+  border-color: var(--royal);
+}
+.cat-pill:hover:not(.active) {
+  border-color: var(--royal);
+  color: var(--royal);
+}
 
-.fade-in { animation: fadeSlideUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.fade-in {
+  animation: fadeSlideUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
 
 .skel {
-  background: linear-gradient(90deg,#f0f0f0 25%,#e8e8e8 50%,#f0f0f0 75%);
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
   background-size: 600px 100%;
   animation: shimmer 1.4s infinite linear;
   border-radius: 8px;
   display: block;
 }
 
-.pay-method:hover { opacity: 0.85; }
+.pay-method:hover {
+  opacity: 0.85;
+}
 
 .tx-history-btn:hover {
   opacity: 0.88;
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
 }
 
-input[type=number]::-webkit-inner-spin-button,
-input[type=number]::-webkit-outer-spin-button {
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none;
   margin: 0;
 }
 
-.process-btn { transition: all 0.18s; }
+.process-btn {
+  transition: all 0.18s;
+}
 .process-btn:not(:disabled):hover {
   opacity: 0.88;
   transform: translateY(-1px);
-  box-shadow: 0 4px 14px rgba(59,130,246,0.3);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.3);
+}
+
+.pos-search-input::placeholder {
+  color: #94a3b8;
+  opacity: 1;
 }
 
 @media (max-width: 768px) {
