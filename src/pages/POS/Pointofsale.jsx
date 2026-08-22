@@ -670,7 +670,10 @@ const PointOfSale = () => {
     const w = window.open("", "PRINT", "height=650,width=420");
     if (!w) return;
     w.document.write(`<html><head><title>Receipt</title><style>
-      body{font-family:'Courier New',monospace;padding:20px;background:#fff;}
+      @page { size: 80mm auto; margin: 0; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body { margin: 0; padding: 0; }
+      body{font-family:'Courier New',monospace;background:#fff;width:80mm;padding:6mm 4mm;box-sizing:border-box;}
     </style></head><body>${html}</body></html>`);
     w.document.close();
     w.focus();
