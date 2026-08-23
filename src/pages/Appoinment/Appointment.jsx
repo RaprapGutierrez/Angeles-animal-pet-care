@@ -1235,6 +1235,9 @@ const Appointment = () => {
   const [savingVetSchedule, setSavingVetSchedule] = useState(false);
   const [vets, setVets] = useState(DEFAULT_VETS);
   const [newVetName, setNewVetName] = useState("");
+  const [showAddVetModal, setShowAddVetModal] = useState(false);
+  const [newVetDays, setNewVetDays] = useState([]);
+  const [newVetTimes, setNewVetTimes] = useState([]);
   const [editingVet, setEditingVet] = useState(null); // { original, draftName } | null
   const [deleteVetConfirm, setDeleteVetConfirm] = useState({
     show: false,
@@ -1261,29 +1264,50 @@ const Appointment = () => {
 
   const addVet = async () => {
     const name = newVetName.trim();
-    if (!name) return;
+    if (!name) {
+      showAlert("Missing Name", "Please enter the veterinarian's name.");
+      return;
+    }
     if (vets.includes(name)) {
       showAlert("Duplicate", "A veterinarian with this name already exists.");
       return;
     }
     const { error } = await supabase
       .from("vet_schedules")
-      .insert([{ vet: name, days: [], times: [] }]);
+      .insert([{ vet: name, days: newVetDays, times: newVetTimes }]);
     if (error) {
       showAlert("Error", error.message);
       return;
     }
-    setNewVetName("");
     setVetScheduleDraft((prev) =>
       prev
         ? {
-            days: { ...prev.days, [name]: [] },
-            times: { ...prev.times, [name]: [] },
+            days: { ...prev.days, [name]: newVetDays },
+            times: { ...prev.times, [name]: newVetTimes },
           }
         : prev,
     );
+    setNewVetName("");
+    setNewVetDays([]);
+    setNewVetTimes([]);
+    setShowAddVetModal(false);
     await fetchVetSchedules();
     showToast(`✓ ${name} added`, "success");
+  };
+
+  const toggleNewVetDay = (day) => {
+    setNewVetDays((prev) =>
+      prev.includes(day)
+        ? prev.filter((d) => d !== day)
+        : [...prev, day].sort((a, b) => a - b),
+    );
+  };
+  const toggleNewVetTime = (time) => {
+    setNewVetTimes((prev) =>
+      prev.includes(time)
+        ? prev.filter((t) => t !== time)
+        : [...prev, time].sort((a, b) => TIMES.indexOf(a) - TIMES.indexOf(b)),
+    );
   };
 
   const renameVet = async (originalName, newName) => {
@@ -3599,34 +3623,18 @@ const Appointment = () => {
                 <div
                   style={{
                     display: "flex",
-                    gap: 8,
+                    justifyContent: "flex-end",
                     marginBottom: 16,
-                    alignItems: "center",
                   }}
                 >
-                  <input
-                    type="text"
-                    value={newVetName}
-                    onChange={(e) => setNewVetName(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") addVet();
-                    }}
-                    placeholder="New veterinarian name…"
-                    style={{
-                      flex: 1,
-                      padding: "8px 12px",
-                      border: "1.5px solid var(--border)",
-                      borderRadius: 8,
-                      fontSize: 13,
-                      fontWeight: 600,
-                      fontFamily: "inherit",
-                      outline: "none",
-                      boxSizing: "border-box",
-                    }}
-                  />
                   <button
                     type="button"
-                    onClick={addVet}
+                    onClick={() => {
+                      setNewVetName("");
+                      setNewVetDays([]);
+                      setNewVetTimes([]);
+                      setShowAddVetModal(true);
+                    }}
                     style={{
                       padding: "8px 16px",
                       borderRadius: 8,
@@ -3638,9 +3646,23 @@ const Appointment = () => {
                       cursor: "pointer",
                       fontFamily: "inherit",
                       whiteSpace: "nowrap",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
                     }}
                   >
-                    + Add Vet
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.8"
+                    >
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Add Vet
                   </button>
                 </div>
               )}
@@ -4026,6 +4048,229 @@ const Appointment = () => {
                 onClick={() => deleteVet(deleteVetConfirm.vet)}
               >
                 Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddVetModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100000,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--card)",
+              borderRadius: 14,
+              width: "100%",
+              maxWidth: 480,
+              maxHeight: "85vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                background: "linear-gradient(135deg,#0f172a,#1e3a8a)",
+                padding: "16px 20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: "#fff",
+                  }}
+                >
+                  Add Veterinarian
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.75)",
+                  }}
+                >
+                  Enter their name and set their availability.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddVetModal(false)}
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  border: "none",
+                  borderRadius: 8,
+                  width: 30,
+                  height: 30,
+                  cursor: "pointer",
+                  color: "#fff",
+                  flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ overflowY: "auto", flex: 1, padding: "18px 20px" }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#94a3b8",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.6px",
+                  marginBottom: 6,
+                }}
+              >
+                Veterinarian Name <span style={{ color: "#ef4444" }}>*</span>
+              </div>
+              <input
+                type="text"
+                autoFocus
+                value={newVetName}
+                onChange={(e) => setNewVetName(e.target.value)}
+                placeholder="e.g. Dr. Dela Cruz"
+                style={{
+                  width: "100%",
+                  padding: "9px 12px",
+                  border: "1.5px solid var(--border)",
+                  borderRadius: 8,
+                  fontSize: 13,
+                  fontWeight: 600,
+                  fontFamily: "inherit",
+                  outline: "none",
+                  boxSizing: "border-box",
+                  marginBottom: 18,
+                }}
+              />
+
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#94a3b8",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.6px",
+                  marginBottom: 6,
+                }}
+              >
+                Available Days
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  marginBottom: 18,
+                }}
+              >
+                {DAY_NAMES.map((label, dIdx) => {
+                  const active = newVetDays.includes(dIdx);
+                  return (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => toggleNewVetDay(dIdx)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        border: `1.5px solid ${active ? "#1e3a8a" : "var(--border)"}`,
+                        background: active ? "#dbeafe" : "transparent",
+                        color: active ? "#1e3a8a" : "var(--muted)",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#94a3b8",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.6px",
+                  marginBottom: 6,
+                }}
+              >
+                Available Times
+              </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                {TIMES.map((t) => {
+                  const active = newVetTimes.includes(t);
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      onClick={() => toggleNewVetTime(t)}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 700,
+                        border: `1.5px solid ${active ? "#16a34a" : "var(--border)"}`,
+                        background: active ? "#dcfce7" : "transparent",
+                        color: active ? "#15803d" : "var(--muted)",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {t}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                padding: "14px 20px",
+                borderTop: "1px solid var(--border)",
+              }}
+            >
+              <button
+                className="btn btn-ghost"
+                style={S.btn}
+                onClick={() => setShowAddVetModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn"
+                style={{
+                  ...S.btn,
+                  background: "#1e3a8a",
+                  color: "#fff",
+                  border: "none",
+                }}
+                onClick={addVet}
+              >
+                Add Veterinarian
               </button>
             </div>
           </div>
