@@ -25,7 +25,7 @@ const isPastDue = (appt) =>
   appt?.date &&
   appt.date < today &&
   ["Pending", "Confirmed"].includes(appt.status);
-const VETS = ["Dr. Santos", "Dr. Reyes", "Dr. Cruz", "Dr. Garcia"];
+const DEFAULT_VETS = ["Dr. Santos", "Dr. Reyes", "Dr. Cruz", "Dr. Garcia"];
 const TIMES = [
   "08:00 AM",
   "09:00 AM",
@@ -1188,6 +1188,7 @@ const Appointment = () => {
   const {
     user,
     isAdmin,
+    isSuperAdmin,
     isEmployee,
     isCustomer,
     seeAllBranches,
@@ -1232,18 +1233,116 @@ const Appointment = () => {
   const [showVetSchedule, setShowVetSchedule] = useState(false);
   const [vetScheduleDraft, setVetScheduleDraft] = useState(null);
   const [savingVetSchedule, setSavingVetSchedule] = useState(false);
+  const [vets, setVets] = useState(DEFAULT_VETS);
+  const [newVetName, setNewVetName] = useState("");
+  const [editingVet, setEditingVet] = useState(null); // { original, draftName } | null
+  const [deleteVetConfirm, setDeleteVetConfirm] = useState({
+    show: false,
+    vet: null,
+  });
 
   const fetchVetSchedules = async () => {
     const { data, error } = await supabase.from("vet_schedules").select("*");
-    if (error || !data || data.length === 0) return;
+    if (error) return;
+    if (!data || data.length === 0) {
+      setVets(DEFAULT_VETS);
+      return;
+    }
     const days = {};
     const times = {};
     data.forEach((row) => {
       days[row.vet] = row.days || [];
       times[row.vet] = row.times || [];
     });
-    setVetSchedule((prev) => ({ ...prev, ...days }));
-    setVetTimeSchedule((prev) => ({ ...prev, ...times }));
+    setVets(data.map((row) => row.vet));
+    setVetSchedule(days);
+    setVetTimeSchedule(times);
+  };
+
+  const addVet = async () => {
+    const name = newVetName.trim();
+    if (!name) return;
+    if (vets.includes(name)) {
+      showAlert("Duplicate", "A veterinarian with this name already exists.");
+      return;
+    }
+    const { error } = await supabase
+      .from("vet_schedules")
+      .insert([{ vet: name, days: [], times: [] }]);
+    if (error) {
+      showAlert("Error", error.message);
+      return;
+    }
+    setNewVetName("");
+    setVetScheduleDraft((prev) =>
+      prev
+        ? {
+            days: { ...prev.days, [name]: [] },
+            times: { ...prev.times, [name]: [] },
+          }
+        : prev,
+    );
+    await fetchVetSchedules();
+    showToast(`✓ ${name} added`, "success");
+  };
+
+  const renameVet = async (originalName, newName) => {
+    const trimmed = newName.trim();
+    if (!trimmed || trimmed === originalName) {
+      setEditingVet(null);
+      return;
+    }
+    if (vets.includes(trimmed)) {
+      showAlert("Duplicate", "A veterinarian with this name already exists.");
+      return;
+    }
+    const { error } = await supabase
+      .from("vet_schedules")
+      .update({ vet: trimmed })
+      .eq("vet", originalName);
+    if (error) {
+      showAlert("Error", error.message);
+      return;
+    }
+    await supabase
+      .from("appointments")
+      .update({ vet: trimmed })
+      .eq("vet", originalName);
+    setVetScheduleDraft((prev) => {
+      if (!prev) return prev;
+      const days = { ...prev.days };
+      const times = { ...prev.times };
+      days[trimmed] = days[originalName] || [];
+      times[trimmed] = times[originalName] || [];
+      delete days[originalName];
+      delete times[originalName];
+      return { days, times };
+    });
+    setEditingVet(null);
+    await fetchVetSchedules();
+    showToast(`✓ Renamed to ${trimmed}`, "success");
+  };
+
+  const deleteVet = async (vetName) => {
+    const { error } = await supabase
+      .from("vet_schedules")
+      .delete()
+      .eq("vet", vetName);
+    if (error) {
+      showAlert("Error", error.message);
+      return;
+    }
+    setVetScheduleDraft((prev) => {
+      if (!prev) return prev;
+      const days = { ...prev.days };
+      const times = { ...prev.times };
+      delete days[vetName];
+      delete times[vetName];
+      return { days, times };
+    });
+    setDeleteVetConfirm({ show: false, vet: null });
+    await fetchVetSchedules();
+    showToast(`Veterinarian removed`, "info");
   };
 
   useEffect(() => {
@@ -1285,7 +1384,7 @@ const Appointment = () => {
   const saveVetSchedule = async () => {
     if (!vetScheduleDraft) return;
     setSavingVetSchedule(true);
-    const rows = VETS.map((vet) => ({
+    const rows = vets.map((vet) => ({
       vet,
       days: vetScheduleDraft.days[vet] || [],
       times: vetScheduleDraft.times[vet] || [],
@@ -1364,6 +1463,7 @@ const Appointment = () => {
     "Other",
   ];
   const [toasts, setToasts] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState(null);
   const [sortDir, setSortDir] = useState("desc");
@@ -1708,6 +1808,7 @@ const Appointment = () => {
   }, [form.date, form.time, form.vet, appts, editMode, selectedAppt]);
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedIds([]);
   }, [search, filterDate, filterStatus, sortField, sortDir]);
 
   const filtered = appts.filter((a) => {
@@ -2552,6 +2653,46 @@ const Appointment = () => {
         showToast("Appointment deleted", "info");
       },
       "Yes, Delete",
+      "#dc2626",
+    );
+
+  const toggleSelectRow = (id) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const toggleSelectAllOnPage = () => {
+    const pageIds = paginated.map((a) => a.id);
+    const allSelected = pageIds.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !pageIds.includes(id))
+        : [...new Set([...prev, ...pageIds])],
+    );
+  };
+
+  const bulkDeleteAppts = () =>
+    showConfirm(
+      "Delete Appointments",
+      `Permanently delete ${selectedIds.length} selected appointment${selectedIds.length > 1 ? "s" : ""}? This cannot be undone.`,
+      async () => {
+        const { error } = await supabase
+          .from("appointments")
+          .delete()
+          .in("id", selectedIds);
+        if (error) {
+          showAlert("Error", error.message);
+          return;
+        }
+        logActivity(
+          user,
+          "Bulk deleted appointments",
+          `Deleted ${selectedIds.length} appointment(s): ${selectedIds.join(", ")}`,
+        );
+        showToast(`${selectedIds.length} appointment(s) deleted`, "info");
+        setSelectedIds([]);
+      },
+      "Yes, Delete All",
       "#dc2626",
     );
 
@@ -3432,7 +3573,7 @@ const Appointment = () => {
                     color: "rgba(255,255,255,0.75)",
                   }}
                 >
-                  {isAdmin
+                  {isAdmin || isSuperAdmin
                     ? "Set which days & times each vet is available. Editable by Admin only."
                     : "Days & times each vet is available."}
                 </p>
@@ -3454,7 +3595,7 @@ const Appointment = () => {
               </button>
             </div>
             <div style={{ overflowY: "auto", flex: 1, padding: "16px 20px" }}>
-              {VETS.map((vet) => (
+              {vets.map((vet) => (
                 <div
                   key={vet}
                   style={{
@@ -3464,16 +3605,145 @@ const Appointment = () => {
                     marginBottom: 14,
                   }}
                 >
-                  <p
+                  <div
                     style={{
-                      margin: "0 0 10px",
-                      fontSize: 13,
-                      fontWeight: 800,
-                      color: "var(--text)",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 10,
+                      gap: 8,
                     }}
                   >
-                    {vet}
-                  </p>
+                    {editingVet?.original === vet ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          flex: 1,
+                          minWidth: 0,
+                        }}
+                      >
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editingVet.draftName}
+                          onChange={(e) =>
+                            setEditingVet((prev) => ({
+                              ...prev,
+                              draftName: e.target.value,
+                            }))
+                          }
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter")
+                              renameVet(vet, editingVet.draftName);
+                            if (e.key === "Escape") setEditingVet(null);
+                          }}
+                          style={{
+                            flex: 1,
+                            padding: "6px 10px",
+                            border: "1.5px solid #1e3a8a",
+                            borderRadius: 6,
+                            fontSize: 13,
+                            fontWeight: 700,
+                            fontFamily: "inherit",
+                            outline: "none",
+                            boxSizing: "border-box",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => renameVet(vet, editingVet.draftName)}
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: 6,
+                            border: "none",
+                            background: "#16a34a",
+                            color: "#fff",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditingVet(null)}
+                          style={{
+                            padding: "6px 10px",
+                            borderRadius: 6,
+                            border: "1.5px solid var(--border)",
+                            background: "transparent",
+                            color: "var(--muted)",
+                            fontSize: 11,
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 13,
+                            fontWeight: 800,
+                            color: "var(--text)",
+                          }}
+                        >
+                          {vet}
+                        </p>
+                        {(isAdmin || isSuperAdmin) && (
+                          <div
+                            style={{ display: "flex", gap: 6, flexShrink: 0 }}
+                          >
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditingVet({ original: vet, draftName: vet })
+                              }
+                              style={{
+                                padding: "4px 9px",
+                                borderRadius: 6,
+                                border: "1.5px solid #e2e8f0",
+                                background: "#f8fafc",
+                                color: "#475569",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                fontFamily: "inherit",
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setDeleteVetConfirm({ show: true, vet })
+                              }
+                              style={{
+                                padding: "4px 9px",
+                                borderRadius: 6,
+                                border: "1.5px solid #fca5a5",
+                                background: "#fef2f2",
+                                color: "#dc2626",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                fontFamily: "inherit",
+                              }}
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </div>
 
                   <div
                     style={{
@@ -3503,7 +3773,7 @@ const Appointment = () => {
                         <button
                           key={label}
                           type="button"
-                          disabled={!isAdmin}
+                          disabled={!(isAdmin || isSuperAdmin)}
                           onClick={() => toggleDraftDay(vet, dIdx)}
                           style={{
                             padding: "6px 12px",
@@ -3513,7 +3783,8 @@ const Appointment = () => {
                             border: `1.5px solid ${active ? "#1e3a8a" : "var(--border)"}`,
                             background: active ? "#dbeafe" : "transparent",
                             color: active ? "#1e3a8a" : "var(--muted)",
-                            cursor: isAdmin ? "pointer" : "default",
+                            cursor:
+                              isAdmin || isSuperAdmin ? "pointer" : "default",
                             fontFamily: "inherit",
                           }}
                         >
@@ -3544,7 +3815,7 @@ const Appointment = () => {
                         <button
                           key={t}
                           type="button"
-                          disabled={!isAdmin}
+                          disabled={!(isAdmin || isSuperAdmin)}
                           onClick={() => toggleDraftTime(vet, t)}
                           style={{
                             padding: "6px 12px",
@@ -3554,7 +3825,8 @@ const Appointment = () => {
                             border: `1.5px solid ${active ? "#16a34a" : "var(--border)"}`,
                             background: active ? "#dcfce7" : "transparent",
                             color: active ? "#15803d" : "var(--muted)",
-                            cursor: isAdmin ? "pointer" : "default",
+                            cursor:
+                              isAdmin || isSuperAdmin ? "pointer" : "default",
                             fontFamily: "inherit",
                           }}
                         >
@@ -3580,9 +3852,9 @@ const Appointment = () => {
                 style={S.btn}
                 onClick={() => setShowVetSchedule(false)}
               >
-                {isAdmin ? "Cancel" : "Close"}
+                {isAdmin || isSuperAdmin ? "Cancel" : "Close"}
               </button>
-              {isAdmin && (
+              {(isAdmin || isSuperAdmin) && (
                 <button
                   className="btn"
                   style={{
@@ -3596,6 +3868,116 @@ const Appointment = () => {
                   Save Schedule
                 </button>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteVetConfirm.show && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100000,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--card)",
+              borderRadius: 14,
+              width: "100%",
+              maxWidth: 400,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "18px 22px 14px",
+                borderBottom: "1px solid var(--border)",
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+              }}
+            >
+              <div
+                style={{
+                  width: 34,
+                  height: 34,
+                  borderRadius: 10,
+                  background: "#fef2f2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  flexShrink: 0,
+                }}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#dc2626"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+              </div>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>
+                Remove Veterinarian?
+              </h3>
+            </div>
+            <div style={{ padding: "16px 22px" }}>
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 13,
+                  color: "var(--muted)",
+                  lineHeight: 1.6,
+                }}
+              >
+                {deleteVetConfirm.vet} will be removed from the schedule list.
+                Existing appointments already booked under this name will not be
+                deleted, but no new appointments can be made with them.
+              </p>
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                padding: "12px 22px",
+                borderTop: "1px solid var(--border)",
+                background: "var(--bg)",
+              }}
+            >
+              <button
+                className="btn btn-ghost"
+                style={{ width: "auto" }}
+                onClick={() => setDeleteVetConfirm({ show: false, vet: null })}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn"
+                style={{
+                  width: "auto",
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                }}
+                onClick={() => deleteVet(deleteVetConfirm.vet)}
+              >
+                Remove
+              </button>
             </div>
           </div>
         </div>
@@ -4273,10 +4655,79 @@ const Appointment = () => {
                   justifyContent: "space-between",
                   padding: "16px 22px",
                   borderBottom: "1px solid var(--border)",
+                  flexWrap: "wrap",
+                  gap: 10,
                 }}
               >
                 <h2 style={{ fontSize: 15, fontWeight: 700 }}>Appointments</h2>
-                {loading ? (
+                {selectedIds.length > 0 ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 10,
+                      background: "#fef2f2",
+                      border: "1.5px solid #fca5a5",
+                      borderRadius: 8,
+                      padding: "6px 12px",
+                    }}
+                  >
+                    <span
+                      style={{
+                        fontSize: 12,
+                        fontWeight: 700,
+                        color: "#991b1b",
+                      }}
+                    >
+                      {selectedIds.length} selected
+                    </span>
+                    <button
+                      onClick={bulkDeleteAppts}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        padding: "5px 12px",
+                        borderRadius: 6,
+                        border: "none",
+                        background: "#dc2626",
+                        color: "#fff",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                      Delete Selected
+                    </button>
+                    <button
+                      onClick={() => setSelectedIds([])}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#991b1b",
+                        fontSize: 12,
+                        fontWeight: 600,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      Clear
+                    </button>
+                  </div>
+                ) : loading ? (
                   <Skel w={80} h={13} />
                 ) : (
                   <span style={{ color: "var(--muted)", fontSize: 13 }}>
@@ -4295,6 +4746,22 @@ const Appointment = () => {
                 >
                   <thead>
                     <tr>
+                      {(isAdmin || isEmployee) && (
+                        <th
+                          className="appt-th"
+                          style={{ width: 36, textAlign: "center" }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={
+                              paginated.length > 0 &&
+                              paginated.every((a) => selectedIds.includes(a.id))
+                            }
+                            onChange={toggleSelectAllOnPage}
+                            style={{ cursor: "pointer" }}
+                          />
+                        </th>
+                      )}
                       {[
                         "Patient",
                         "Owner",
@@ -4315,12 +4782,15 @@ const Appointment = () => {
                   <tbody>
                     {loading ? (
                       [1, 2, 3, 4, 5, 6].map((i) => (
-                        <TableRowSkeleton key={i} cols={9} />
+                        <TableRowSkeleton
+                          key={i}
+                          cols={isAdmin || isEmployee ? 10 : 9}
+                        />
                       ))
                     ) : paginated.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={9}
+                          colSpan={isAdmin || isEmployee ? 10 : 9}
                           style={{
                             textAlign: "center",
                             padding: 40,
@@ -4470,6 +4940,20 @@ const Appointment = () => {
                               setShowView(true);
                             }}
                           >
+                            {(isAdmin || isEmployee) && (
+                              <td
+                                className="appt-td"
+                                style={{ textAlign: "center" }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.includes(a.id)}
+                                  onChange={() => toggleSelectRow(a.id)}
+                                  style={{ cursor: "pointer" }}
+                                />
+                              </td>
+                            )}
                             {/* Patient */}
                             <td className="appt-td">
                               <div
@@ -6142,7 +6626,7 @@ const Appointment = () => {
                             setForm({ ...form, vet: val, time: "" })
                           }
                           placeholder="— Select Veterinarian —"
-                          options={VETS}
+                          options={vets}
                         />
                         {form.vet && vetSchedule[form.vet] && (
                           <p
@@ -6519,7 +7003,7 @@ const Appointment = () => {
                               onChange={(val) =>
                                 updateExtraPet(idx, { vet: val })
                               }
-                              options={VETS}
+                              options={vets}
                               placeholder="— Select Veterinarian —"
                             />
                             {p.purpose === "Imaging" && (
