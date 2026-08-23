@@ -193,6 +193,10 @@
     hue-rotate(110deg) brightness(0.9);
 }
 
+.inv-stats-grid {
+  margin-top: 20px;
+}
+
 .inv-card {
   background: var(--card);
   border-radius: var(--radius-lg);
@@ -224,6 +228,12 @@
 
 .inv-btn-auto {
   width: auto;
+}
+
+.inv-search-input::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
 }
 
 @keyframes fadeSlideUp {

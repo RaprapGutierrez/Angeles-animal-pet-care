@@ -634,7 +634,7 @@ const PointOfSale = () => {
     return `
       <div style="width:280px;margin:0 auto;font-family:'Courier New',monospace;color:#111;font-size:12px;line-height:1.5;">
         <div style="text-align:center;">
-          <img src="/images/446805041_881106557364617_1125518808684788316_n-removebg-preview.png" alt="Logo" style="width:56px;height:56px;object-fit:contain;margin:0 auto 8px;display:block;" />
+          <img src="/image/446805041_881106557364617_1125518808684788316_n-removebg-preview.png" alt="Logo" style="width:56px;height:56px;object-fit:contain;margin:0 auto 8px;display:block;" />
           <div style="font-weight:800;font-size:14px;">Angeles Animal Care Hospital</div>
           <div style="font-size:10.5px;color:#444;">Tarlac City, Central Luzon</div>
         </div>

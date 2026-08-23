@@ -39,7 +39,7 @@ const EMPTY_FORM = {
   purpose: "Checkup",
   vet: "",
   notes: "",
-  status: "Waiting",
+  status: "Attended",
   mode: "new",
   existingId: null,
 };
@@ -1308,7 +1308,7 @@ const Walkin = () => {
         purpose: p.purpose,
         vet: p.purpose === "Grooming" ? null : p.vet || null,
         notes: p.notes.trim(),
-        status: "Waiting",
+        status: "Attended",
         arrived_at: new Date().toISOString(),
         branch_id: user?.branchId ?? null,
       };
@@ -2186,7 +2186,7 @@ const Walkin = () => {
         </div>
 
         {/* ══ Content ══ */}
-        <div className="content" style={{ paddingTop: 122 }}>
+        <div className="content" style={{ paddingTop: 92 }}>
           <div
             className="wk-stats-grid"
             style={{
@@ -3098,81 +3098,6 @@ const Walkin = () => {
                                   flexWrap: "nowrap",
                                 }}
                               >
-                                {w.status === "Waiting" && (
-                                  <button
-                                    onClick={() =>
-                                      updateStatus(w.id, "Attended")
-                                    }
-                                    style={{
-                                      background: "none",
-                                      border: "1px solid #bbf7d0",
-                                      borderRadius: 20,
-                                      height: 28,
-                                      padding: "0 10px",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 5,
-                                      cursor: "pointer",
-                                      color: "#16a34a",
-                                      fontSize: 11,
-                                      fontWeight: 600,
-                                      fontFamily: "inherit",
-                                    }}
-                                  >
-                                    <svg
-                                      width="11"
-                                      height="11"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2.5"
-                                      strokeLinecap="round"
-                                    >
-                                      <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                    Attended
-                                  </button>
-                                )}
-                                {w.status === "Waiting" && (
-                                  <button
-                                    onClick={() =>
-                                      showConfirm(
-                                        "Are you sure you want to cancel this walk-in?",
-                                        () => updateStatus(w.id, "Cancelled"),
-                                        "Cancel Walk-In",
-                                      )
-                                    }
-                                    style={{
-                                      background: "none",
-                                      border: "1px solid #fca5a5",
-                                      borderRadius: 20,
-                                      height: 28,
-                                      padding: "0 10px",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 5,
-                                      cursor: "pointer",
-                                      color: "#dc2626",
-                                      fontSize: 11,
-                                      fontWeight: 600,
-                                      fontFamily: "inherit",
-                                    }}
-                                  >
-                                    <svg
-                                      width="11"
-                                      height="11"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2.5"
-                                      strokeLinecap="round"
-                                    >
-                                      <line x1="18" y1="6" x2="6" y2="18" />
-                                      <line x1="6" y1="6" x2="18" y2="18" />
-                                    </svg>
-                                    Cancel
-                                  </button>
-                                )}
                                 <button
                                   onClick={() => {
                                     setViewItem(null);
@@ -3909,6 +3834,610 @@ const Walkin = () => {
             </div>
 
             <div style={{ flex: 1, overflowY: "auto" }}>
+              {/* ── Section: Owner ── */}
+              <div
+                style={{
+                  borderBottom: "1.5px solid #e2e8f0",
+                  position: "relative",
+                  zIndex: showOwnerDrop ? 200 : "auto",
+                }}
+              >
+                <div className="wk-section-label">Owner / Client</div>
+                <div style={{ padding: "12px 16px" }}>
+                  {/* Auto-detected branch */}
+                  <div
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: "#eff6ff",
+                      border: "1px solid #bfdbfe",
+                      borderRadius: 6,
+                      padding: "4px 10px",
+                      marginBottom: 10,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#1e40af",
+                    }}
+                  >
+                    <svg
+                      width="11"
+                      height="11"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    >
+                      <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                    </svg>
+                    Branch:{" "}
+                    {branches.find((b) => b.id === user?.branchId)?.name ||
+                      "My Branch"}
+                  </div>
+
+                  {/* Toggle */}
+                  <div
+                    style={{
+                      display: "flex",
+                      border: "1.5px solid var(--border)",
+                      borderRadius: 8,
+                      overflow: "hidden",
+                      marginBottom: 12,
+                      width: "fit-content",
+                    }}
+                  >
+                    {[
+                      { key: "walkin", label: "Walk-in Guest" },
+                      { key: "registered", label: "Registered Client" },
+                    ].map(({ key, label }) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => {
+                          setOwnerType(key);
+                          clearOwner();
+                        }}
+                        style={{
+                          padding: "7px 18px",
+                          border: "none",
+                          fontSize: 12,
+                          fontWeight: 600,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "all 0.15s",
+                          background:
+                            ownerType === key ? "var(--royal)" : "#fff",
+                          color: ownerType === key ? "#fff" : "var(--muted)",
+                        }}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Walk-in Guest inputs */}
+                  {ownerType === "walkin" && (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 10,
+                        }}
+                      >
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#94a3b8",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.8px",
+                              marginBottom: 6,
+                            }}
+                          >
+                            First Name{" "}
+                            <span style={{ color: "#ef4444" }}>*</span>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="e.g. Juan"
+                            value={form.ownerFirstName}
+                            onChange={(e) => {
+                              const v = sanitizeName(e.target.value);
+                              setForm((prev) => ({
+                                ...prev,
+                                ownerFirstName: v,
+                                owner: `${v} ${prev.ownerLastName}`.trim(),
+                                owner_id: null,
+                              }));
+                            }}
+                            onBlur={() =>
+                              fetchExistingPatientsFor(form.owner.trim(), null)
+                            }
+                            style={{
+                              width: "100%",
+                              border: "none",
+                              borderBottom: "1.5px solid #cbd5e1",
+                              background: "transparent",
+                              fontSize: 13,
+                              fontWeight: 600,
+                              color: "var(--text, #1e293b)",
+                              outline: "none",
+                              padding: "2px 0",
+                              fontFamily: "inherit",
+                              boxSizing: "border-box",
+                            }}
+                          />
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#94a3b8",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.8px",
+                              marginBottom: 6,
+                            }}
+                          >
+                            Last Name{" "}
+                            <span style={{ color: "#ef4444" }}>*</span>
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="e.g. dela Cruz"
+                            value={form.ownerLastName}
+                            onChange={(e) => {
+                              const v = sanitizeName(e.target.value);
+                              setForm((prev) => ({
+                                ...prev,
+                                ownerLastName: v,
+                                owner: `${prev.ownerFirstName} ${v}`.trim(),
+                                owner_id: null,
+                              }));
+                            }}
+                            onBlur={() =>
+                              fetchExistingPatientsFor(form.owner.trim(), null)
+                            }
+                            style={{
+                              width: "100%",
+                              border: "none",
+                              borderBottom: "1.5px solid #cbd5e1",
+                              background: "transparent",
+                              fontSize: 13,
+                              fontWeight: 600,
+                              color: "var(--text, #1e293b)",
+                              outline: "none",
+                              padding: "2px 0",
+                              fontFamily: "inherit",
+                              boxSizing: "border-box",
+                            }}
+                          />
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 10,
+                        }}
+                      >
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#94a3b8",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.8px",
+                              marginBottom: 6,
+                            }}
+                          >
+                            Sex
+                          </div>
+                          <CustomSelect
+                            value={form.ownerSex}
+                            onChange={(val) =>
+                              setForm((prev) => ({ ...prev, ownerSex: val }))
+                            }
+                            options={["Male", "Female"]}
+                            placeholder="— Select Sex —"
+                          />
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#94a3b8",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.8px",
+                              marginBottom: 6,
+                            }}
+                          >
+                            Contact
+                          </div>
+                          <input
+                            type="text"
+                            placeholder="e.g. 09170000000"
+                            value={form.contact}
+                            onChange={(e) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                contact: sanitizeContact(e.target.value),
+                              }))
+                            }
+                            inputMode="numeric"
+                            maxLength={11}
+                            style={{
+                              width: "100%",
+                              border: "none",
+                              borderBottom: "1.5px solid #cbd5e1",
+                              background: "transparent",
+                              fontSize: 13,
+                              fontWeight: 600,
+                              color: "var(--text, #1e293b)",
+                              outline: "none",
+                              padding: "2px 0",
+                              fontFamily: "inherit",
+                              boxSizing: "border-box",
+                            }}
+                          />
+                          {form.contact && form.contact.length !== 11 && (
+                            <p
+                              style={{
+                                fontSize: 10,
+                                color: "#dc2626",
+                                margin: "4px 0 0",
+                              }}
+                            >
+                              Must be 11 digits.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Registered Client dropdown */}
+                  {ownerType === "registered" && (
+                    <div ref={ownerRef} style={{ position: "relative" }}>
+                      {selectedClient ? (
+                        <div
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 10,
+                            background: "#f0fdf4",
+                            border: "1.5px solid #bbf7d0",
+                            borderRadius: 8,
+                            padding: "9px 12px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: "50%",
+                              background: "var(--royal)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              color: "#fff",
+                              fontSize: 13,
+                              fontWeight: 700,
+                              flexShrink: 0,
+                            }}
+                          >
+                            {(
+                              selectedClient.first_name?.[0] || "?"
+                            ).toUpperCase()}
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <p
+                              style={{
+                                margin: 0,
+                                fontSize: 13,
+                                fontWeight: 700,
+                                color: "#166534",
+                              }}
+                            >
+                              {selectedClient.full_name}
+                            </p>
+                            <p
+                              style={{
+                                margin: 0,
+                                fontSize: 11,
+                                color: "#16a34a",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {selectedClient.email || ""}
+                              {selectedClient.phone
+                                ? ` · ${selectedClient.phone}`
+                                : ""}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={clearOwner}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              color: "#dc2626",
+                              fontSize: 14,
+                              fontWeight: 700,
+                              padding: 0,
+                              width: "auto",
+                            }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div
+                            onClick={() => setShowOwnerDrop(true)}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 8,
+                              padding: "9px 12px",
+                              border: `1.5px solid ${showOwnerDrop ? "var(--royal)" : "var(--border)"}`,
+                              borderRadius: 8,
+                              background: "#fff",
+                              cursor: "text",
+                              boxSizing: "border-box",
+                              transition: "border-color 0.15s",
+                            }}
+                          >
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="#9ca3af"
+                              strokeWidth="2.5"
+                              style={{ flexShrink: 0 }}
+                            >
+                              <circle cx="11" cy="11" r="8" />
+                              <path d="m21 21-4.35-4.35" />
+                            </svg>
+                            <input
+                              type="text"
+                              placeholder="Search by name, email or phone..."
+                              value={ownerSearch}
+                              onChange={(e) => {
+                                setOwnerSearch(e.target.value);
+                                setShowOwnerDrop(true);
+                              }}
+                              onFocus={() => setShowOwnerDrop(true)}
+                              style={{
+                                border: "none",
+                                background: "transparent",
+                                fontSize: 13,
+                                color: "var(--text)",
+                                outline: "none",
+                                fontFamily: "inherit",
+                                width: "100%",
+                              }}
+                            />
+                            {ownerSearch && (
+                              <button
+                                type="button"
+                                onClick={clearOwner}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  cursor: "pointer",
+                                  color: "var(--muted)",
+                                  fontSize: 14,
+                                  padding: 0,
+                                  width: "auto",
+                                }}
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                          {showOwnerDrop && (
+                            <div
+                              style={{
+                                position: "absolute",
+                                top: "100%",
+                                left: 0,
+                                right: 0,
+                                background: "#fff",
+                                border: "1.5px solid var(--border)",
+                                borderRadius: 10,
+                                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                                zIndex: 9999,
+                                maxHeight: 220,
+                                overflowY: "auto",
+                                marginTop: 4,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  padding: "7px 12px 5px",
+                                  borderBottom: "1px solid var(--border)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "space-between",
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "var(--muted)",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.5px",
+                                  }}
+                                >
+                                  {branchLabel} Clients
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: 10,
+                                    color: "var(--muted)",
+                                  }}
+                                >
+                                  {filteredClients.length} found
+                                </span>
+                              </div>
+                              {clients.length === 0 ? (
+                                <div
+                                  style={{
+                                    padding: "14px 16px",
+                                    textAlign: "center",
+                                    color: "var(--muted)",
+                                    fontSize: 13,
+                                  }}
+                                >
+                                  <div style={{ marginBottom: 4 }}>
+                                    <svg
+                                      width="20"
+                                      height="20"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="#cbd5e1"
+                                      strokeWidth="1.5"
+                                      strokeLinecap="round"
+                                    >
+                                      <circle cx="11" cy="11" r="8" />
+                                      <path d="m21 21-4.35-4.35" />
+                                    </svg>
+                                  </div>
+                                  No clients in {branchLabel} yet.
+                                </div>
+                              ) : filteredClients.length === 0 ? (
+                                <div
+                                  style={{
+                                    padding: "14px 16px",
+                                    textAlign: "center",
+                                    color: "var(--muted)",
+                                    fontSize: 13,
+                                  }}
+                                >
+                                  <div style={{ marginBottom: 4 }}>
+                                    <svg
+                                      width="20"
+                                      height="20"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="#cbd5e1"
+                                      strokeWidth="1.5"
+                                      strokeLinecap="round"
+                                    >
+                                      <circle cx="11" cy="11" r="8" />
+                                      <path d="m21 21-4.35-4.35" />
+                                    </svg>
+                                  </div>
+                                  No client matching "{ownerSearch}"
+                                </div>
+                              ) : (
+                                filteredClients.map((c) => (
+                                  <div
+                                    key={c.id}
+                                    onClick={() => selectOwner(c)}
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 10,
+                                      padding: "9px 12px",
+                                      cursor: "pointer",
+                                      borderBottom: "1px solid var(--border)",
+                                      transition: "background 0.12s",
+                                    }}
+                                    onMouseEnter={(e) =>
+                                      (e.currentTarget.style.background =
+                                        "var(--light-blue)")
+                                    }
+                                    onMouseLeave={(e) =>
+                                      (e.currentTarget.style.background = "")
+                                    }
+                                  >
+                                    <div
+                                      style={{
+                                        width: 32,
+                                        height: 32,
+                                        borderRadius: "50%",
+                                        background: "var(--royal)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        color: "#fff",
+                                        fontSize: 12,
+                                        fontWeight: 700,
+                                        flexShrink: 0,
+                                      }}
+                                    >
+                                      {(c.first_name?.[0] || "?").toUpperCase()}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <p
+                                        style={{
+                                          margin: 0,
+                                          fontSize: 13,
+                                          fontWeight: 600,
+                                          color: "var(--text)",
+                                        }}
+                                      >
+                                        {c.full_name}
+                                      </p>
+                                      <p
+                                        style={{
+                                          margin: 0,
+                                          fontSize: 11,
+                                          color: "var(--muted)",
+                                          overflow: "hidden",
+                                          textOverflow: "ellipsis",
+                                          whiteSpace: "nowrap",
+                                        }}
+                                      >
+                                        {c.email || ""}
+                                        {c.phone ? ` · ${c.phone}` : ""}
+                                      </p>
+                                    </div>
+                                    {c.role && (
+                                      <span
+                                        style={{
+                                          fontSize: 9,
+                                          background: "#dbeafe",
+                                          color: "#1e40af",
+                                          borderRadius: 4,
+                                          padding: "2px 5px",
+                                          fontWeight: 700,
+                                          flexShrink: 0,
+                                        }}
+                                      >
+                                        {c.role.toUpperCase()}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* ── Section: Patient ── */}
               <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
                 <div
@@ -4721,610 +5250,6 @@ const Walkin = () => {
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-
-              {/* ── Section: Owner ── */}
-              <div
-                style={{
-                  borderBottom: "1.5px solid #e2e8f0",
-                  position: "relative",
-                  zIndex: showOwnerDrop ? 200 : "auto",
-                }}
-              >
-                <div className="wk-section-label">Owner / Client</div>
-                <div style={{ padding: "12px 16px" }}>
-                  {/* Auto-detected branch */}
-                  <div
-                    style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      background: "#eff6ff",
-                      border: "1px solid #bfdbfe",
-                      borderRadius: 6,
-                      padding: "4px 10px",
-                      marginBottom: 10,
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: "#1e40af",
-                    }}
-                  >
-                    <svg
-                      width="11"
-                      height="11"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    >
-                      <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
-                    </svg>
-                    Branch:{" "}
-                    {branches.find((b) => b.id === user?.branchId)?.name ||
-                      "My Branch"}
-                  </div>
-
-                  {/* Toggle */}
-                  <div
-                    style={{
-                      display: "flex",
-                      border: "1.5px solid var(--border)",
-                      borderRadius: 8,
-                      overflow: "hidden",
-                      marginBottom: 12,
-                      width: "fit-content",
-                    }}
-                  >
-                    {[
-                      { key: "walkin", label: "Walk-in Guest" },
-                      { key: "registered", label: "Registered Client" },
-                    ].map(({ key, label }) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => {
-                          setOwnerType(key);
-                          clearOwner();
-                        }}
-                        style={{
-                          padding: "7px 18px",
-                          border: "none",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                          transition: "all 0.15s",
-                          background:
-                            ownerType === key ? "var(--royal)" : "#fff",
-                          color: ownerType === key ? "#fff" : "var(--muted)",
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Walk-in Guest inputs */}
-                  {ownerType === "walkin" && (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 10,
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 10,
-                        }}
-                      >
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#94a3b8",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.8px",
-                              marginBottom: 6,
-                            }}
-                          >
-                            First Name{" "}
-                            <span style={{ color: "#ef4444" }}>*</span>
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="e.g. Juan"
-                            value={form.ownerFirstName}
-                            onChange={(e) => {
-                              const v = sanitizeName(e.target.value);
-                              setForm((prev) => ({
-                                ...prev,
-                                ownerFirstName: v,
-                                owner: `${v} ${prev.ownerLastName}`.trim(),
-                                owner_id: null,
-                              }));
-                            }}
-                            onBlur={() =>
-                              fetchExistingPatientsFor(form.owner.trim(), null)
-                            }
-                            style={{
-                              width: "100%",
-                              border: "none",
-                              borderBottom: "1.5px solid #cbd5e1",
-                              background: "transparent",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: "var(--text, #1e293b)",
-                              outline: "none",
-                              padding: "2px 0",
-                              fontFamily: "inherit",
-                              boxSizing: "border-box",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#94a3b8",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.8px",
-                              marginBottom: 6,
-                            }}
-                          >
-                            Last Name{" "}
-                            <span style={{ color: "#ef4444" }}>*</span>
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="e.g. dela Cruz"
-                            value={form.ownerLastName}
-                            onChange={(e) => {
-                              const v = sanitizeName(e.target.value);
-                              setForm((prev) => ({
-                                ...prev,
-                                ownerLastName: v,
-                                owner: `${prev.ownerFirstName} ${v}`.trim(),
-                                owner_id: null,
-                              }));
-                            }}
-                            onBlur={() =>
-                              fetchExistingPatientsFor(form.owner.trim(), null)
-                            }
-                            style={{
-                              width: "100%",
-                              border: "none",
-                              borderBottom: "1.5px solid #cbd5e1",
-                              background: "transparent",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: "var(--text, #1e293b)",
-                              outline: "none",
-                              padding: "2px 0",
-                              fontFamily: "inherit",
-                              boxSizing: "border-box",
-                            }}
-                          />
-                        </div>
-                      </div>
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 10,
-                        }}
-                      >
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#94a3b8",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.8px",
-                              marginBottom: 6,
-                            }}
-                          >
-                            Sex
-                          </div>
-                          <CustomSelect
-                            value={form.ownerSex}
-                            onChange={(val) =>
-                              setForm((prev) => ({ ...prev, ownerSex: val }))
-                            }
-                            options={["Male", "Female"]}
-                            placeholder="— Select Sex —"
-                          />
-                        </div>
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#94a3b8",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.8px",
-                              marginBottom: 6,
-                            }}
-                          >
-                            Contact
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="e.g. 09170000000"
-                            value={form.contact}
-                            onChange={(e) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                contact: sanitizeContact(e.target.value),
-                              }))
-                            }
-                            inputMode="numeric"
-                            maxLength={11}
-                            style={{
-                              width: "100%",
-                              border: "none",
-                              borderBottom: "1.5px solid #cbd5e1",
-                              background: "transparent",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: "var(--text, #1e293b)",
-                              outline: "none",
-                              padding: "2px 0",
-                              fontFamily: "inherit",
-                              boxSizing: "border-box",
-                            }}
-                          />
-                          {form.contact && form.contact.length !== 11 && (
-                            <p
-                              style={{
-                                fontSize: 10,
-                                color: "#dc2626",
-                                margin: "4px 0 0",
-                              }}
-                            >
-                              Must be 11 digits.
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Registered Client dropdown */}
-                  {ownerType === "registered" && (
-                    <div ref={ownerRef} style={{ position: "relative" }}>
-                      {selectedClient ? (
-                        <div
-                          style={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 10,
-                            background: "#f0fdf4",
-                            border: "1.5px solid #bbf7d0",
-                            borderRadius: 8,
-                            padding: "9px 12px",
-                          }}
-                        >
-                          <div
-                            style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: "50%",
-                              background: "var(--royal)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "#fff",
-                              fontSize: 13,
-                              fontWeight: 700,
-                              flexShrink: 0,
-                            }}
-                          >
-                            {(
-                              selectedClient.first_name?.[0] || "?"
-                            ).toUpperCase()}
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p
-                              style={{
-                                margin: 0,
-                                fontSize: 13,
-                                fontWeight: 700,
-                                color: "#166534",
-                              }}
-                            >
-                              {selectedClient.full_name}
-                            </p>
-                            <p
-                              style={{
-                                margin: 0,
-                                fontSize: 11,
-                                color: "#16a34a",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {selectedClient.email || ""}
-                              {selectedClient.phone
-                                ? ` · ${selectedClient.phone}`
-                                : ""}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={clearOwner}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              color: "#dc2626",
-                              fontSize: 14,
-                              fontWeight: 700,
-                              padding: 0,
-                              width: "auto",
-                            }}
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <div
-                            onClick={() => setShowOwnerDrop(true)}
-                            style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              padding: "9px 12px",
-                              border: `1.5px solid ${showOwnerDrop ? "var(--royal)" : "var(--border)"}`,
-                              borderRadius: 8,
-                              background: "#fff",
-                              cursor: "text",
-                              boxSizing: "border-box",
-                              transition: "border-color 0.15s",
-                            }}
-                          >
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="#9ca3af"
-                              strokeWidth="2.5"
-                              style={{ flexShrink: 0 }}
-                            >
-                              <circle cx="11" cy="11" r="8" />
-                              <path d="m21 21-4.35-4.35" />
-                            </svg>
-                            <input
-                              type="text"
-                              placeholder="Search by name, email or phone..."
-                              value={ownerSearch}
-                              onChange={(e) => {
-                                setOwnerSearch(e.target.value);
-                                setShowOwnerDrop(true);
-                              }}
-                              onFocus={() => setShowOwnerDrop(true)}
-                              style={{
-                                border: "none",
-                                background: "transparent",
-                                fontSize: 13,
-                                color: "var(--text)",
-                                outline: "none",
-                                fontFamily: "inherit",
-                                width: "100%",
-                              }}
-                            />
-                            {ownerSearch && (
-                              <button
-                                type="button"
-                                onClick={clearOwner}
-                                style={{
-                                  background: "none",
-                                  border: "none",
-                                  cursor: "pointer",
-                                  color: "var(--muted)",
-                                  fontSize: 14,
-                                  padding: 0,
-                                  width: "auto",
-                                }}
-                              >
-                                ✕
-                              </button>
-                            )}
-                          </div>
-                          {showOwnerDrop && (
-                            <div
-                              style={{
-                                position: "absolute",
-                                top: "100%",
-                                left: 0,
-                                right: 0,
-                                background: "#fff",
-                                border: "1.5px solid var(--border)",
-                                borderRadius: 10,
-                                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                                zIndex: 9999,
-                                maxHeight: 220,
-                                overflowY: "auto",
-                                marginTop: 4,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  padding: "7px 12px 5px",
-                                  borderBottom: "1px solid var(--border)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "space-between",
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    color: "var(--muted)",
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.5px",
-                                  }}
-                                >
-                                  {branchLabel} Clients
-                                </span>
-                                <span
-                                  style={{
-                                    fontSize: 10,
-                                    color: "var(--muted)",
-                                  }}
-                                >
-                                  {filteredClients.length} found
-                                </span>
-                              </div>
-                              {clients.length === 0 ? (
-                                <div
-                                  style={{
-                                    padding: "14px 16px",
-                                    textAlign: "center",
-                                    color: "var(--muted)",
-                                    fontSize: 13,
-                                  }}
-                                >
-                                  <div style={{ marginBottom: 4 }}>
-                                    <svg
-                                      width="20"
-                                      height="20"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="#cbd5e1"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                    >
-                                      <circle cx="11" cy="11" r="8" />
-                                      <path d="m21 21-4.35-4.35" />
-                                    </svg>
-                                  </div>
-                                  No clients in {branchLabel} yet.
-                                </div>
-                              ) : filteredClients.length === 0 ? (
-                                <div
-                                  style={{
-                                    padding: "14px 16px",
-                                    textAlign: "center",
-                                    color: "var(--muted)",
-                                    fontSize: 13,
-                                  }}
-                                >
-                                  <div style={{ marginBottom: 4 }}>
-                                    <svg
-                                      width="20"
-                                      height="20"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="#cbd5e1"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                    >
-                                      <circle cx="11" cy="11" r="8" />
-                                      <path d="m21 21-4.35-4.35" />
-                                    </svg>
-                                  </div>
-                                  No client matching "{ownerSearch}"
-                                </div>
-                              ) : (
-                                filteredClients.map((c) => (
-                                  <div
-                                    key={c.id}
-                                    onClick={() => selectOwner(c)}
-                                    style={{
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 10,
-                                      padding: "9px 12px",
-                                      cursor: "pointer",
-                                      borderBottom: "1px solid var(--border)",
-                                      transition: "background 0.12s",
-                                    }}
-                                    onMouseEnter={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "var(--light-blue)")
-                                    }
-                                    onMouseLeave={(e) =>
-                                      (e.currentTarget.style.background = "")
-                                    }
-                                  >
-                                    <div
-                                      style={{
-                                        width: 32,
-                                        height: 32,
-                                        borderRadius: "50%",
-                                        background: "var(--royal)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        color: "#fff",
-                                        fontSize: 12,
-                                        fontWeight: 700,
-                                        flexShrink: 0,
-                                      }}
-                                    >
-                                      {(c.first_name?.[0] || "?").toUpperCase()}
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <p
-                                        style={{
-                                          margin: 0,
-                                          fontSize: 13,
-                                          fontWeight: 600,
-                                          color: "var(--text)",
-                                        }}
-                                      >
-                                        {c.full_name}
-                                      </p>
-                                      <p
-                                        style={{
-                                          margin: 0,
-                                          fontSize: 11,
-                                          color: "var(--muted)",
-                                          overflow: "hidden",
-                                          textOverflow: "ellipsis",
-                                          whiteSpace: "nowrap",
-                                        }}
-                                      >
-                                        {c.email || ""}
-                                        {c.phone ? ` · ${c.phone}` : ""}
-                                      </p>
-                                    </div>
-                                    {c.role && (
-                                      <span
-                                        style={{
-                                          fontSize: 9,
-                                          background: "#dbeafe",
-                                          color: "#1e40af",
-                                          borderRadius: 4,
-                                          padding: "2px 5px",
-                                          fontWeight: 700,
-                                          flexShrink: 0,
-                                        }}
-                                      >
-                                        {c.role.toUpperCase()}
-                                      </span>
-                                    )}
-                                  </div>
-                                ))
-                              )}
-                            </div>
-                          )}
-                        </>
-                      )}
-                    </div>
-                  )}
                 </div>
               </div>
 

@@ -3165,7 +3165,7 @@ const Inventory = () => {
         </div>
       )}
 
-      <div className="content inv-page-content" style={{ paddingTop: 24 }}>
+      <div className="content inv-page-content" style={{ paddingTop: 96 }}>
         {/* Low stock alert */}
         {lowStock.length > 0 && (
           <div
