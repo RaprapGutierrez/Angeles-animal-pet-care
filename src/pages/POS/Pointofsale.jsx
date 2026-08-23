@@ -635,8 +635,8 @@ const PointOfSale = () => {
       <div style="width:280px;margin:0 auto;font-family:'Courier New',monospace;color:#111;font-size:12px;line-height:1.5;">
         <div style="text-align:center;">
           <img src="/image/446805041_881106557364617_1125518808684788316_n-removebg-preview.png" alt="Logo" style="width:56px;height:56px;object-fit:contain;margin:0 auto 8px;display:block;" />
-          <div style="font-weight:800;font-size:14px;">Angeles Animal Care Hospital</div>
-          <div style="font-size:10.5px;color:#444;">Tarlac City, Central Luzon</div>
+          <div style="font-weight:800;font-size:14px;">${branchInfo.name}</div>
+          <div style="font-size:10.5px;color:#444;">${branchInfo.address}</div>
         </div>
         ${dashLine}
         <div style="text-align:center;font-weight:800;letter-spacing:1px;font-size:12px;">*** SALES RECEIPT ***</div>
@@ -773,11 +773,33 @@ const PointOfSale = () => {
     );
   }, [user]);
 
+  const [branchInfo, setBranchInfo] = useState({
+    name: "Angeles Pet Care Hospital",
+    address: "Camatchiles, Mabalacat City, Pampanga",
+  });
+
+  const fetchBranchInfo = useCallback(async () => {
+    if (!user?.branchId) return;
+    const { data, error } = await supabase
+      .from("branches")
+      .select("id, name, address, is_main")
+      .eq("id", user.branchId)
+      .maybeSingle();
+    if (error || !data) return;
+    setBranchInfo({
+      name: data.is_main
+        ? "Angeles Pet Care Hospital"
+        : `Angeles Pet Care Clinic${data.name ? " — " + data.name : ""}`,
+      address: data.address || "",
+    });
+  }, [user]);
+
   useEffect(() => {
     if (userLoading || !user) return;
     fetchProducts();
     fetchClients();
     fetchTransactions();
+    fetchBranchInfo();
 
     const inventoryChannel = supabase
       .channel(`pos-inventory-realtime-${user?.branchId || "all"}`)
