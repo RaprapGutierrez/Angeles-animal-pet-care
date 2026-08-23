@@ -3595,6 +3595,55 @@ const Appointment = () => {
               </button>
             </div>
             <div style={{ overflowY: "auto", flex: 1, padding: "16px 20px" }}>
+              {(isAdmin || isSuperAdmin) && (
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    marginBottom: 16,
+                    alignItems: "center",
+                  }}
+                >
+                  <input
+                    type="text"
+                    value={newVetName}
+                    onChange={(e) => setNewVetName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") addVet();
+                    }}
+                    placeholder="New veterinarian name…"
+                    style={{
+                      flex: 1,
+                      padding: "8px 12px",
+                      border: "1.5px solid var(--border)",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontWeight: 600,
+                      fontFamily: "inherit",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={addVet}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "#1e3a8a",
+                      color: "#fff",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    + Add Vet
+                  </button>
+                </div>
+              )}
               {vets.map((vet) => (
                 <div
                   key={vet}
