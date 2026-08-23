@@ -77,6 +77,68 @@ const CustomerShop = () => {
     w.close();
   };
 
+  const generateReceiptHTML = (tx) => {
+    const dashLine =
+      '<div style="border-top:1px dashed #999;margin:8px 0;"></div>';
+    const itemsHTML = (tx.items || [])
+      .map(
+        (i) => `
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;padding:2px 0;">
+          <span style="text-transform:uppercase;">${i.name}</span>
+          <span>₱${(i.qty * i.price).toFixed(2)}</span>
+        </div>`,
+      )
+      .join("");
+
+    return `
+      <div style="width:280px;margin:0 auto;font-family:'Courier New',monospace;color:#111;font-size:12px;line-height:1.5;">
+        <div style="text-align:center;">
+          <img src="/image/446805041_881106557364617_1125518808684788316_n-removebg-preview.png" alt="Logo" style="width:56px;height:56px;object-fit:contain;margin:0 auto 8px;display:block;" />
+          <div style="font-weight:800;font-size:14px;">${branchInfo.name}</div>
+          <div style="font-size:10.5px;color:#444;">${branchInfo.address}</div>
+        </div>
+        ${dashLine}
+        <div style="text-align:center;font-weight:800;letter-spacing:1px;font-size:12px;">*** SALES RECEIPT ***</div>
+        ${dashLine}
+        <div style="display:flex;justify-content:space-between;font-size:11.5px;">
+          <span>DATE: ${new Date(tx.created_at).toLocaleDateString()}</span>
+          <span>TIME: ${new Date(tx.created_at).toLocaleTimeString()}</span>
+        </div>
+        <div style="margin-top:6px;font-size:11.5px;">
+          CLIENT: ${tx.client}
+        </div>
+        ${dashLine}
+        ${itemsHTML}
+        ${dashLine}
+        <div style="display:flex;justify-content:space-between;"><span>SUBTOTAL</span><span>₱${Number(tx.subtotal).toFixed(2)}</span></div>
+        ${
+          Number(tx.discount) > 0
+            ? `<div style="display:flex;justify-content:space-between;"><span>DISCOUNT (${tx.discount}%)</span><span>-₱${((tx.subtotal * tx.discount) / 100).toFixed(2)}</span></div>`
+            : ""
+        }
+        <div style="display:flex;justify-content:space-between;font-weight:800;font-size:14px;margin-top:4px;"><span>TOTAL</span><span>₱${Number(tx.total).toFixed(2)}</span></div>
+        <div style="display:flex;justify-content:space-between;margin-top:2px;"><span>PAYMENT</span><span>${tx.payment}</span></div>
+        ${dashLine}
+        <div style="text-align:center;font-weight:700;">Thank you for trusting us<br/>with Animal Care!</div>
+      </div>
+    `;
+  };
+
+  const printReceiptHTML = (html) => {
+    const w = window.open("", "PRINT", "height=650,width=420");
+    if (!w) return;
+    w.document.write(`<html><head><title>Receipt</title><style>
+      @page { size: 80mm auto; margin: 0; }
+      * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      html, body { margin: 0; padding: 0; }
+      body{font-family:'Courier New',monospace;background:#fff;width:80mm;padding:6mm 4mm;box-sizing:border-box;}
+    </style></head><body>${html}</body></html>`);
+    w.document.close();
+    w.focus();
+    w.print();
+    w.close();
+  };
+
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 640);
     window.addEventListener("resize", onResize);
@@ -1414,18 +1476,15 @@ Payment  : ${tx.payment}
                             >
                               <div
                                 style={{
-                                  fontFamily: "monospace",
-                                  fontSize: 12,
-                                  background: "var(--bg)",
+                                  background: "#fff",
                                   borderRadius: 10,
-                                  padding: 16,
+                                  padding: "20px 16px",
                                   border: "1px dashed var(--border)",
-                                  whiteSpace: "pre-wrap",
-                                  lineHeight: 1.7,
                                 }}
-                              >
-                                {receiptText}
-                              </div>
+                                dangerouslySetInnerHTML={{
+                                  __html: generateReceiptHTML(tx),
+                                }}
+                              />
                               <div
                                 style={{
                                   display: "flex",
@@ -1434,7 +1493,9 @@ Payment  : ${tx.payment}
                                 }}
                               >
                                 <button
-                                  onClick={() => printReceiptText(receiptText)}
+                                  onClick={() =>
+                                    printReceiptHTML(generateReceiptHTML(tx))
+                                  }
                                   style={{
                                     background: "none",
                                     border: "1px solid var(--border)",
