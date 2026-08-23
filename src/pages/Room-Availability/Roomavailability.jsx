@@ -137,20 +137,6 @@ const RoomCard = ({ room, onView }) => {
                 {room.patient}
               </div>
             </div>
-            {room.diagnosis && (
-              <div
-                style={{
-                  fontSize: 11,
-                  color: "var(--muted)",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-                title={room.diagnosis}
-              >
-                {room.diagnosis}
-              </div>
-            )}
             {room.discharge_date && (
               <div
                 style={{
@@ -510,7 +496,6 @@ const ViewModal = ({ room, onClose, onEdit, onDelete }) => {
               label: "Patient",
               value: room.patient || "— No patient assigned —",
             },
-            { label: "Diagnosis", value: room.diagnosis || "— None —" },
             {
               label: "Discharge Date",
               value: room.discharge_date
@@ -1659,53 +1644,6 @@ const RoomFormModal = ({
             </div>
           </div>
 
-          {/* Section 3: Diagnosis / Notes */}
-          <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
-            <div
-              style={{
-                background: "#f1f5f9",
-                borderBottom: "1px solid #e2e8f0",
-                padding: "6px 16px",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 10,
-                  fontWeight: 800,
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
-                  color: "#64748b",
-                }}
-              >
-                Diagnosis / Notes
-              </span>
-            </div>
-            <div style={{ padding: "12px 16px", minHeight: 70 }}>
-              <textarea
-                value={form.diagnosis || ""}
-                onChange={(e) =>
-                  setForm({ ...form, diagnosis: e.target.value })
-                }
-                placeholder="Describe the condition, reason for occupancy, or any notes..."
-                style={{
-                  width: "100%",
-                  border: "none",
-                  background: "transparent",
-                  fontSize: 13,
-                  color: "var(--text)",
-                  outline: "none",
-                  resize: "vertical",
-                  minHeight: 64,
-                  fontFamily: "inherit",
-                  lineHeight: 1.8,
-                  boxSizing: "border-box",
-                  backgroundImage:
-                    "repeating-linear-gradient(transparent,transparent 27px,rgba(147,197,253,0.25) 27px,rgba(147,197,253,0.25) 28px)",
-                }}
-              />
-            </div>
-          </div>
-
           {/* Footer watermark */}
           <div style={{ padding: "6px 16px", background: "var(--bg)" }}>
             <p
@@ -2088,11 +2026,6 @@ const validateRoom = (form, isEdit, existingNumbers = []) => {
     };
   if (form.patient && !/^[a-zA-Z\s'-]+$/.test(form.patient.trim()))
     return { valid: false, message: "Patient name can only contain letters" };
-  if (form.status === "Occupied" && !form.diagnosis?.toString().trim())
-    return {
-      valid: false,
-      message: "Please enter a diagnosis for an occupied room",
-    };
   if (
     form.status === "Occupied" &&
     form.discharge_date &&

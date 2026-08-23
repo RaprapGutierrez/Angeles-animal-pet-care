@@ -27,6 +27,7 @@ const MAX_GROOMERS = 2;
 const EMPTY_FORM = {
   patient: "",
   species: "Dog",
+  breed: "",
   sex: "Unknown",
   room: "",
   owner: "",
@@ -43,6 +44,33 @@ const EMPTY_FORM = {
   existingId: null,
 };
 const PURPOSES = ["Checkup", "Grooming", "Vaccination", "Consultation"];
+const DOG_BREEDS = [
+  "Aspin (Askal)",
+  "Shih Tzu",
+  "Poodle",
+  "Labrador Retriever",
+  "Golden Retriever",
+  "Chihuahua",
+  "Siberian Husky",
+  "Beagle",
+  "German Shepherd",
+  "Pomeranian",
+  "Dachshund",
+  "French Bulldog",
+  "Rottweiler",
+  "Others",
+];
+const CAT_BREEDS = [
+  "Puspin (Native)",
+  "Persian",
+  "Siamese",
+  "British Shorthair",
+  "Maine Coon",
+  "Ragdoll",
+  "Scottish Fold",
+  "American Shorthair",
+  "Others",
+];
 const sanitizeContact = (v) => v.replace(/\D/g, "").slice(0, 11);
 const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, "");
 const CustomSelect = ({
@@ -541,10 +569,14 @@ const Walkin = () => {
   const [branches, setBranches] = useState([]);
   const [rooms, setRooms] = useState([]);
   const [walkins, setWalkins] = useState([]);
+  const [vetSchedule, setVetSchedule] = useState({});
+  const [vetTimeSchedule, setVetTimeSchedule] = useState({});
+  const [allVets, setAllVets] = useState(VETS);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState(null); // null | 'Today' | 'Attended' | 'Waiting'
+  const [search, setSearch] = useState("");
   const [formOriginal, setFormOriginal] = useState(null); // snapshot for unsaved-changes detection
   const ROWS_PER_PAGE = 10;
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -579,6 +611,7 @@ const Walkin = () => {
     existingId: null,
     patient: "",
     species: "Dog",
+    breed: "",
     room: "",
     purpose: "Checkup",
     vet: "",
@@ -618,6 +651,59 @@ const Walkin = () => {
       .order("name")
       .then(({ data }) => setBranches(data || []));
   }, []);
+
+  const fetchVetSchedules = useCallback(async () => {
+    const { data, error } = await supabase.from("vet_schedules").select("*");
+    if (error || !data || data.length === 0) return;
+    const days = {};
+    const times = {};
+    data.forEach((row) => {
+      days[row.vet] = row.days || [];
+      times[row.vet] = row.times || [];
+    });
+    setAllVets(data.map((row) => row.vet));
+    setVetSchedule(days);
+    setVetTimeSchedule(times);
+  }, []);
+
+  const TIME_SLOTS = [
+    "08:00 AM",
+    "09:00 AM",
+    "10:00 AM",
+    "11:00 AM",
+    "01:00 PM",
+    "02:00 PM",
+    "03:00 PM",
+    "04:00 PM",
+  ];
+  const getNearestTimeSlot = () => {
+    const now = new Date();
+    const totalMin = now.getHours() * 60 + now.getMinutes();
+    const slotMinutes = [480, 540, 600, 660, 780, 840, 900, 960];
+    let closest = TIME_SLOTS[0];
+    let closestDiff = Infinity;
+    slotMinutes.forEach((sm, i) => {
+      const diff = Math.abs(sm - totalMin);
+      if (diff < closestDiff) {
+        closestDiff = diff;
+        closest = TIME_SLOTS[i];
+      }
+    });
+    return closest;
+  };
+  const getAvailableVets = () => {
+    const todayDow = new Date().getDay();
+    const nearestSlot = getNearestTimeSlot();
+    const available = allVets.filter((vet) => {
+      const days = vetSchedule[vet];
+      const times = vetTimeSchedule[vet];
+      const dayOk = !days || days.length === 0 || days.includes(todayDow);
+      const timeOk =
+        !times || times.length === 0 || times.includes(nearestSlot);
+      return dayOk && timeOk;
+    });
+    return available.length > 0 ? available : allVets;
+  };
 
   const fetchRooms = useCallback(async () => {
     let q = supabase.from("rooms").select("*").order("number");
@@ -715,6 +801,7 @@ const Walkin = () => {
     fetchWalkins();
     fetchRooms();
     fetchClients();
+    fetchVetSchedules();
 
     const walkinChannel = supabase
       .channel("walkins-realtime")
@@ -797,14 +884,22 @@ const Walkin = () => {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [walkins.length, statusFilter]);
+  }, [walkins.length, statusFilter, search]);
 
-  const filteredWalkins =
+  const baseFilteredWalkins =
     statusFilter === "Today"
       ? walkins.filter((w) => w.arrived_at?.startsWith(today))
       : statusFilter
         ? walkins.filter((w) => w.status === statusFilter)
         : walkins;
+
+  const filteredWalkins = search
+    ? baseFilteredWalkins.filter((w) =>
+        `${w.patient} ${w.owner} ${w.vet}`
+          .toLowerCase()
+          .includes(search.toLowerCase()),
+      )
+    : baseFilteredWalkins;
 
   const sortedWalkins = (() => {
     if (!sortConfig.key) return filteredWalkins;
@@ -2319,7 +2414,67 @@ const Walkin = () => {
               }}
             >
               <h2 style={{ fontSize: 15, fontWeight: 700 }}>Walk-In Records</h2>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  flexWrap: "wrap",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    background: "var(--bg)",
+                    border: "1.5px solid var(--border)",
+                    borderRadius: 8,
+                    padding: "7px 12px",
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#9ca3af"
+                    strokeWidth="2.5"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
+                  <input
+                    type="text"
+                    placeholder="Search patient, owner, vet..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      fontSize: 13,
+                      color: "var(--text)",
+                      outline: "none",
+                      fontFamily: "inherit",
+                      width: 200,
+                    }}
+                  />
+                  {search && (
+                    <button
+                      onClick={() => setSearch("")}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "var(--muted)",
+                        fontSize: 13,
+                        padding: 0,
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
                 {statusFilter && (
                   <button
                     onClick={() => setStatusFilter(null)}
@@ -3968,7 +4123,9 @@ const Walkin = () => {
                         </div>
                         <CustomSelect
                           value={form.species}
-                          onChange={(val) => setForm({ ...form, species: val })}
+                          onChange={(val) =>
+                            setForm({ ...form, species: val, breed: "" })
+                          }
                           options={["Dog", "Cat"]}
                           placeholder="— Select Species —"
                         />
@@ -3993,6 +4150,30 @@ const Walkin = () => {
                           placeholder="— Select Sex —"
                         />
                       </div>
+                    </div>
+                  )}
+                  {form.mode === "new" && form.species && (
+                    <div style={{ marginTop: 10 }}>
+                      <div
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: "#94a3b8",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.8px",
+                          marginBottom: 6,
+                        }}
+                      >
+                        Breed
+                      </div>
+                      <CustomSelect
+                        value={form.breed}
+                        onChange={(val) => setForm({ ...form, breed: val })}
+                        options={
+                          form.species === "Cat" ? CAT_BREEDS : DOG_BREEDS
+                        }
+                        placeholder={`— Select ${form.species} Breed —`}
+                      />
                     </div>
                   )}
                 </div>
@@ -4217,12 +4398,38 @@ const Walkin = () => {
                             <CustomSelect
                               value={p.species}
                               onChange={(val) =>
-                                updateExtraPet(idx, { species: val })
+                                updateExtraPet(idx, { species: val, breed: "" })
                               }
                               options={["Dog", "Cat"]}
                               placeholder="— Select Species —"
                             />
                           </div>
+                          {p.mode === "new" && p.species && (
+                            <div style={{ gridColumn: "1 / -1", marginTop: 4 }}>
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "#94a3b8",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.8px",
+                                  marginBottom: 6,
+                                }}
+                              >
+                                Breed
+                              </div>
+                              <CustomSelect
+                                value={p.breed}
+                                onChange={(val) =>
+                                  updateExtraPet(idx, { breed: val })
+                                }
+                                options={
+                                  p.species === "Cat" ? CAT_BREEDS : DOG_BREEDS
+                                }
+                                placeholder={`— Select ${p.species} Breed —`}
+                              />
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -4291,7 +4498,7 @@ const Walkin = () => {
                               onChange={(val) =>
                                 updateExtraPet(idx, { vet: val })
                               }
-                              options={VETS}
+                              options={getAvailableVets()}
                               placeholder="Unassigned"
                             />
                           </>
@@ -5175,9 +5382,18 @@ const Walkin = () => {
                         <CustomSelect
                           value={form.vet}
                           onChange={(val) => setForm({ ...form, vet: val })}
-                          options={VETS}
+                          options={getAvailableVets()}
                           placeholder="Unassigned"
                         />
+                        <p
+                          style={{
+                            margin: "6px 0 0",
+                            fontSize: 10,
+                            color: "var(--muted)",
+                          }}
+                        >
+                          Showing vets available right now
+                        </p>
                       </>
                     ) : (
                       <div style={{ paddingTop: 4 }}>

@@ -3619,53 +3619,6 @@ const Appointment = () => {
               </button>
             </div>
             <div style={{ overflowY: "auto", flex: 1, padding: "16px 20px" }}>
-              {(isAdmin || isSuperAdmin) && (
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "flex-end",
-                    marginBottom: 16,
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setNewVetName("");
-                      setNewVetDays([]);
-                      setNewVetTimes([]);
-                      setShowAddVetModal(true);
-                    }}
-                    style={{
-                      padding: "8px 16px",
-                      borderRadius: 8,
-                      border: "none",
-                      background: "#1e3a8a",
-                      color: "#fff",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      whiteSpace: "nowrap",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
-                    <svg
-                      width="12"
-                      height="12"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2.8"
-                    >
-                      <line x1="12" y1="5" x2="12" y2="19" />
-                      <line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Add Vet
-                  </button>
-                </div>
-              )}
               {vets.map((vet) => (
                 <div
                   key={vet}
@@ -3912,33 +3865,77 @@ const Appointment = () => {
             <div
               style={{
                 display: "flex",
-                justifyContent: "flex-end",
+                justifyContent: "space-between",
+                alignItems: "center",
                 gap: 10,
                 padding: "14px 20px",
                 borderTop: "1px solid var(--border)",
               }}
             >
-              <button
-                className="btn btn-ghost"
-                style={S.btn}
-                onClick={() => setShowVetSchedule(false)}
-              >
-                {isAdmin || isSuperAdmin ? "Cancel" : "Close"}
-              </button>
-              {(isAdmin || isSuperAdmin) && (
+              <div>
+                {(isAdmin || isSuperAdmin) && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setNewVetName("");
+                      setNewVetDays([]);
+                      setNewVetTimes([]);
+                      setShowAddVetModal(true);
+                    }}
+                    style={{
+                      padding: "8px 16px",
+                      borderRadius: 8,
+                      border: "none",
+                      background: "#1e3a8a",
+                      color: "#fff",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      whiteSpace: "nowrap",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.8"
+                    >
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Add Vet
+                  </button>
+                )}
+              </div>
+              <div style={{ display: "flex", gap: 10 }}>
                 <button
-                  className="btn"
-                  style={{
-                    ...S.btn,
-                    background: "#1e3a8a",
-                    color: "#fff",
-                    border: "none",
-                  }}
-                  onClick={saveVetSchedule}
+                  className="btn btn-ghost"
+                  style={S.btn}
+                  onClick={() => setShowVetSchedule(false)}
                 >
-                  Save Schedule
+                  {isAdmin || isSuperAdmin ? "Cancel" : "Close"}
                 </button>
-              )}
+                {(isAdmin || isSuperAdmin) && (
+                  <button
+                    className="btn"
+                    style={{
+                      ...S.btn,
+                      background: "#1e3a8a",
+                      color: "#fff",
+                      border: "none",
+                    }}
+                    onClick={saveVetSchedule}
+                  >
+                    Save Schedule
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

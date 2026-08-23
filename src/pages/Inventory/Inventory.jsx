@@ -2585,6 +2585,8 @@ const Inventory = () => {
   const [showDeletedModal, setShowDeletedModal] = useState(false);
 
   const [toasts, setToasts] = useState([]);
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [bulkConfirm, setBulkConfirm] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const ROWS_PER_PAGE = 10;
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -2733,6 +2735,7 @@ const Inventory = () => {
 
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedIds([]);
   }, [search, catFilter, stockFilter, expiryFilter]);
 
   const sorted = useMemo(() => {
@@ -2854,6 +2857,45 @@ const Inventory = () => {
     fetchDeletedItems();
   };
 
+  const toggleSelectRow = (id) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const toggleSelectAllOnPage = () => {
+    const pageIds = paginated.map((i) => i.id);
+    const allSelected = pageIds.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !pageIds.includes(id))
+        : [...new Set([...prev, ...pageIds])],
+    );
+  };
+
+  const doBulkDelete = async () => {
+    const { error } = await supabase
+      .from("inventory")
+      .update({ deleted_at: new Date().toISOString() })
+      .in("id", selectedIds);
+    if (error) {
+      alert("Error: " + error.message);
+      return;
+    }
+    logActivity(
+      user,
+      "Bulk deleted inventory items",
+      `Moved to Recently Deleted: ${selectedIds.length} item(s)`,
+    );
+    showToast(
+      `${selectedIds.length} item(s) moved to Recently Deleted`,
+      "info",
+    );
+    setSelectedIds([]);
+    setBulkConfirm(false);
+    fetchItems();
+    fetchDeletedItems();
+  };
+
   const restoreItem = async (id, name) => {
     const { error } = await supabase
       .from("inventory")
@@ -2961,42 +3003,6 @@ const Inventory = () => {
           </div>
         </div>
         <div className="topbar-actions">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              background: "var(--bg)",
-              border: "1.5px solid var(--border)",
-              borderRadius: 8,
-              padding: "8px 14px",
-            }}
-          >
-            <img
-              src="/icon/search.png"
-              alt=""
-              style={{
-                width: 16,
-                height: 16,
-                filter: "brightness(0) saturate(100%) invert(40%)",
-              }}
-            />
-            <input
-              type="text"
-              placeholder="Search items, category, supplier..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              style={{
-                border: "none",
-                background: "transparent",
-                fontSize: 13,
-                color: "var(--text)",
-                outline: "none",
-                fontFamily: "inherit",
-                width: 220,
-              }}
-            />
-          </div>
           <div style={{ width: 170 }}>
             <CustomSelect
               value={catFilter}
@@ -3159,7 +3165,7 @@ const Inventory = () => {
         </div>
       )}
 
-      <div className="content inv-page-content">
+      <div className="content inv-page-content" style={{ paddingTop: 24 }}>
         {/* Low stock alert */}
         {lowStock.length > 0 && (
           <div
@@ -3393,6 +3399,9 @@ const Inventory = () => {
           className="fade-in inv-card"
           style={{ padding: "14px 22px", marginBottom: 16 }}
         >
+          <style>{`
+            .inv-search-input::placeholder { color: #94a3b8; opacity: 1; }
+          `}</style>
           <div
             style={{
               display: "flex",
@@ -3401,6 +3410,46 @@ const Inventory = () => {
               flexWrap: "wrap",
             }}
           >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+                background: "var(--bg)",
+                border: "1.5px solid var(--border)",
+                borderRadius: 8,
+                padding: "8px 14px",
+                flex: "1 1 220px",
+                minWidth: 200,
+                maxWidth: 320,
+              }}
+            >
+              <img
+                src="/icon/search.png"
+                alt=""
+                style={{
+                  width: 16,
+                  height: 16,
+                  filter: "brightness(0) saturate(100%) invert(40%)",
+                }}
+              />
+              <input
+                type="text"
+                className="inv-search-input"
+                placeholder="Search items, category, supplier..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                style={{
+                  border: "none",
+                  background: "transparent",
+                  fontSize: 13,
+                  color: "var(--text)",
+                  outline: "none",
+                  fontFamily: "inherit",
+                  width: "100%",
+                }}
+              />
+            </div>
             {[
               { label: "All Stock", value: "" },
               { label: "Low Stock", value: "low" },
@@ -3445,12 +3494,79 @@ const Inventory = () => {
               justifyContent: "space-between",
               padding: "16px 22px",
               borderBottom: "1px solid var(--border)",
+              flexWrap: "wrap",
+              gap: 10,
             }}
           >
             <h2 style={{ fontSize: 15, fontWeight: 700 }}>All Items</h2>
-            <span style={{ color: "var(--muted)", fontSize: 13 }}>
-              {filtered.length} items
-            </span>
+            {selectedIds.length > 0 ? (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  background: "#fef2f2",
+                  border: "1.5px solid #fca5a5",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                }}
+              >
+                <span
+                  style={{ fontSize: 12, fontWeight: 700, color: "#991b1b" }}
+                >
+                  {selectedIds.length} selected
+                </span>
+                <button
+                  onClick={() => setBulkConfirm(true)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "5px 12px",
+                    borderRadius: 6,
+                    border: "none",
+                    background: "#dc2626",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  Delete Selected
+                </button>
+                <button
+                  onClick={() => setSelectedIds([])}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#991b1b",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            ) : (
+              <span style={{ color: "var(--muted)", fontSize: 13 }}>
+                {filtered.length} items
+              </span>
+            )}
           </div>
           <div style={{ overflowX: "auto" }}>
             {loading ? (
@@ -3486,6 +3602,22 @@ const Inventory = () => {
               >
                 <thead>
                   <tr>
+                    {perms.canDelete && (
+                      <th
+                        className="inv-th"
+                        style={{ width: 36, textAlign: "center" }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={
+                            paginated.length > 0 &&
+                            paginated.every((i) => selectedIds.includes(i.id))
+                          }
+                          onChange={toggleSelectAllOnPage}
+                          style={{ cursor: "pointer" }}
+                        />
+                      </th>
+                    )}
                     {[
                       { label: "Item", key: "name" },
                       { label: "Category", key: "category" },
@@ -3545,7 +3677,7 @@ const Inventory = () => {
                   {filtered.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={7}
+                        colSpan={7 + (perms.canDelete ? 1 : 0)}
                         style={{
                           textAlign: "center",
                           padding: 40,
@@ -3591,6 +3723,20 @@ const Inventory = () => {
                           }}
                           onClick={() => openView(item)}
                         >
+                          {perms.canDelete && (
+                            <td
+                              className="inv-td"
+                              style={{ textAlign: "center" }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(item.id)}
+                                onChange={() => toggleSelectRow(item.id)}
+                                style={{ cursor: "pointer" }}
+                              />
+                            </td>
+                          )}
                           {/* Item name */}
                           <td className="inv-td">
                             <div
@@ -4110,6 +4256,58 @@ const Inventory = () => {
               <button
                 className="btn btn-danger inv-btn-auto"
                 onClick={() => doDelete(deleteId)}
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Bulk Delete Confirm ── */}
+      {bulkConfirm && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--card)",
+              borderRadius: 14,
+              width: "100%",
+              maxWidth: 400,
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+            }}
+          >
+            <div className="modal-header">
+              <h3>Delete {selectedIds.length} Item(s)?</h3>
+            </div>
+            <div className="modal-body">
+              <p style={{ color: "var(--muted)" }}>
+                These items will move to Recently Deleted for 30 days before
+                being permanently removed.
+              </p>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-ghost inv-btn-auto"
+                onClick={() => setBulkConfirm(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-danger inv-btn-auto"
+                onClick={doBulkDelete}
               >
                 Yes, Delete
               </button>
