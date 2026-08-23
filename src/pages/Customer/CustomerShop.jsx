@@ -44,6 +44,26 @@ const CustomerShop = () => {
   const [expandedTx, setExpandedTx] = useState(null);
   const [receiptSearch, setReceiptSearch] = useState("");
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [branchInfo, setBranchInfo] = useState({
+    name: "Angeles Pet Care Hospital",
+    address: "Camatchiles, Mabalacat City, Pampanga",
+  });
+
+  const fetchBranchInfo = useCallback(async () => {
+    if (!user?.branchId) return;
+    const { data, error } = await supabase
+      .from("branches")
+      .select("id, name, address, is_main")
+      .eq("id", user.branchId)
+      .maybeSingle();
+    if (error || !data) return;
+    setBranchInfo({
+      name: data.is_main
+        ? "Angeles Pet Care Hospital"
+        : `Angeles Pet Care Clinic${data.name ? " — " + data.name : ""}`,
+      address: data.address || "",
+    });
+  }, [user?.branchId]);
 
   const printReceiptText = (text) => {
     const w = window.open("", "PRINT", "height=650,width=420");
@@ -94,6 +114,7 @@ const CustomerShop = () => {
   useEffect(() => {
     if (userLoading) return;
     fetchProducts();
+    fetchBranchInfo();
 
     const inventoryChannel = supabase
       .channel(`customer-shop-inventory-${user?.branchId || "all"}`)
@@ -461,10 +482,7 @@ const CustomerShop = () => {
     );
   }
 
-  // Branch label for receipts modal (derived from branchId if available)
-  const branchLabel = user?.branchId
-    ? `Branch ${user.branchId}`
-    : "Your Branch";
+  const branchLabel = branchInfo.name;
 
   return (
     <Layout isCustomer>
@@ -1214,8 +1232,8 @@ const CustomerShop = () => {
                       const isOpen = expandedTx === tx.id;
                       const pc = payColor(tx.payment);
                       const itemCount = (tx.items || []).length;
-                      const receiptText = `Angeles Animal Care Hospital
-${branchLabel}
+                      const receiptText = `${branchLabel}
+${branchInfo.address}
 ================================
 Client : ${tx.client}
 Date   : ${new Date(tx.created_at).toLocaleDateString("en-PH", { year: "numeric", month: "long", day: "numeric" })}
