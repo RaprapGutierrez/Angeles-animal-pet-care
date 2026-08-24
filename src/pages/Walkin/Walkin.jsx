@@ -1368,11 +1368,11 @@ const Walkin = () => {
       owner_id: ownerType === "registered" ? form.owner_id || null : null,
       contact: form.contact.trim(),
       purpose: form.purpose,
+      price: form.price === "" ? 0 : Number(form.price),
       vet: form.purpose === "Grooming" ? null : form.vet || null,
       notes: form.notes.trim(),
       status: form.status,
     };
-
     if (editItem) {
       const { error } = await supabase
         .from("walkins")
@@ -1429,6 +1429,7 @@ const Walkin = () => {
         owner_id: ownerType === "registered" ? form.owner_id || null : null,
         contact: form.contact.trim(),
         purpose: p.purpose,
+        price: form.price === "" ? 0 : Number(form.price),
         vet: p.purpose === "Grooming" ? null : p.vet || null,
         notes: p.notes.trim(),
         status: "Attended",
