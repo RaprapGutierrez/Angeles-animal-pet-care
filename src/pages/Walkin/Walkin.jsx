@@ -22,6 +22,7 @@ const STATUS_BADGE = {
   Cancelled: "badge-red",
 };
 const VETS = ["Dr. Santos", "Dr. Reyes", "Dr. Cruz", "Dr. Garcia"];
+const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const today = new Date().toISOString().split("T")[0];
 const MAX_GROOMERS = 2;
 const EMPTY_FORM = {
@@ -42,8 +43,91 @@ const EMPTY_FORM = {
   status: "Attended",
   mode: "new",
   existingId: null,
+  price: "",
 };
 const PURPOSES = ["Checkup", "Grooming", "Vaccination", "Consultation"];
+
+const SERVICE_META = {
+  Checkup: {
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#475569"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ width: 16, height: 16 }}
+      >
+        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+      </svg>
+    ),
+    color: "#475569",
+    bg: "#f8fafc",
+  },
+  Grooming: {
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#7c3aed"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ width: 16, height: 16 }}
+      >
+        <circle cx="6" cy="6" r="3" />
+        <circle cx="6" cy="18" r="3" />
+        <line x1="20" y1="4" x2="8.12" y2="15.88" />
+        <line x1="14.47" y1="14.48" x2="20" y2="20" />
+        <line x1="8.12" y1="8.12" x2="12" y2="12" />
+      </svg>
+    ),
+    color: "#7c3aed",
+    bg: "#f3e8ff",
+  },
+  Vaccination: {
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#15803d"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ width: 16, height: 16 }}
+      >
+        <path d="m18 2 4 4" />
+        <path d="m17 7 3-3" />
+        <path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" />
+        <path d="m9 11 4 4" />
+        <path d="m5 19-3 3" />
+        <path d="m14 4 6 6" />
+      </svg>
+    ),
+    color: "#15803d",
+    bg: "#f0fdf4",
+  },
+  Consultation: {
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#1d4ed8"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ width: 16, height: 16 }}
+      >
+        <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.3.3 0 1 0 .3.3" />
+        <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" />
+        <circle cx="20" cy="10" r="2" />
+      </svg>
+    ),
+    color: "#1d4ed8",
+    bg: "#eff6ff",
+  },
+};
 const DOG_BREEDS = [
   "Aspin (Askal)",
   "Shih Tzu",
@@ -575,6 +659,7 @@ const Walkin = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState([]);
   const [statusFilter, setStatusFilter] = useState(null); // null | 'Today' | 'Attended' | 'Waiting'
   const [search, setSearch] = useState("");
   const [formOriginal, setFormOriginal] = useState(null); // snapshot for unsaved-changes detection
@@ -620,6 +705,41 @@ const Walkin = () => {
   const [extraPets, setExtraPets] = useState([]); // additional pets beyond the main `form`
   const [existingPatients, setExistingPatients] = useState([]); // this owner's known pets
   const [loadingExistingPatients, setLoadingExistingPatients] = useState(false);
+
+  // ── Service step (mirrors Appointments.jsx booking flow) ────────────────
+  const [bookStep, setBookStep] = useState("service"); // 'service' | 'form'
+  const [services, setServices] = useState([]);
+
+  useEffect(() => {
+    supabase
+      .from("inventory")
+      .select("name, price, branch_id")
+      .eq("category", "Service")
+      .then(({ data }) => setServices(data || []));
+  }, []);
+
+  const getServicePrice = (purpose, branchId) => {
+    if (!purpose) return null;
+    const exact = services.find(
+      (s) => s.name === purpose && String(s.branch_id) === String(branchId),
+    );
+    if (exact) return exact.price;
+    const fallback = services.find(
+      (s) => s.name === purpose && s.branch_id == null,
+    );
+    if (fallback) return fallback.price;
+    return null;
+  };
+
+  const selectService = (val) => {
+    const looked = getServicePrice(val, user?.branchId);
+    setForm((prev) => ({
+      ...prev,
+      purpose: val,
+      price: looked != null ? looked : "",
+    }));
+    setBookStep("form");
+  };
 
   // ── Owner type toggle ─────────────────────────────────────────────────────
   const [ownerType, setOwnerType] = useState("walkin"); // 'walkin' | 'registered'
@@ -884,6 +1004,7 @@ const Walkin = () => {
 
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedIds([]);
   }, [walkins.length, statusFilter, search]);
 
   const baseFilteredWalkins =
@@ -1003,6 +1124,7 @@ const Walkin = () => {
     setExtraPets([]);
     setExistingPatients([]);
     setFormOriginal(snapshotWalkinState(EMPTY_FORM, "walkin"));
+    setBookStep("service");
     setShowModal(true);
   };
 
@@ -1035,6 +1157,7 @@ const Walkin = () => {
     );
     setSelectedClient(matched || null);
     setFormOriginal(snapshotWalkinState(initialForm, initialOwnerType));
+    setBookStep("form"); // editing skips the service-picker step
     setShowModal(true);
   };
 
@@ -1050,8 +1173,8 @@ const Walkin = () => {
     setExtraPets([]);
     setExistingPatients([]);
     setFormOriginal(null);
+    setBookStep("service");
   };
-
   const hasUnsavedWalkinEdits = () => {
     if (!formOriginal) return false;
     return snapshotWalkinState(form, ownerType) !== formOriginal;
@@ -1380,6 +1503,45 @@ const Walkin = () => {
           showAlert("Error deleting walk-in: " + error.message, "Error");
       },
       "Delete Walk-In",
+    );
+  };
+
+  const toggleSelectRow = (id) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const toggleSelectAllOnPage = () => {
+    const pageIds = paginated.map((w) => w.id);
+    const allSelected = pageIds.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !pageIds.includes(id))
+        : [...new Set([...prev, ...pageIds])],
+    );
+  };
+
+  const bulkDeleteWalkins = () => {
+    showConfirm(
+      `Permanently delete ${selectedIds.length} selected walk-in${selectedIds.length > 1 ? "s" : ""}? This cannot be undone.`,
+      async () => {
+        const { error } = await supabase
+          .from("walkins")
+          .delete()
+          .in("id", selectedIds);
+        if (error) {
+          showAlert("Error deleting walk-ins: " + error.message, "Error");
+          return;
+        }
+        logActivity(
+          user,
+          "Bulk deleted walk-ins",
+          `Deleted ${selectedIds.length} walk-in(s): ${selectedIds.join(", ")}`,
+        );
+        showToast(`${selectedIds.length} walk-in(s) deleted`, "info");
+        setSelectedIds([]);
+      },
+      "Delete Walk-Ins",
     );
   };
 
@@ -2414,6 +2576,70 @@ const Walkin = () => {
               }}
             >
               <h2 style={{ fontSize: 15, fontWeight: 700 }}>Walk-In Records</h2>
+              {selectedIds.length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    background: "#fef2f2",
+                    border: "1.5px solid #fca5a5",
+                    borderRadius: 8,
+                    padding: "6px 12px",
+                  }}
+                >
+                  <span
+                    style={{ fontSize: 12, fontWeight: 700, color: "#991b1b" }}
+                  >
+                    {selectedIds.length} selected
+                  </span>
+                  <button
+                    onClick={bulkDeleteWalkins}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "5px 12px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: "#dc2626",
+                      color: "#fff",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    Delete Selected
+                  </button>
+                  <button
+                    onClick={() => setSelectedIds([])}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#991b1b",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
               <div
                 style={{
                   display: "flex",
@@ -2566,6 +2792,17 @@ const Walkin = () => {
                 >
                   <thead>
                     <tr>
+                      <th style={{ ...S.th, width: 36, textAlign: "center" }}>
+                        <input
+                          type="checkbox"
+                          checked={
+                            paginated.length > 0 &&
+                            paginated.every((w) => selectedIds.includes(w.id))
+                          }
+                          onChange={toggleSelectAllOnPage}
+                          style={{ cursor: "pointer" }}
+                        />
+                      </th>
                       {[
                         { label: "#", key: null },
                         { label: "Patient", key: "patient" },
@@ -2624,13 +2861,14 @@ const Walkin = () => {
                     {filteredWalkins.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={8}
+                          colSpan={9}
                           style={{
                             textAlign: "center",
                             padding: 40,
                             color: "var(--muted)",
                           }}
                         >
+                          {" "}
                           {statusFilter
                             ? `No walk-ins match "${statusFilter}"`
                             : "No walk-ins recorded yet"}
@@ -2755,6 +2993,17 @@ const Walkin = () => {
                             }}
                             onClick={() => openView(w)}
                           >
+                            <td
+                              style={{ ...S.td, textAlign: "center" }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(w.id)}
+                                onChange={() => toggleSelectRow(w.id)}
+                                style={{ cursor: "pointer" }}
+                              />
+                            </td>
                             <td style={S.td}>
                               <span
                                 style={{
@@ -3834,406 +4083,426 @@ const Walkin = () => {
             </div>
 
             <div style={{ flex: 1, overflowY: "auto" }}>
-              {/* ── Section: Owner ── */}
-              <div
-                style={{
-                  borderBottom: "1.5px solid #e2e8f0",
-                  position: "relative",
-                  zIndex: showOwnerDrop ? 200 : "auto",
-                }}
-              >
-                <div className="wk-section-label">Owner / Client</div>
-                <div style={{ padding: "12px 16px" }}>
-                  {/* Auto-detected branch */}
-                  <div
+              {/* Step 1: Service picker (new walk-ins only) */}
+              {!editItem && bookStep === "service" && (
+                <div style={{ padding: "18px 16px" }}>
+                  <p
                     style={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 6,
-                      background: "#eff6ff",
-                      border: "1px solid #bfdbfe",
-                      borderRadius: 6,
-                      padding: "4px 10px",
-                      marginBottom: 10,
-                      fontSize: 11,
+                      margin: "0 0 12px",
+                      fontSize: 12,
                       fontWeight: 700,
-                      color: "#1e40af",
+                      color: "var(--muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.6px",
                     }}
                   >
-                    <svg
-                      width="11"
-                      height="11"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    >
-                      <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
-                    </svg>
-                    Branch:{" "}
-                    {branches.find((b) => b.id === user?.branchId)?.name ||
-                      "My Branch"}
-                  </div>
-
-                  {/* Toggle */}
+                    Select a Service
+                  </p>
                   <div
                     style={{
-                      display: "flex",
-                      border: "1.5px solid var(--border)",
-                      borderRadius: 8,
-                      overflow: "hidden",
-                      marginBottom: 12,
-                      width: "fit-content",
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fill, minmax(140px, 1fr))",
+                      gap: 10,
                     }}
                   >
-                    {[
-                      { key: "walkin", label: "Walk-in Guest" },
-                      { key: "registered", label: "Registered Client" },
-                    ].map(({ key, label }) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() => {
-                          setOwnerType(key);
-                          clearOwner();
-                        }}
-                        style={{
-                          padding: "7px 18px",
-                          border: "none",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                          transition: "all 0.15s",
-                          background:
-                            ownerType === key ? "var(--royal)" : "#fff",
-                          color: ownerType === key ? "#fff" : "var(--muted)",
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                    {PURPOSES.map((opt) => {
+                      const meta = SERVICE_META[opt] || SERVICE_META.Checkup;
+                      const price = getServicePrice(opt, user?.branchId);
+                      return (
+                        <button
+                          key={opt}
+                          type="button"
+                          onClick={() => selectService(opt)}
+                          style={{
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            gap: 6,
+                            padding: "16px 10px",
+                            borderRadius: 12,
+                            cursor: "pointer",
+                            border: `1.5px solid ${meta.color}33`,
+                            background: meta.bg,
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          <span style={{ display: "inline-flex" }}>
+                            {meta.icon}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: meta.color,
+                            }}
+                          >
+                            {opt}
+                          </span>
+                          <span
+                            style={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: "var(--muted)",
+                            }}
+                          >
+                            {price != null
+                              ? `₱${Number(price).toLocaleString()}`
+                              : "Contact clinic"}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
+                </div>
+              )}
 
-                  {/* Walk-in Guest inputs */}
-                  {ownerType === "walkin" && (
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 10,
-                      }}
-                    >
+              {/* ── Section: Owner ── */}
+              {(editItem || bookStep !== "service") && (
+                <>
+                  <div
+                    style={{
+                      borderBottom: "1.5px solid #e2e8f0",
+                      position: "relative",
+                      zIndex: showOwnerDrop ? 200 : "auto",
+                    }}
+                  >
+                    <div className="wk-section-label">Owner / Client</div>
+                    <div style={{ padding: "12px 16px" }}>
+                      {/* Auto-detected branch */}
                       <div
                         style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 10,
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          background: "#eff6ff",
+                          border: "1px solid #bfdbfe",
+                          borderRadius: 6,
+                          padding: "4px 10px",
+                          marginBottom: 10,
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#1e40af",
                         }}
                       >
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#94a3b8",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.8px",
-                              marginBottom: 6,
-                            }}
-                          >
-                            First Name{" "}
-                            <span style={{ color: "#ef4444" }}>*</span>
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="e.g. Juan"
-                            value={form.ownerFirstName}
-                            onChange={(e) => {
-                              const v = sanitizeName(e.target.value);
-                              setForm((prev) => ({
-                                ...prev,
-                                ownerFirstName: v,
-                                owner: `${v} ${prev.ownerLastName}`.trim(),
-                                owner_id: null,
-                              }));
-                            }}
-                            onBlur={() =>
-                              fetchExistingPatientsFor(form.owner.trim(), null)
-                            }
-                            style={{
-                              width: "100%",
-                              border: "none",
-                              borderBottom: "1.5px solid #cbd5e1",
-                              background: "transparent",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: "var(--text, #1e293b)",
-                              outline: "none",
-                              padding: "2px 0",
-                              fontFamily: "inherit",
-                              boxSizing: "border-box",
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#94a3b8",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.8px",
-                              marginBottom: 6,
-                            }}
-                          >
-                            Last Name{" "}
-                            <span style={{ color: "#ef4444" }}>*</span>
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="e.g. dela Cruz"
-                            value={form.ownerLastName}
-                            onChange={(e) => {
-                              const v = sanitizeName(e.target.value);
-                              setForm((prev) => ({
-                                ...prev,
-                                ownerLastName: v,
-                                owner: `${prev.ownerFirstName} ${v}`.trim(),
-                                owner_id: null,
-                              }));
-                            }}
-                            onBlur={() =>
-                              fetchExistingPatientsFor(form.owner.trim(), null)
-                            }
-                            style={{
-                              width: "100%",
-                              border: "none",
-                              borderBottom: "1.5px solid #cbd5e1",
-                              background: "transparent",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: "var(--text, #1e293b)",
-                              outline: "none",
-                              padding: "2px 0",
-                              fontFamily: "inherit",
-                              boxSizing: "border-box",
-                            }}
-                          />
-                        </div>
+                        <svg
+                          width="11"
+                          height="11"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        >
+                          <path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+                        </svg>
+                        Branch:{" "}
+                        {branches.find((b) => b.id === user?.branchId)?.name ||
+                          "My Branch"}
                       </div>
+
+                      {/* Toggle */}
                       <div
                         style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
-                          gap: 10,
+                          display: "flex",
+                          border: "1.5px solid var(--border)",
+                          borderRadius: 8,
+                          overflow: "hidden",
+                          marginBottom: 12,
+                          width: "fit-content",
                         }}
                       >
-                        <div>
-                          <div
-                            style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#94a3b8",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.8px",
-                              marginBottom: 6,
+                        {[
+                          { key: "walkin", label: "Walk-in Guest" },
+                          { key: "registered", label: "Registered Client" },
+                        ].map(({ key, label }) => (
+                          <button
+                            key={key}
+                            type="button"
+                            onClick={() => {
+                              setOwnerType(key);
+                              clearOwner();
                             }}
-                          >
-                            Sex
-                          </div>
-                          <CustomSelect
-                            value={form.ownerSex}
-                            onChange={(val) =>
-                              setForm((prev) => ({ ...prev, ownerSex: val }))
-                            }
-                            options={["Male", "Female"]}
-                            placeholder="— Select Sex —"
-                          />
-                        </div>
-                        <div>
-                          <div
                             style={{
-                              fontSize: 10,
-                              fontWeight: 700,
-                              color: "#94a3b8",
-                              textTransform: "uppercase",
-                              letterSpacing: "0.8px",
-                              marginBottom: 6,
-                            }}
-                          >
-                            Contact
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="e.g. 09170000000"
-                            value={form.contact}
-                            onChange={(e) =>
-                              setForm((prev) => ({
-                                ...prev,
-                                contact: sanitizeContact(e.target.value),
-                              }))
-                            }
-                            inputMode="numeric"
-                            maxLength={11}
-                            style={{
-                              width: "100%",
+                              padding: "7px 18px",
                               border: "none",
-                              borderBottom: "1.5px solid #cbd5e1",
-                              background: "transparent",
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: 600,
-                              color: "var(--text, #1e293b)",
-                              outline: "none",
-                              padding: "2px 0",
+                              cursor: "pointer",
                               fontFamily: "inherit",
-                              boxSizing: "border-box",
+                              transition: "all 0.15s",
+                              background:
+                                ownerType === key ? "var(--royal)" : "#fff",
+                              color:
+                                ownerType === key ? "#fff" : "var(--muted)",
                             }}
-                          />
-                          {form.contact && form.contact.length !== 11 && (
-                            <p
-                              style={{
-                                fontSize: 10,
-                                color: "#dc2626",
-                                margin: "4px 0 0",
-                              }}
-                            >
-                              Must be 11 digits.
-                            </p>
-                          )}
-                        </div>
+                          >
+                            {label}
+                          </button>
+                        ))}
                       </div>
-                    </div>
-                  )}
 
-                  {/* Registered Client dropdown */}
-                  {ownerType === "registered" && (
-                    <div ref={ownerRef} style={{ position: "relative" }}>
-                      {selectedClient ? (
+                      {/* Walk-in Guest inputs */}
+                      {ownerType === "walkin" && (
                         <div
                           style={{
                             display: "flex",
-                            alignItems: "center",
+                            flexDirection: "column",
                             gap: 10,
-                            background: "#f0fdf4",
-                            border: "1.5px solid #bbf7d0",
-                            borderRadius: 8,
-                            padding: "9px 12px",
                           }}
                         >
                           <div
                             style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: "50%",
-                              background: "var(--royal)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              color: "#fff",
-                              fontSize: 13,
-                              fontWeight: 700,
-                              flexShrink: 0,
+                              display: "grid",
+                              gridTemplateColumns: "1fr 1fr",
+                              gap: 10,
                             }}
                           >
-                            {(
-                              selectedClient.first_name?.[0] || "?"
-                            ).toUpperCase()}
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "#94a3b8",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.8px",
+                                  marginBottom: 6,
+                                }}
+                              >
+                                First Name{" "}
+                                <span style={{ color: "#ef4444" }}>*</span>
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="e.g. Juan"
+                                value={form.ownerFirstName}
+                                onChange={(e) => {
+                                  const v = sanitizeName(e.target.value);
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    ownerFirstName: v,
+                                    owner: `${v} ${prev.ownerLastName}`.trim(),
+                                    owner_id: null,
+                                  }));
+                                }}
+                                onBlur={() =>
+                                  fetchExistingPatientsFor(
+                                    form.owner.trim(),
+                                    null,
+                                  )
+                                }
+                                style={{
+                                  width: "100%",
+                                  border: "none",
+                                  borderBottom: "1.5px solid #cbd5e1",
+                                  background: "transparent",
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  color: "var(--text, #1e293b)",
+                                  outline: "none",
+                                  padding: "2px 0",
+                                  fontFamily: "inherit",
+                                  boxSizing: "border-box",
+                                }}
+                              />
+                            </div>
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "#94a3b8",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.8px",
+                                  marginBottom: 6,
+                                }}
+                              >
+                                Last Name{" "}
+                                <span style={{ color: "#ef4444" }}>*</span>
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="e.g. dela Cruz"
+                                value={form.ownerLastName}
+                                onChange={(e) => {
+                                  const v = sanitizeName(e.target.value);
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    ownerLastName: v,
+                                    owner: `${prev.ownerFirstName} ${v}`.trim(),
+                                    owner_id: null,
+                                  }));
+                                }}
+                                onBlur={() =>
+                                  fetchExistingPatientsFor(
+                                    form.owner.trim(),
+                                    null,
+                                  )
+                                }
+                                style={{
+                                  width: "100%",
+                                  border: "none",
+                                  borderBottom: "1.5px solid #cbd5e1",
+                                  background: "transparent",
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  color: "var(--text, #1e293b)",
+                                  outline: "none",
+                                  padding: "2px 0",
+                                  fontFamily: "inherit",
+                                  boxSizing: "border-box",
+                                }}
+                              />
+                            </div>
                           </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <p
-                              style={{
-                                margin: 0,
-                                fontSize: 13,
-                                fontWeight: 700,
-                                color: "#166534",
-                              }}
-                            >
-                              {selectedClient.full_name}
-                            </p>
-                            <p
-                              style={{
-                                margin: 0,
-                                fontSize: 11,
-                                color: "#16a34a",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
-                              }}
-                            >
-                              {selectedClient.email || ""}
-                              {selectedClient.phone
-                                ? ` · ${selectedClient.phone}`
-                                : ""}
-                            </p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={clearOwner}
-                            style={{
-                              background: "none",
-                              border: "none",
-                              cursor: "pointer",
-                              color: "#dc2626",
-                              fontSize: 14,
-                              fontWeight: 700,
-                              padding: 0,
-                              width: "auto",
-                            }}
-                          >
-                            ✕
-                          </button>
-                        </div>
-                      ) : (
-                        <>
                           <div
-                            onClick={() => setShowOwnerDrop(true)}
                             style={{
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 8,
-                              padding: "9px 12px",
-                              border: `1.5px solid ${showOwnerDrop ? "var(--royal)" : "var(--border)"}`,
-                              borderRadius: 8,
-                              background: "#fff",
-                              cursor: "text",
-                              boxSizing: "border-box",
-                              transition: "border-color 0.15s",
+                              display: "grid",
+                              gridTemplateColumns: "1fr 1fr",
+                              gap: 10,
                             }}
                           >
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="#9ca3af"
-                              strokeWidth="2.5"
-                              style={{ flexShrink: 0 }}
-                            >
-                              <circle cx="11" cy="11" r="8" />
-                              <path d="m21 21-4.35-4.35" />
-                            </svg>
-                            <input
-                              type="text"
-                              placeholder="Search by name, email or phone..."
-                              value={ownerSearch}
-                              onChange={(e) => {
-                                setOwnerSearch(e.target.value);
-                                setShowOwnerDrop(true);
-                              }}
-                              onFocus={() => setShowOwnerDrop(true)}
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "#94a3b8",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.8px",
+                                  marginBottom: 6,
+                                }}
+                              >
+                                Sex
+                              </div>
+                              <CustomSelect
+                                value={form.ownerSex}
+                                onChange={(val) =>
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    ownerSex: val,
+                                  }))
+                                }
+                                options={["Male", "Female"]}
+                                placeholder="— Select Sex —"
+                              />
+                            </div>
+                            <div>
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "#94a3b8",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.8px",
+                                  marginBottom: 6,
+                                }}
+                              >
+                                Contact
+                              </div>
+                              <input
+                                type="text"
+                                placeholder="e.g. 09170000000"
+                                value={form.contact}
+                                onChange={(e) =>
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    contact: sanitizeContact(e.target.value),
+                                  }))
+                                }
+                                inputMode="numeric"
+                                maxLength={11}
+                                style={{
+                                  width: "100%",
+                                  border: "none",
+                                  borderBottom: "1.5px solid #cbd5e1",
+                                  background: "transparent",
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  color: "var(--text, #1e293b)",
+                                  outline: "none",
+                                  padding: "2px 0",
+                                  fontFamily: "inherit",
+                                  boxSizing: "border-box",
+                                }}
+                              />
+                              {form.contact && form.contact.length !== 11 && (
+                                <p
+                                  style={{
+                                    fontSize: 10,
+                                    color: "#dc2626",
+                                    margin: "4px 0 0",
+                                  }}
+                                >
+                                  Must be 11 digits.
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Registered Client dropdown */}
+                      {ownerType === "registered" && (
+                        <div ref={ownerRef} style={{ position: "relative" }}>
+                          {selectedClient ? (
+                            <div
                               style={{
-                                border: "none",
-                                background: "transparent",
-                                fontSize: 13,
-                                color: "var(--text)",
-                                outline: "none",
-                                fontFamily: "inherit",
-                                width: "100%",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                background: "#f0fdf4",
+                                border: "1.5px solid #bbf7d0",
+                                borderRadius: 8,
+                                padding: "9px 12px",
                               }}
-                            />
-                            {ownerSearch && (
+                            >
+                              <div
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: "50%",
+                                  background: "var(--royal)",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  color: "#fff",
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {(
+                                  selectedClient.first_name?.[0] || "?"
+                                ).toUpperCase()}
+                              </div>
+                              <div style={{ flex: 1, minWidth: 0 }}>
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    color: "#166534",
+                                  }}
+                                >
+                                  {selectedClient.full_name}
+                                </p>
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 11,
+                                    color: "#16a34a",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                >
+                                  {selectedClient.email || ""}
+                                  {selectedClient.phone
+                                    ? ` · ${selectedClient.phone}`
+                                    : ""}
+                                </p>
+                              </div>
                               <button
                                 type="button"
                                 onClick={clearOwner}
@@ -4241,480 +4510,275 @@ const Walkin = () => {
                                   background: "none",
                                   border: "none",
                                   cursor: "pointer",
-                                  color: "var(--muted)",
+                                  color: "#dc2626",
                                   fontSize: 14,
+                                  fontWeight: 700,
                                   padding: 0,
                                   width: "auto",
                                 }}
                               >
                                 ✕
                               </button>
-                            )}
-                          </div>
-                          {showOwnerDrop && (
-                            <div
-                              style={{
-                                position: "absolute",
-                                top: "100%",
-                                left: 0,
-                                right: 0,
-                                background: "#fff",
-                                border: "1.5px solid var(--border)",
-                                borderRadius: 10,
-                                boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                                zIndex: 9999,
-                                maxHeight: 220,
-                                overflowY: "auto",
-                                marginTop: 4,
-                              }}
-                            >
+                            </div>
+                          ) : (
+                            <>
                               <div
+                                onClick={() => setShowOwnerDrop(true)}
                                 style={{
-                                  padding: "7px 12px 5px",
-                                  borderBottom: "1px solid var(--border)",
                                   display: "flex",
                                   alignItems: "center",
-                                  justifyContent: "space-between",
+                                  gap: 8,
+                                  padding: "9px 12px",
+                                  border: `1.5px solid ${showOwnerDrop ? "var(--royal)" : "var(--border)"}`,
+                                  borderRadius: 8,
+                                  background: "#fff",
+                                  cursor: "text",
+                                  boxSizing: "border-box",
+                                  transition: "border-color 0.15s",
                                 }}
                               >
-                                <span
-                                  style={{
-                                    fontSize: 10,
-                                    fontWeight: 700,
-                                    color: "var(--muted)",
-                                    textTransform: "uppercase",
-                                    letterSpacing: "0.5px",
-                                  }}
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="#9ca3af"
+                                  strokeWidth="2.5"
+                                  style={{ flexShrink: 0 }}
                                 >
-                                  {branchLabel} Clients
-                                </span>
-                                <span
-                                  style={{
-                                    fontSize: 10,
-                                    color: "var(--muted)",
+                                  <circle cx="11" cy="11" r="8" />
+                                  <path d="m21 21-4.35-4.35" />
+                                </svg>
+                                <input
+                                  type="text"
+                                  placeholder="Search by name, email or phone..."
+                                  value={ownerSearch}
+                                  onChange={(e) => {
+                                    setOwnerSearch(e.target.value);
+                                    setShowOwnerDrop(true);
                                   }}
-                                >
-                                  {filteredClients.length} found
-                                </span>
-                              </div>
-                              {clients.length === 0 ? (
-                                <div
+                                  onFocus={() => setShowOwnerDrop(true)}
                                   style={{
-                                    padding: "14px 16px",
-                                    textAlign: "center",
-                                    color: "var(--muted)",
+                                    border: "none",
+                                    background: "transparent",
                                     fontSize: 13,
+                                    color: "var(--text)",
+                                    outline: "none",
+                                    fontFamily: "inherit",
+                                    width: "100%",
                                   }}
-                                >
-                                  <div style={{ marginBottom: 4 }}>
-                                    <svg
-                                      width="20"
-                                      height="20"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="#cbd5e1"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                    >
-                                      <circle cx="11" cy="11" r="8" />
-                                      <path d="m21 21-4.35-4.35" />
-                                    </svg>
-                                  </div>
-                                  No clients in {branchLabel} yet.
-                                </div>
-                              ) : filteredClients.length === 0 ? (
-                                <div
-                                  style={{
-                                    padding: "14px 16px",
-                                    textAlign: "center",
-                                    color: "var(--muted)",
-                                    fontSize: 13,
-                                  }}
-                                >
-                                  <div style={{ marginBottom: 4 }}>
-                                    <svg
-                                      width="20"
-                                      height="20"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="#cbd5e1"
-                                      strokeWidth="1.5"
-                                      strokeLinecap="round"
-                                    >
-                                      <circle cx="11" cy="11" r="8" />
-                                      <path d="m21 21-4.35-4.35" />
-                                    </svg>
-                                  </div>
-                                  No client matching "{ownerSearch}"
-                                </div>
-                              ) : (
-                                filteredClients.map((c) => (
-                                  <div
-                                    key={c.id}
-                                    onClick={() => selectOwner(c)}
+                                />
+                                {ownerSearch && (
+                                  <button
+                                    type="button"
+                                    onClick={clearOwner}
                                     style={{
+                                      background: "none",
+                                      border: "none",
+                                      cursor: "pointer",
+                                      color: "var(--muted)",
+                                      fontSize: 14,
+                                      padding: 0,
+                                      width: "auto",
+                                    }}
+                                  >
+                                    ✕
+                                  </button>
+                                )}
+                              </div>
+                              {showOwnerDrop && ownerSearch.trim() && (
+                                <div
+                                  style={{
+                                    position: "absolute",
+                                    top: "100%",
+                                    left: 0,
+                                    right: 0,
+                                    background: "#fff",
+                                    border: "1.5px solid var(--border)",
+                                    borderRadius: 10,
+                                    boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
+                                    zIndex: 9999,
+                                    maxHeight: 220,
+                                    overflowY: "auto",
+                                    marginTop: 4,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      padding: "7px 12px 5px",
+                                      borderBottom: "1px solid var(--border)",
                                       display: "flex",
                                       alignItems: "center",
-                                      gap: 10,
-                                      padding: "9px 12px",
-                                      cursor: "pointer",
-                                      borderBottom: "1px solid var(--border)",
-                                      transition: "background 0.12s",
+                                      justifyContent: "space-between",
                                     }}
-                                    onMouseEnter={(e) =>
-                                      (e.currentTarget.style.background =
-                                        "var(--light-blue)")
-                                    }
-                                    onMouseLeave={(e) =>
-                                      (e.currentTarget.style.background = "")
-                                    }
                                   >
-                                    <div
+                                    <span
                                       style={{
-                                        width: 32,
-                                        height: 32,
-                                        borderRadius: "50%",
-                                        background: "var(--royal)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        color: "#fff",
-                                        fontSize: 12,
+                                        fontSize: 10,
                                         fontWeight: 700,
-                                        flexShrink: 0,
+                                        color: "var(--muted)",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.5px",
                                       }}
                                     >
-                                      {(c.first_name?.[0] || "?").toUpperCase()}
-                                    </div>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <p
-                                        style={{
-                                          margin: 0,
-                                          fontSize: 13,
-                                          fontWeight: 600,
-                                          color: "var(--text)",
-                                        }}
-                                      >
-                                        {c.full_name}
-                                      </p>
-                                      <p
-                                        style={{
-                                          margin: 0,
-                                          fontSize: 11,
-                                          color: "var(--muted)",
-                                          overflow: "hidden",
-                                          textOverflow: "ellipsis",
-                                          whiteSpace: "nowrap",
-                                        }}
-                                      >
-                                        {c.email || ""}
-                                        {c.phone ? ` · ${c.phone}` : ""}
-                                      </p>
-                                    </div>
-                                    {c.role && (
-                                      <span
-                                        style={{
-                                          fontSize: 9,
-                                          background: "#dbeafe",
-                                          color: "#1e40af",
-                                          borderRadius: 4,
-                                          padding: "2px 5px",
-                                          fontWeight: 700,
-                                          flexShrink: 0,
-                                        }}
-                                      >
-                                        {c.role.toUpperCase()}
-                                      </span>
-                                    )}
+                                      {branchLabel} Clients
+                                    </span>
+                                    <span
+                                      style={{
+                                        fontSize: 10,
+                                        color: "var(--muted)",
+                                      }}
+                                    >
+                                      {filteredClients.length} found
+                                    </span>
                                   </div>
-                                ))
+                                  {clients.length === 0 ? (
+                                    <div
+                                      style={{
+                                        padding: "14px 16px",
+                                        textAlign: "center",
+                                        color: "var(--muted)",
+                                        fontSize: 13,
+                                      }}
+                                    >
+                                      <div style={{ marginBottom: 4 }}>
+                                        <svg
+                                          width="20"
+                                          height="20"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="#cbd5e1"
+                                          strokeWidth="1.5"
+                                          strokeLinecap="round"
+                                        >
+                                          <circle cx="11" cy="11" r="8" />
+                                          <path d="m21 21-4.35-4.35" />
+                                        </svg>
+                                      </div>
+                                      No clients in {branchLabel} yet.
+                                    </div>
+                                  ) : filteredClients.length === 0 ? (
+                                    <div
+                                      style={{
+                                        padding: "14px 16px",
+                                        textAlign: "center",
+                                        color: "var(--muted)",
+                                        fontSize: 13,
+                                      }}
+                                    >
+                                      <div style={{ marginBottom: 4 }}>
+                                        <svg
+                                          width="20"
+                                          height="20"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="#cbd5e1"
+                                          strokeWidth="1.5"
+                                          strokeLinecap="round"
+                                        >
+                                          <circle cx="11" cy="11" r="8" />
+                                          <path d="m21 21-4.35-4.35" />
+                                        </svg>
+                                      </div>
+                                      No client matching "{ownerSearch}"
+                                    </div>
+                                  ) : (
+                                    filteredClients.map((c) => (
+                                      <div
+                                        key={c.id}
+                                        onClick={() => selectOwner(c)}
+                                        style={{
+                                          display: "flex",
+                                          alignItems: "center",
+                                          gap: 10,
+                                          padding: "9px 12px",
+                                          cursor: "pointer",
+                                          borderBottom:
+                                            "1px solid var(--border)",
+                                          transition: "background 0.12s",
+                                        }}
+                                        onMouseEnter={(e) =>
+                                          (e.currentTarget.style.background =
+                                            "var(--light-blue)")
+                                        }
+                                        onMouseLeave={(e) =>
+                                          (e.currentTarget.style.background =
+                                            "")
+                                        }
+                                      >
+                                        <div
+                                          style={{
+                                            width: 32,
+                                            height: 32,
+                                            borderRadius: "50%",
+                                            background: "var(--royal)",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            color: "#fff",
+                                            fontSize: 12,
+                                            fontWeight: 700,
+                                            flexShrink: 0,
+                                          }}
+                                        >
+                                          {(
+                                            c.first_name?.[0] || "?"
+                                          ).toUpperCase()}
+                                        </div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                          <p
+                                            style={{
+                                              margin: 0,
+                                              fontSize: 13,
+                                              fontWeight: 600,
+                                              color: "var(--text)",
+                                            }}
+                                          >
+                                            {c.full_name}
+                                          </p>
+                                          <p
+                                            style={{
+                                              margin: 0,
+                                              fontSize: 11,
+                                              color: "var(--muted)",
+                                              overflow: "hidden",
+                                              textOverflow: "ellipsis",
+                                              whiteSpace: "nowrap",
+                                            }}
+                                          >
+                                            {c.email || ""}
+                                            {c.phone ? ` · ${c.phone}` : ""}
+                                          </p>
+                                        </div>
+                                        {c.role && (
+                                          <span
+                                            style={{
+                                              fontSize: 9,
+                                              background: "#dbeafe",
+                                              color: "#1e40af",
+                                              borderRadius: 4,
+                                              padding: "2px 5px",
+                                              fontWeight: 700,
+                                              flexShrink: 0,
+                                            }}
+                                          >
+                                            {c.role.toUpperCase()}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))
+                                  )}
+                                </div>
                               )}
-                            </div>
+                            </>
                           )}
-                        </>
+                        </div>
                       )}
                     </div>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Section: Patient ── */}
-              <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
-                <div
-                  className="wk-section-label"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span>
-                    Patient Information{" "}
-                    {extraPets.length > 0
-                      ? `(Pet 1 of ${1 + extraPets.length})`
-                      : ""}
-                  </span>
-                  {!editItem && (
-                    <button
-                      style={{
-                        padding: "3px 9px",
-                        borderRadius: 6,
-                        border: "1.5px dashed #c7d2fe",
-                        background: "#f5f3ff",
-                        color: "#6366f1",
-                        fontWeight: 600,
-                        fontSize: 11,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: 5,
-                      }}
-                      onClick={addExtraPet}
-                    >
-                      <svg
-                        width="10"
-                        height="10"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.8"
-                      >
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
-                      </svg>
-                      Add Another Pet
-                    </button>
-                  )}
-                </div>
-                <div
-                  style={{
-                    padding: "10px 16px",
-                    borderBottom: "1px solid #e2e8f0",
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      border: "1.5px solid var(--border)",
-                      borderRadius: 8,
-                      overflow: "hidden",
-                      width: "fit-content",
-                      marginBottom: form.mode === "existing" ? 10 : 0,
-                    }}
-                  >
-                    {[
-                      { key: "new", label: "New Pet" },
-                      { key: "existing", label: "Existing Pet" },
-                    ].map(({ key, label }) => (
-                      <button
-                        key={key}
-                        type="button"
-                        onClick={() =>
-                          setForm((prev) =>
-                            key === "existing"
-                              ? { ...prev, mode: "existing", existingId: null }
-                              : { ...prev, mode: "new", existingId: null },
-                          )
-                        }
-                        style={{
-                          padding: "6px 16px",
-                          border: "none",
-                          fontSize: 12,
-                          fontWeight: 600,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                          background:
-                            form.mode === key ? "var(--royal)" : "#fff",
-                          color: form.mode === key ? "#fff" : "var(--muted)",
-                        }}
-                      >
-                        {label}
-                      </button>
-                    ))}
                   </div>
 
-                  {form.mode === "existing" ? (
-                    loadingExistingPatients ? (
-                      <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                        Loading {form.owner || "owner"}'s pets…
-                      </div>
-                    ) : existingPatients.length === 0 ? (
-                      <div
-                        style={{
-                          fontSize: 12,
-                          color: "var(--muted)",
-                          background: "var(--bg)",
-                          border: "1px solid var(--border)",
-                          borderRadius: 8,
-                          padding: "8px 12px",
-                        }}
-                      >
-                        No registered pets found for this owner yet. Switch to
-                        "New Pet" to add one.
-                      </div>
-                    ) : (
-                      <select
-                        value={form.existingId || ""}
-                        onChange={(e) => {
-                          const sel = existingPatients.find(
-                            (ep) => ep.id === e.target.value,
-                          );
-                          setForm((prev) => ({
-                            ...prev,
-                            existingId: sel?.id || null,
-                            patient: sel?.name || "",
-                            species: sel?.species || "Dog",
-                          }));
-                        }}
-                        style={{
-                          width: "100%",
-                          border: "1.5px solid var(--border)",
-                          borderRadius: 8,
-                          background: "#fff",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: "var(--text)",
-                          outline: "none",
-                          padding: "8px 10px",
-                          fontFamily: "inherit",
-                          boxSizing: "border-box",
-                        }}
-                      >
-                        <option value="">— Select a pet —</option>
-                        {existingPatients.map((ep) => (
-                          <option key={ep.id} value={ep.id}>
-                            {ep.name}
-                            {ep.species ? ` (${ep.species})` : ""}
-                          </option>
-                        ))}
-                      </select>
-                    )
-                  ) : (
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "2fr 1fr 1fr",
-                        gap: 10,
-                      }}
-                    >
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: "#94a3b8",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.8px",
-                            marginBottom: 6,
-                          }}
-                        >
-                          Patient Name{" "}
-                          <span style={{ color: "#ef4444" }}>*</span>
-                        </div>
-                        <input
-                          type="text"
-                          value={form.patient}
-                          onChange={(e) =>
-                            setForm({
-                              ...form,
-                              patient: sanitizeName(e.target.value),
-                            })
-                          }
-                          placeholder="Pet name"
-                          style={{
-                            width: "100%",
-                            border: "none",
-                            borderBottom: "1.5px solid #cbd5e1",
-                            background: "transparent",
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: "var(--text, #1e293b)",
-                            outline: "none",
-                            padding: "2px 0",
-                            fontFamily: "inherit",
-                            boxSizing: "border-box",
-                          }}
-                        />
-                      </div>
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: "#94a3b8",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.8px",
-                            marginBottom: 6,
-                          }}
-                        >
-                          Species
-                        </div>
-                        <CustomSelect
-                          value={form.species}
-                          onChange={(val) =>
-                            setForm({ ...form, species: val, breed: "" })
-                          }
-                          options={["Dog", "Cat"]}
-                          placeholder="— Select Species —"
-                        />
-                      </div>
-                      <div>
-                        <div
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: "#94a3b8",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.8px",
-                            marginBottom: 6,
-                          }}
-                        >
-                          Sex
-                        </div>
-                        <CustomSelect
-                          value={form.sex}
-                          onChange={(val) => setForm({ ...form, sex: val })}
-                          options={["Male", "Female", "Unknown"]}
-                          placeholder="— Select Sex —"
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {form.mode === "new" && form.species && (
-                    <div style={{ marginTop: 10 }}>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "#94a3b8",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.8px",
-                          marginBottom: 6,
-                        }}
-                      >
-                        Breed
-                      </div>
-                      <CustomSelect
-                        value={form.breed}
-                        onChange={(val) => setForm({ ...form, breed: val })}
-                        options={
-                          form.species === "Cat" ? CAT_BREEDS : DOG_BREEDS
-                        }
-                        placeholder={`— Select ${form.species} Breed —`}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* ── Extra pets (additional walk-ins for the same owner) ── */}
-              {!editItem &&
-                extraPets.map((p, idx) => (
-                  <div
-                    key={idx}
-                    style={{ borderBottom: "1.5px solid #e2e8f0" }}
-                  >
+                  {/* ── Section: Patient ── */}
+                  <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
                     <div
                       className="wk-section-label"
                       style={{
@@ -4724,40 +4788,44 @@ const Walkin = () => {
                       }}
                     >
                       <span>
-                        Pet {idx + 2} of {1 + extraPets.length}
+                        Patient Information{" "}
+                        {extraPets.length > 0
+                          ? `(Pet 1 of ${1 + extraPets.length})`
+                          : ""}
                       </span>
-                      <button
-                        onClick={() => removeExtraPet(idx)}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          cursor: "pointer",
-                          color: "#dc2626",
-                          fontSize: 11,
-                          fontWeight: 700,
-                          padding: "2px 6px",
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: 4,
-                          fontFamily: "inherit",
-                        }}
-                      >
-                        <svg
-                          width="11"
-                          height="11"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
+                      {!editItem && (
+                        <button
+                          style={{
+                            padding: "3px 9px",
+                            borderRadius: 6,
+                            border: "1.5px dashed #c7d2fe",
+                            background: "#f5f3ff",
+                            color: "#6366f1",
+                            fontWeight: 600,
+                            fontSize: 11,
+                            cursor: "pointer",
+                            fontFamily: "inherit",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 5,
+                          }}
+                          onClick={addExtraPet}
                         >
-                          <line x1="18" y1="6" x2="6" y2="18" />
-                          <line x1="6" y1="6" x2="18" y2="18" />
-                        </svg>
-                        Remove
-                      </button>
+                          <svg
+                            width="10"
+                            height="10"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.8"
+                          >
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                          </svg>
+                          Add Another Pet
+                        </button>
+                      )}
                     </div>
-
                     <div
                       style={{
                         padding: "10px 16px",
@@ -4771,7 +4839,7 @@ const Walkin = () => {
                           borderRadius: 8,
                           overflow: "hidden",
                           width: "fit-content",
-                          marginBottom: p.mode === "existing" ? 10 : 0,
+                          marginBottom: form.mode === "existing" ? 10 : 0,
                         }}
                       >
                         {[
@@ -4782,15 +4850,14 @@ const Walkin = () => {
                             key={key}
                             type="button"
                             onClick={() =>
-                              updateExtraPet(
-                                idx,
+                              setForm((prev) =>
                                 key === "existing"
                                   ? {
+                                      ...prev,
                                       mode: "existing",
-                                      patient: "",
-                                      species: "Dog",
+                                      existingId: null,
                                     }
-                                  : { mode: "new", existingId: null },
+                                  : { ...prev, mode: "new", existingId: null },
                               )
                             }
                             style={{
@@ -4800,10 +4867,10 @@ const Walkin = () => {
                               fontWeight: 600,
                               cursor: "pointer",
                               fontFamily: "inherit",
-                              transition: "all 0.15s",
                               background:
-                                p.mode === key ? "var(--royal)" : "#fff",
-                              color: p.mode === key ? "#fff" : "var(--muted)",
+                                form.mode === key ? "var(--royal)" : "#fff",
+                              color:
+                                form.mode === key ? "#fff" : "var(--muted)",
                             }}
                           >
                             {label}
@@ -4811,7 +4878,7 @@ const Walkin = () => {
                         ))}
                       </div>
 
-                      {p.mode === "existing" ? (
+                      {form.mode === "existing" ? (
                         loadingExistingPatients ? (
                           <div style={{ fontSize: 12, color: "var(--muted)" }}>
                             Loading {form.owner || "owner"}'s pets…
@@ -4832,15 +4899,17 @@ const Walkin = () => {
                           </div>
                         ) : (
                           <select
-                            value={p.existingId || ""}
+                            value={form.existingId || ""}
                             onChange={(e) => {
                               const sel = existingPatients.find(
                                 (ep) => ep.id === e.target.value,
                               );
-                              updateExtraPet(idx, {
+                              setForm((prev) => ({
+                                ...prev,
                                 existingId: sel?.id || null,
+                                patient: sel?.name || "",
                                 species: sel?.species || "Dog",
-                              });
+                              }));
                             }}
                             style={{
                               width: "100%",
@@ -4869,7 +4938,7 @@ const Walkin = () => {
                         <div
                           style={{
                             display: "grid",
-                            gridTemplateColumns: "1fr 1fr",
+                            gridTemplateColumns: "2fr 1fr 1fr",
                             gap: 10,
                           }}
                         >
@@ -4889,9 +4958,10 @@ const Walkin = () => {
                             </div>
                             <input
                               type="text"
-                              value={p.patient}
+                              value={form.patient}
                               onChange={(e) =>
-                                updateExtraPet(idx, {
+                                setForm({
+                                  ...form,
                                   patient: sanitizeName(e.target.value),
                                 })
                               }
@@ -4903,7 +4973,7 @@ const Walkin = () => {
                                 background: "transparent",
                                 fontSize: 13,
                                 fontWeight: 600,
-                                color: "var(--text)",
+                                color: "var(--text, #1e293b)",
                                 outline: "none",
                                 padding: "2px 0",
                                 fontFamily: "inherit",
@@ -4925,16 +4995,669 @@ const Walkin = () => {
                               Species
                             </div>
                             <CustomSelect
-                              value={p.species}
+                              value={form.species}
                               onChange={(val) =>
-                                updateExtraPet(idx, { species: val, breed: "" })
+                                setForm({ ...form, species: val, breed: "" })
                               }
                               options={["Dog", "Cat"]}
                               placeholder="— Select Species —"
                             />
                           </div>
-                          {p.mode === "new" && p.species && (
-                            <div style={{ gridColumn: "1 / -1", marginTop: 4 }}>
+                          <div>
+                            <div
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: "#94a3b8",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.8px",
+                                marginBottom: 6,
+                              }}
+                            >
+                              Sex
+                            </div>
+                            <CustomSelect
+                              value={form.sex}
+                              onChange={(val) => setForm({ ...form, sex: val })}
+                              options={["Male", "Female", "Unknown"]}
+                              placeholder="— Select Sex —"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {form.mode === "new" && form.species && (
+                        <div style={{ marginTop: 10 }}>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#94a3b8",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.8px",
+                              marginBottom: 6,
+                            }}
+                          >
+                            Breed
+                          </div>
+                          <CustomSelect
+                            value={form.breed}
+                            onChange={(val) => setForm({ ...form, breed: val })}
+                            options={
+                              form.species === "Cat" ? CAT_BREEDS : DOG_BREEDS
+                            }
+                            placeholder={`— Select ${form.species} Breed —`}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* ── Extra pets (additional walk-ins for the same owner) ── */}
+                  {!editItem &&
+                    extraPets.map((p, idx) => (
+                      <div
+                        key={idx}
+                        style={{ borderBottom: "1.5px solid #e2e8f0" }}
+                      >
+                        <div
+                          className="wk-section-label"
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                          }}
+                        >
+                          <span>
+                            Pet {idx + 2} of {1 + extraPets.length}
+                          </span>
+                          <button
+                            onClick={() => removeExtraPet(idx)}
+                            style={{
+                              background: "none",
+                              border: "none",
+                              cursor: "pointer",
+                              color: "#dc2626",
+                              fontSize: 11,
+                              fontWeight: 700,
+                              padding: "2px 6px",
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                              fontFamily: "inherit",
+                            }}
+                          >
+                            <svg
+                              width="11"
+                              height="11"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                            >
+                              <line x1="18" y1="6" x2="6" y2="18" />
+                              <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                            Remove
+                          </button>
+                        </div>
+
+                        <div
+                          style={{
+                            padding: "10px 16px",
+                            borderBottom: "1px solid #e2e8f0",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              border: "1.5px solid var(--border)",
+                              borderRadius: 8,
+                              overflow: "hidden",
+                              width: "fit-content",
+                              marginBottom: p.mode === "existing" ? 10 : 0,
+                            }}
+                          >
+                            {[
+                              { key: "new", label: "New Pet" },
+                              { key: "existing", label: "Existing Pet" },
+                            ].map(({ key, label }) => (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() =>
+                                  updateExtraPet(
+                                    idx,
+                                    key === "existing"
+                                      ? {
+                                          mode: "existing",
+                                          patient: "",
+                                          species: "Dog",
+                                        }
+                                      : { mode: "new", existingId: null },
+                                  )
+                                }
+                                style={{
+                                  padding: "6px 16px",
+                                  border: "none",
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  cursor: "pointer",
+                                  fontFamily: "inherit",
+                                  transition: "all 0.15s",
+                                  background:
+                                    p.mode === key ? "var(--royal)" : "#fff",
+                                  color:
+                                    p.mode === key ? "#fff" : "var(--muted)",
+                                }}
+                              >
+                                {label}
+                              </button>
+                            ))}
+                          </div>
+
+                          {p.mode === "existing" ? (
+                            loadingExistingPatients ? (
+                              <div
+                                style={{ fontSize: 12, color: "var(--muted)" }}
+                              >
+                                Loading {form.owner || "owner"}'s pets…
+                              </div>
+                            ) : existingPatients.length === 0 ? (
+                              <div
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--muted)",
+                                  background: "var(--bg)",
+                                  border: "1px solid var(--border)",
+                                  borderRadius: 8,
+                                  padding: "8px 12px",
+                                }}
+                              >
+                                No registered pets found for this owner yet.
+                                Switch to "New Pet" to add one.
+                              </div>
+                            ) : (
+                              <select
+                                value={p.existingId || ""}
+                                onChange={(e) => {
+                                  const sel = existingPatients.find(
+                                    (ep) => ep.id === e.target.value,
+                                  );
+                                  updateExtraPet(idx, {
+                                    existingId: sel?.id || null,
+                                    species: sel?.species || "Dog",
+                                  });
+                                }}
+                                style={{
+                                  width: "100%",
+                                  border: "1.5px solid var(--border)",
+                                  borderRadius: 8,
+                                  background: "#fff",
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  color: "var(--text)",
+                                  outline: "none",
+                                  padding: "8px 10px",
+                                  fontFamily: "inherit",
+                                  boxSizing: "border-box",
+                                }}
+                              >
+                                <option value="">— Select a pet —</option>
+                                {existingPatients.map((ep) => (
+                                  <option key={ep.id} value={ep.id}>
+                                    {ep.name}
+                                    {ep.species ? ` (${ep.species})` : ""}
+                                  </option>
+                                ))}
+                              </select>
+                            )
+                          ) : (
+                            <div
+                              style={{
+                                display: "grid",
+                                gridTemplateColumns: "1fr 1fr",
+                                gap: 10,
+                              }}
+                            >
+                              <div>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "#94a3b8",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.8px",
+                                    marginBottom: 6,
+                                  }}
+                                >
+                                  Patient Name{" "}
+                                  <span style={{ color: "#ef4444" }}>*</span>
+                                </div>
+                                <input
+                                  type="text"
+                                  value={p.patient}
+                                  onChange={(e) =>
+                                    updateExtraPet(idx, {
+                                      patient: sanitizeName(e.target.value),
+                                    })
+                                  }
+                                  placeholder="Pet name"
+                                  style={{
+                                    width: "100%",
+                                    border: "none",
+                                    borderBottom: "1.5px solid #cbd5e1",
+                                    background: "transparent",
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: "var(--text)",
+                                    outline: "none",
+                                    padding: "2px 0",
+                                    fontFamily: "inherit",
+                                    boxSizing: "border-box",
+                                  }}
+                                />
+                              </div>
+                              <div>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "#94a3b8",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.8px",
+                                    marginBottom: 6,
+                                  }}
+                                >
+                                  Species
+                                </div>
+                                <CustomSelect
+                                  value={p.species}
+                                  onChange={(val) =>
+                                    updateExtraPet(idx, {
+                                      species: val,
+                                      breed: "",
+                                    })
+                                  }
+                                  options={["Dog", "Cat"]}
+                                  placeholder="— Select Species —"
+                                />
+                              </div>
+                              {p.mode === "new" && p.species && (
+                                <div
+                                  style={{ gridColumn: "1 / -1", marginTop: 4 }}
+                                >
+                                  <div
+                                    style={{
+                                      fontSize: 10,
+                                      fontWeight: 700,
+                                      color: "#94a3b8",
+                                      textTransform: "uppercase",
+                                      letterSpacing: "0.8px",
+                                      marginBottom: 6,
+                                    }}
+                                  >
+                                    Breed
+                                  </div>
+                                  <CustomSelect
+                                    value={p.breed}
+                                    onChange={(val) =>
+                                      updateExtraPet(idx, { breed: val })
+                                    }
+                                    options={
+                                      p.species === "Cat"
+                                        ? CAT_BREEDS
+                                        : DOG_BREEDS
+                                    }
+                                    placeholder={`— Select ${p.species} Breed —`}
+                                  />
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr 1fr",
+                            borderBottom: "1px solid #e2e8f0",
+                          }}
+                        >
+                          <div
+                            style={{
+                              padding: "10px 16px",
+                              borderRight: "1px solid #e2e8f0",
+                            }}
+                          >
+                            <div
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: "#94a3b8",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.8px",
+                                marginBottom: 6,
+                              }}
+                            >
+                              Purpose
+                            </div>
+                            <CustomSelect
+                              value={p.purpose}
+                              onChange={(val) =>
+                                updateExtraPet(idx, {
+                                  purpose: val,
+                                  vet: val === "Grooming" ? "" : p.vet,
+                                })
+                              }
+                              options={[
+                                "Checkup",
+                                "Vaccination",
+                                "Emergency",
+                                "Grooming",
+                                "Dental",
+                                "Other",
+                              ]}
+                              placeholder="— Select Purpose —"
+                            />
+                          </div>
+                          <div style={{ padding: "10px 16px" }}>
+                            {p.purpose !== "Grooming" ? (
+                              <>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "#94a3b8",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.8px",
+                                    marginBottom: 6,
+                                  }}
+                                >
+                                  Assign Vet
+                                </div>
+                                <CustomSelect
+                                  value={p.vet}
+                                  onChange={(val) =>
+                                    updateExtraPet(idx, { vet: val })
+                                  }
+                                  options={getAvailableVets()}
+                                  placeholder="Unassigned"
+                                />
+                              </>
+                            ) : (
+                              <div
+                                style={{
+                                  fontSize: 11,
+                                  color: "#9333ea",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  paddingTop: 4,
+                                }}
+                              >
+                                <svg
+                                  width="14"
+                                  height="14"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="#7c3aed"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                >
+                                  <circle cx="6" cy="6" r="3" />
+                                  <circle cx="6" cy="18" r="3" />
+                                  <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                                  <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                                  <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                                </svg>
+                                Handled by grooming team
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div style={{ padding: "10px 16px" }}>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#94a3b8",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.8px",
+                              marginBottom: 6,
+                            }}
+                          >
+                            Notes for this pet
+                          </div>
+                          <textarea
+                            value={p.notes}
+                            onChange={(e) =>
+                              updateExtraPet(idx, { notes: e.target.value })
+                            }
+                            placeholder="Notes for this pet..."
+                            style={{
+                              width: "100%",
+                              border: "1px solid var(--border)",
+                              borderRadius: 8,
+                              background: "transparent",
+                              fontSize: 13,
+                              color: "var(--text)",
+                              outline: "none",
+                              resize: "vertical",
+                              minHeight: 50,
+                              fontFamily: "inherit",
+                              lineHeight: 1.6,
+                              boxSizing: "border-box",
+                              padding: "8px 10px",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+
+                  {/* ── Section: Arrival (Automatic) ── */}
+                  <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
+                    <div
+                      className="wk-section-label"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span>Arrival Date &amp; Time</span>
+                      <span
+                        style={{
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: "#16a34a",
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 3,
+                        }}
+                      >
+                        <svg
+                          width="9"
+                          height="9"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="3"
+                          strokeLinecap="round"
+                        >
+                          <rect x="3" y="11" width="18" height="11" rx="2" />
+                          <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        Auto-recorded
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        padding: "12px 16px",
+                        gap: 14,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 9,
+                            background: "#eff6ff",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#1d4ed8"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          >
+                            <rect x="3" y="4" width="18" height="18" rx="2" />
+                            <line x1="16" y1="2" x2="16" y2="6" />
+                            <line x1="8" y1="2" x2="8" y2="6" />
+                            <line x1="3" y1="10" x2="21" y2="10" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#94a3b8",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.8px",
+                            }}
+                          >
+                            Date
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: "var(--text)",
+                            }}
+                          >
+                            {arrivalDisplay.date}
+                          </div>
+                        </div>
+                      </div>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 10,
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: 34,
+                            height: 34,
+                            borderRadius: 9,
+                            background: "#f0fdf4",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <svg
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#16a34a"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                          >
+                            <circle cx="12" cy="12" r="10" />
+                            <polyline points="12 6 12 12 16 14" />
+                          </svg>
+                        </div>
+                        <div>
+                          <div
+                            style={{
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "#94a3b8",
+                              textTransform: "uppercase",
+                              letterSpacing: "0.8px",
+                            }}
+                          >
+                            Time
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: "var(--text)",
+                            }}
+                          >
+                            {arrivalDisplay.time}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* ── Section: Visit Details ── */}
+                  <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
+                    <div
+                      className="wk-section-label"
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                      }}
+                    >
+                      <span>Visit Details</span>
+                    </div>
+
+                    {/* Locked service + price (chosen in Step 1) */}
+                    <div
+                      style={{
+                        padding: "10px 16px",
+                        borderBottom: "1px solid #e2e8f0",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 12,
+                      }}
+                    >
+                      {(() => {
+                        const meta =
+                          SERVICE_META[form.purpose] || SERVICE_META.Checkup;
+                        return (
+                          <>
+                            <div
+                              style={{
+                                width: 44,
+                                height: 44,
+                                borderRadius: 10,
+                                background: meta.bg,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                flexShrink: 0,
+                              }}
+                            >
+                              {meta.icon}
+                            </div>
+                            <div style={{ flex: 1 }}>
                               <div
                                 style={{
                                   fontSize: 10,
@@ -4942,73 +5665,80 @@ const Walkin = () => {
                                   color: "#94a3b8",
                                   textTransform: "uppercase",
                                   letterSpacing: "0.8px",
-                                  marginBottom: 6,
                                 }}
                               >
-                                Breed
+                                Service
                               </div>
-                              <CustomSelect
-                                value={p.breed}
-                                onChange={(val) =>
-                                  updateExtraPet(idx, { breed: val })
-                                }
-                                options={
-                                  p.species === "Cat" ? CAT_BREEDS : DOG_BREEDS
-                                }
-                                placeholder={`— Select ${p.species} Breed —`}
-                              />
+                              <div
+                                style={{
+                                  fontSize: 14,
+                                  fontWeight: 800,
+                                  color: meta.color,
+                                }}
+                              >
+                                {form.purpose}
+                              </div>
                             </div>
-                          )}
-                        </div>
-                      )}
+                            <div style={{ textAlign: "right" }}>
+                              <div
+                                style={{
+                                  fontSize: 10,
+                                  fontWeight: 700,
+                                  color: "#94a3b8",
+                                  textTransform: "uppercase",
+                                  letterSpacing: "0.8px",
+                                }}
+                              >
+                                Price
+                              </div>
+                              <div
+                                style={{
+                                  fontSize: 14,
+                                  fontWeight: 800,
+                                  color: "#16a34a",
+                                }}
+                              >
+                                {form.price !== ""
+                                  ? `₱${Number(form.price).toLocaleString()}`
+                                  : "—"}
+                              </div>
+                            </div>
+                            {!editItem && (
+                              <button
+                                type="button"
+                                onClick={() => setBookStep("service")}
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: "#6366f1",
+                                  background: "#f5f3ff",
+                                  border: "1px solid #c7d2fe",
+                                  borderRadius: 8,
+                                  padding: "6px 10px",
+                                  cursor: "pointer",
+                                  fontFamily: "inherit",
+                                  flexShrink: 0,
+                                }}
+                              >
+                                Change
+                              </button>
+                            )}
+                          </>
+                        );
+                      })()}
                     </div>
 
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "1fr 1fr 1fr",
+                        gridTemplateColumns: "1fr 1fr",
                         borderBottom: "1px solid #e2e8f0",
                       }}
                     >
                       <div
-                        style={{
-                          padding: "10px 16px",
-                          borderRight: "1px solid #e2e8f0",
-                        }}
+                        style={{ padding: "10px 16px", gridColumn: "1 / -1" }}
                       >
-                        <div
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: "#94a3b8",
-                            textTransform: "uppercase",
-                            letterSpacing: "0.8px",
-                            marginBottom: 6,
-                          }}
-                        >
-                          Purpose
-                        </div>
-                        <CustomSelect
-                          value={p.purpose}
-                          onChange={(val) =>
-                            updateExtraPet(idx, {
-                              purpose: val,
-                              vet: val === "Grooming" ? "" : p.vet,
-                            })
-                          }
-                          options={[
-                            "Checkup",
-                            "Vaccination",
-                            "Emergency",
-                            "Grooming",
-                            "Dental",
-                            "Other",
-                          ]}
-                          placeholder="— Select Purpose —"
-                        />
-                      </div>
-                      <div style={{ padding: "10px 16px" }}>
-                        {p.purpose !== "Grooming" ? (
+                        {!isGrooming ? (
                           <>
                             <div
                               style={{
@@ -5023,41 +5753,80 @@ const Walkin = () => {
                               Assign Vet
                             </div>
                             <CustomSelect
-                              value={p.vet}
-                              onChange={(val) =>
-                                updateExtraPet(idx, { vet: val })
-                              }
+                              value={form.vet}
+                              onChange={(val) => setForm({ ...form, vet: val })}
                               options={getAvailableVets()}
                               placeholder="Unassigned"
                             />
+                            <p
+                              style={{
+                                margin: "6px 0 0",
+                                fontSize: 10,
+                                color: "var(--muted)",
+                              }}
+                            >
+                              Showing vets available right now
+                            </p>
+                            {form.vet && vetSchedule[form.vet] && (
+                              <p
+                                style={{
+                                  margin: "4px 0 0",
+                                  fontSize: 10,
+                                  color: "var(--muted)",
+                                }}
+                              >
+                                Available days:{" "}
+                                {vetSchedule[form.vet]
+                                  .map((d) => DAY_NAMES[d])
+                                  .join(", ")}
+                              </p>
+                            )}
+                            {form.vet && vetTimeSchedule[form.vet] && (
+                              <p
+                                style={{
+                                  margin: "2px 0 0",
+                                  fontSize: 10,
+                                  color: "var(--muted)",
+                                }}
+                              >
+                                Available times:{" "}
+                                {vetTimeSchedule[form.vet].join(", ")}
+                              </p>
+                            )}
                           </>
                         ) : (
-                          <div
-                            style={{
-                              fontSize: 11,
-                              color: "#9333ea",
-                              display: "flex",
-                              alignItems: "center",
-                              gap: 6,
-                              paddingTop: 4,
-                            }}
-                          >
-                            <svg
-                              width="14"
-                              height="14"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="#7c3aed"
-                              strokeWidth="2"
-                              strokeLinecap="round"
+                          <div style={{ paddingTop: 4 }}>
+                            <div
+                              style={{
+                                background: "#f3e8ff",
+                                border: "1px solid #d8b4fe",
+                                borderRadius: 8,
+                                padding: "8px 12px",
+                                fontSize: 12,
+                                color: "#6b21a8",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                              }}
                             >
-                              <circle cx="6" cy="6" r="3" />
-                              <circle cx="6" cy="18" r="3" />
-                              <line x1="20" y1="4" x2="8.12" y2="15.88" />
-                              <line x1="14.47" y1="14.48" x2="20" y2="20" />
-                              <line x1="8.12" y1="8.12" x2="12" y2="12" />
-                            </svg>
-                            Handled by grooming team
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#7c3aed"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                              >
+                                <circle cx="6" cy="6" r="3" />
+                                <circle cx="6" cy="18" r="3" />
+                                <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                                <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                                <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                              </svg>
+                              <strong>Grooming</strong> — handled by our{" "}
+                              {MAX_GROOMERS} groomers.
+                            </div>
                           </div>
                         )}
                       </div>
@@ -5074,224 +5843,36 @@ const Walkin = () => {
                           marginBottom: 6,
                         }}
                       >
-                        Notes for this pet
+                        Assign Room
                       </div>
-                      <textarea
-                        value={p.notes}
-                        onChange={(e) =>
-                          updateExtraPet(idx, { notes: e.target.value })
+
+                      <CustomSelect
+                        value={form.room}
+                        onChange={(val) =>
+                          setForm((prev) => ({ ...prev, room: val }))
                         }
-                        placeholder="Notes for this pet..."
-                        style={{
-                          width: "100%",
-                          border: "1px solid var(--border)",
-                          borderRadius: 8,
-                          background: "transparent",
-                          fontSize: 13,
-                          color: "var(--text)",
-                          outline: "none",
-                          resize: "vertical",
-                          minHeight: 50,
-                          fontFamily: "inherit",
-                          lineHeight: 1.6,
-                          boxSizing: "border-box",
-                          padding: "8px 10px",
-                        }}
+                        options={rooms
+                          .filter(
+                            (r) =>
+                              r.status === "Available" ||
+                              r.number === form.room,
+                          )
+                          .map((r) => ({
+                            value: r.number,
+                            label: `${r.number}${r.type ? ` · ${r.type}` : ""}`,
+                          }))}
+                        placeholder="No room assigned"
                       />
                     </div>
-                  </div>
-                ))}
 
-              {/* ── Section: Arrival (Automatic) ── */}
-              <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
-                <div
-                  className="wk-section-label"
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span>Arrival Date &amp; Time</span>
-                  <span
-                    style={{
-                      fontSize: 9,
-                      fontWeight: 700,
-                      color: "#16a34a",
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 3,
-                    }}
-                  >
-                    <svg
-                      width="9"
-                      height="9"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                      strokeLinecap="round"
-                    >
-                      <rect x="3" y="11" width="18" height="11" rx="2" />
-                      <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                    </svg>
-                    Auto-recorded
-                  </span>
-                </div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    padding: "12px 16px",
-                    gap: 14,
-                  }}
-                >
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 10 }}
-                  >
-                    <div
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 9,
-                        background: "#eff6ff",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#1d4ed8"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      >
-                        <rect x="3" y="4" width="18" height="18" rx="2" />
-                        <line x1="16" y1="2" x2="16" y2="6" />
-                        <line x1="8" y1="2" x2="8" y2="6" />
-                        <line x1="3" y1="10" x2="21" y2="10" />
-                      </svg>
-                    </div>
-                    <div>
+                    {/* Status row — edit only */}
+                    {editItem && (
                       <div
                         style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "#94a3b8",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.8px",
+                          padding: "10px 16px",
+                          borderBottom: "1px solid #e2e8f0",
                         }}
                       >
-                        Date
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 700,
-                          color: "var(--text)",
-                        }}
-                      >
-                        {arrivalDisplay.date}
-                      </div>
-                    </div>
-                  </div>
-                  <div
-                    style={{ display: "flex", alignItems: "center", gap: 10 }}
-                  >
-                    <div
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 9,
-                        background: "#f0fdf4",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexShrink: 0,
-                      }}
-                    >
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#16a34a"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                      >
-                        <circle cx="12" cy="12" r="10" />
-                        <polyline points="12 6 12 12 16 14" />
-                      </svg>
-                    </div>
-                    <div>
-                      <div
-                        style={{
-                          fontSize: 10,
-                          fontWeight: 700,
-                          color: "#94a3b8",
-                          textTransform: "uppercase",
-                          letterSpacing: "0.8px",
-                        }}
-                      >
-                        Time
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 13,
-                          fontWeight: 700,
-                          color: "var(--text)",
-                        }}
-                      >
-                        {arrivalDisplay.time}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* ── Section: Visit Details ── */}
-              <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
-                <div className="wk-section-label">Visit Details</div>
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    borderBottom: "1px solid #e2e8f0",
-                  }}
-                >
-                  <div
-                    style={{
-                      padding: "10px 16px",
-                      borderRight: "1px solid #e2e8f0",
-                    }}
-                  >
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: "#94a3b8",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.8px",
-                        marginBottom: 6,
-                      }}
-                    >
-                      Purpose
-                    </div>
-                    <CustomSelect
-                      value={form.purpose}
-                      onChange={(val) =>
-                        setForm((prev) => ({ ...prev, purpose: val }))
-                      }
-                      options={PURPOSES}
-                    />
-                  </div>
-                  <div style={{ padding: "10px 16px" }}>
-                    {!isGrooming ? (
-                      <>
                         <div
                           style={{
                             fontSize: 10,
@@ -5302,322 +5883,226 @@ const Walkin = () => {
                             marginBottom: 6,
                           }}
                         >
-                          Assign Vet
+                          Status
                         </div>
                         <CustomSelect
-                          value={form.vet}
-                          onChange={(val) => setForm({ ...form, vet: val })}
-                          options={getAvailableVets()}
-                          placeholder="Unassigned"
+                          value={form.status}
+                          onChange={(val) => setForm({ ...form, status: val })}
+                          options={["Waiting", "Attended", "Cancelled"]}
+                          placeholder="— Select Status —"
                         />
-                        <p
-                          style={{
-                            margin: "6px 0 0",
-                            fontSize: 10,
-                            color: "var(--muted)",
-                          }}
-                        >
-                          Showing vets available right now
-                        </p>
-                      </>
-                    ) : (
-                      <div style={{ paddingTop: 4 }}>
-                        <div
-                          style={{
-                            background: "#f3e8ff",
-                            border: "1px solid #d8b4fe",
-                            borderRadius: 8,
-                            padding: "8px 12px",
-                            fontSize: 12,
-                            color: "#6b21a8",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 6,
-                          }}
-                        >
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#7c3aed"
-                            strokeWidth="2"
-                            strokeLinecap="round"
-                          >
-                            <circle cx="6" cy="6" r="3" />
-                            <circle cx="6" cy="18" r="3" />
-                            <line x1="20" y1="4" x2="8.12" y2="15.88" />
-                            <line x1="14.47" y1="14.48" x2="20" y2="20" />
-                            <line x1="8.12" y1="8.12" x2="12" y2="12" />
-                          </svg>
-                          <strong>Grooming</strong> — handled by our{" "}
-                          {MAX_GROOMERS} groomers.
-                        </div>
                       </div>
                     )}
                   </div>
-                </div>
 
-                <div style={{ padding: "10px 16px" }}>
-                  <div
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: "#94a3b8",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.8px",
-                      marginBottom: 6,
-                    }}
-                  >
-                    Assign Room
+                  {/* ── Section: Notes ── */}
+                  <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
+                    <div className="wk-section-label">Notes / Remarks</div>
+                    <div style={{ padding: "12px 16px", minHeight: 70 }}>
+                      <textarea
+                        value={form.notes}
+                        onChange={(e) =>
+                          setForm({ ...form, notes: e.target.value })
+                        }
+                        placeholder="Additional notes, symptoms, or special instructions..."
+                        style={{
+                          width: "100%",
+                          border: "none",
+                          background: "transparent",
+                          fontSize: 13,
+                          color: "var(--text)",
+                          outline: "none",
+                          resize: "vertical",
+                          minHeight: 60,
+                          fontFamily: "inherit",
+                          lineHeight: 1.8,
+                          boxSizing: "border-box",
+                          backgroundImage:
+                            "repeating-linear-gradient(transparent, transparent 27px, rgba(147,197,253,0.25) 27px, rgba(147,197,253,0.25) 28px)",
+                        }}
+                      />
+                    </div>
                   </div>
 
-                  <CustomSelect
-                    value={form.room}
-                    onChange={(val) =>
-                      setForm((prev) => ({ ...prev, room: val }))
-                    }
-                    options={rooms
-                      .filter(
-                        (r) =>
-                          r.status === "Available" || r.number === form.room,
-                      )
-                      .map((r) => ({
-                        value: r.number,
-                        label: `${r.number}${r.type ? ` · ${r.type}` : ""}`,
-                      }))}
-                    placeholder="No room assigned"
-                  />
-                </div>
-
-                {/* Status row — edit only */}
-                {editItem && (
-                  <div
-                    style={{
-                      padding: "10px 16px",
-                      borderBottom: "1px solid #e2e8f0",
-                    }}
-                  >
+                  {/* Conflict alerts */}
+                  {conflictType === "grooming" && (
                     <div
                       style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: "#94a3b8",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.8px",
-                        marginBottom: 6,
+                        margin: "0 16px 16px",
+                        background: "#fef3c7",
+                        border: "1.5px solid #fcd34d",
+                        borderRadius: 8,
+                        padding: "12px 16px",
+                        fontSize: 13,
                       }}
                     >
-                      Status
+                      <p
+                        style={{
+                          margin: 0,
+                          fontWeight: 700,
+                          color: "#92400e",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#92400e"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        >
+                          <circle cx="6" cy="6" r="3" />
+                          <circle cx="6" cy="18" r="3" />
+                          <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                          <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                          <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                        </svg>
+                        Grooming Fully Booked Right Now
+                      </p>
+                      <p style={{ margin: "4px 0 0", color: "#b45309" }}>
+                        Both groomers ({MAX_GROOMERS}/{MAX_GROOMERS}) are
+                        currently busy.
+                      </p>
                     </div>
-                    <CustomSelect
-                      value={form.status}
-                      onChange={(val) => setForm({ ...form, status: val })}
-                      options={["Waiting", "Attended", "Cancelled"]}
-                      placeholder="— Select Status —"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* ── Section: Notes ── */}
-              <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
-                <div className="wk-section-label">Notes / Remarks</div>
-                <div style={{ padding: "12px 16px", minHeight: 70 }}>
-                  <textarea
-                    value={form.notes}
-                    onChange={(e) =>
-                      setForm({ ...form, notes: e.target.value })
-                    }
-                    placeholder="Additional notes, symptoms, or special instructions..."
-                    style={{
-                      width: "100%",
-                      border: "none",
-                      background: "transparent",
-                      fontSize: 13,
-                      color: "var(--text)",
-                      outline: "none",
-                      resize: "vertical",
-                      minHeight: 60,
-                      fontFamily: "inherit",
-                      lineHeight: 1.8,
-                      boxSizing: "border-box",
-                      backgroundImage:
-                        "repeating-linear-gradient(transparent, transparent 27px, rgba(147,197,253,0.25) 27px, rgba(147,197,253,0.25) 28px)",
-                    }}
-                  />
-                </div>
-              </div>
-
-              {/* Conflict alerts */}
-              {conflictType === "grooming" && (
-                <div
-                  style={{
-                    margin: "0 16px 16px",
-                    background: "#fef3c7",
-                    border: "1.5px solid #fcd34d",
-                    borderRadius: 8,
-                    padding: "12px 16px",
-                    fontSize: 13,
-                  }}
-                >
-                  <p
-                    style={{
-                      margin: 0,
-                      fontWeight: 700,
-                      color: "#92400e",
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 6,
-                    }}
-                  >
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#92400e"
-                      strokeWidth="2"
-                      strokeLinecap="round"
+                  )}
+                  {isGrooming && !conflictType && (
+                    <div
+                      style={{
+                        margin: "0 16px 16px",
+                        background: "#f0fdf4",
+                        border: "1px solid #bbf7d0",
+                        borderRadius: 8,
+                        padding: "10px 14px",
+                        fontSize: 12,
+                        color: "#15803d",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
                     >
-                      <circle cx="6" cy="6" r="3" />
-                      <circle cx="6" cy="18" r="3" />
-                      <line x1="20" y1="4" x2="8.12" y2="15.88" />
-                      <line x1="14.47" y1="14.48" x2="20" y2="20" />
-                      <line x1="8.12" y1="8.12" x2="12" y2="12" />
-                    </svg>
-                    Grooming Fully Booked Right Now
-                  </p>
-                  <p style={{ margin: "4px 0 0", color: "#b45309" }}>
-                    Both groomers ({MAX_GROOMERS}/{MAX_GROOMERS}) are currently
-                    busy.
-                  </p>
-                </div>
-              )}
-              {isGrooming && !conflictType && (
-                <div
-                  style={{
-                    margin: "0 16px 16px",
-                    background: "#f0fdf4",
-                    border: "1px solid #bbf7d0",
-                    borderRadius: 8,
-                    padding: "10px 14px",
-                    fontSize: 12,
-                    color: "#15803d",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#15803d"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                  >
-                    <circle cx="6" cy="6" r="3" />
-                    <circle cx="6" cy="18" r="3" />
-                    <line x1="20" y1="4" x2="8.12" y2="15.88" />
-                    <line x1="14.47" y1="14.48" x2="20" y2="20" />
-                    <line x1="8.12" y1="8.12" x2="12" y2="12" />
-                  </svg>
-                  <span>
-                    <strong>
-                      {MAX_GROOMERS - groomingUsed} of {MAX_GROOMERS}
-                    </strong>{" "}
-                    groomer slot{MAX_GROOMERS - groomingUsed !== 1 ? "s" : ""}{" "}
-                    available.
-                  </span>
-                </div>
-              )}
-              {!editItem &&
-                extraPets.some((p) => p.purpose === "Grooming") &&
-                getGroomingUsedForExtra(-1) > MAX_GROOMERS && (
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#15803d"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      >
+                        <circle cx="6" cy="6" r="3" />
+                        <circle cx="6" cy="18" r="3" />
+                        <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                        <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                        <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                      </svg>
+                      <span>
+                        <strong>
+                          {MAX_GROOMERS - groomingUsed} of {MAX_GROOMERS}
+                        </strong>{" "}
+                        groomer slot
+                        {MAX_GROOMERS - groomingUsed !== 1 ? "s" : ""}{" "}
+                        available.
+                      </span>
+                    </div>
+                  )}
+                  {!editItem &&
+                    extraPets.some((p) => p.purpose === "Grooming") &&
+                    getGroomingUsedForExtra(-1) > MAX_GROOMERS && (
+                      <div
+                        style={{
+                          margin: "0 16px 16px",
+                          background: "#fef3c7",
+                          border: "1.5px solid #fcd34d",
+                          borderRadius: 8,
+                          padding: "12px 16px",
+                          fontSize: 13,
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin: 0,
+                            fontWeight: 700,
+                            color: "#92400e",
+                          }}
+                        >
+                          One or more additional pets can't be booked for
+                          grooming — only {MAX_GROOMERS} groomer slots exist
+                          total.
+                        </p>
+                      </div>
+                    )}
+
+                  {!isFormValid() && !conflictType && (
+                    <div
+                      style={{
+                        margin: "0 16px 16px",
+                        background: "#fff7ed",
+                        border: "1px solid #fed7aa",
+                        borderRadius: 8,
+                        padding: "10px 14px",
+                        fontSize: 12,
+                        color: "#9a3412",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#9a3412"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        style={{ flexShrink: 0 }}
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                      <span>
+                        {!isMainPetValid()
+                          ? form.mode === "existing"
+                            ? "Please select an existing pet."
+                            : "Please enter the patient (pet) name."
+                          : !isOwnerValid()
+                            ? ownerType === "registered"
+                              ? "Please select a registered client."
+                              : !form.owner.trim()
+                                ? "Please enter the owner name."
+                                : "Contact number must be 11 digits."
+                            : "Please complete all required fields for each additional pet."}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Footer note */}
                   <div
                     style={{
-                      margin: "0 16px 16px",
-                      background: "#fef3c7",
-                      border: "1.5px solid #fcd34d",
-                      borderRadius: 8,
-                      padding: "12px 16px",
-                      fontSize: 13,
+                      padding: "8px 16px",
+                      background: "var(--bg, #f8fafc)",
+                      borderTop: "1px solid var(--border, #e2e8f0)",
                     }}
                   >
-                    <p style={{ margin: 0, fontWeight: 700, color: "#92400e" }}>
-                      One or more additional pets can't be booked for grooming —
-                      only {MAX_GROOMERS} groomer slots exist total.
+                    <p
+                      style={{
+                        margin: 0,
+                        fontSize: 10,
+                        color: "#94a3b8",
+                        textAlign: "right",
+                        fontStyle: "italic",
+                      }}
+                    >
+                      Walk-In Registration System
                     </p>
                   </div>
-                )}
-
-              {!isFormValid() && !conflictType && (
-                <div
-                  style={{
-                    margin: "0 16px 16px",
-                    background: "#fff7ed",
-                    border: "1px solid #fed7aa",
-                    borderRadius: 8,
-                    padding: "10px 14px",
-                    fontSize: 12,
-                    color: "#9a3412",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 8,
-                  }}
-                >
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#9a3412"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    style={{ flexShrink: 0 }}
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <line x1="12" y1="8" x2="12" y2="12" />
-                    <line x1="12" y1="16" x2="12.01" y2="16" />
-                  </svg>
-                  <span>
-                    {!isMainPetValid()
-                      ? form.mode === "existing"
-                        ? "Please select an existing pet."
-                        : "Please enter the patient (pet) name."
-                      : !isOwnerValid()
-                        ? ownerType === "registered"
-                          ? "Please select a registered client."
-                          : !form.owner.trim()
-                            ? "Please enter the owner name."
-                            : "Contact number must be 11 digits."
-                        : "Please complete all required fields for each additional pet."}
-                  </span>
-                </div>
+                </>
               )}
-
-              {/* Footer note */}
-              <div
-                style={{
-                  padding: "8px 16px",
-                  background: "var(--bg, #f8fafc)",
-                  borderTop: "1px solid var(--border, #e2e8f0)",
-                }}
-              >
-                <p
-                  style={{
-                    margin: 0,
-                    fontSize: 10,
-                    color: "#94a3b8",
-                    textAlign: "right",
-                    fontStyle: "italic",
-                  }}
-                >
-                  Walk-In Registration System
-                </p>
-              </div>
             </div>
 
             {/* Modal footer */}
@@ -5634,7 +6119,17 @@ const Walkin = () => {
                 flexWrap: "wrap",
               }}
             >
-              <div />
+              <div>
+                {!editItem && bookStep !== "service" && (
+                  <button
+                    className="btn btn-ghost"
+                    style={S.btn}
+                    onClick={() => setBookStep("service")}
+                  >
+                    ← Change Service
+                  </button>
+                )}
+              </div>
               <div style={{ display: "flex", gap: 10 }}>
                 <button
                   className="btn btn-ghost"
@@ -5643,45 +6138,47 @@ const Walkin = () => {
                 >
                   Cancel
                 </button>
-                <button
-                  className="btn btn-primary"
-                  style={{
-                    ...S.btn,
-                    background: "#0f172a",
-                    borderColor: "#0f172a",
-                    opacity: !isFormValid() || saving ? 0.5 : 1,
-                    cursor:
-                      !isFormValid() || saving ? "not-allowed" : "pointer",
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 6,
-                  }}
-                  onClick={saveWalkin}
-                  disabled={saving || !isFormValid()}
-                >
-                  {saving ? (
-                    "Saving..."
-                  ) : (
-                    <>
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                      >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      {editItem
-                        ? "Save Changes"
-                        : extraPets.length > 0
-                          ? `Register ${1 + extraPets.length} Walk-Ins`
-                          : "Register Walk-In"}
-                    </>
-                  )}
-                </button>
+                {(editItem || bookStep !== "service") && (
+                  <button
+                    className="btn btn-primary"
+                    style={{
+                      ...S.btn,
+                      background: "#0f172a",
+                      borderColor: "#0f172a",
+                      opacity: !isFormValid() || saving ? 0.5 : 1,
+                      cursor:
+                        !isFormValid() || saving ? "not-allowed" : "pointer",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                    }}
+                    onClick={saveWalkin}
+                    disabled={saving || !isFormValid()}
+                  >
+                    {saving ? (
+                      "Saving..."
+                    ) : (
+                      <>
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                        >
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        {editItem
+                          ? "Save Changes"
+                          : extraPets.length > 0
+                            ? `Register ${1 + extraPets.length} Walk-Ins`
+                            : "Register Walk-In"}
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           </div>

@@ -3520,17 +3520,21 @@ const Branches = () => {
                     placeholder="Full address"
                   />
                 </div>
-                <div className="form-group">
+               <div className="form-group">
                   <label>
                     Phone <span style={{ color: "#dc2626" }}>*</span>
                   </label>
                   <input
                     type="text"
+                    inputMode="numeric"
+                    maxLength={11}
                     value={form.phone}
                     onChange={(e) => {
+                      const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 11);
                       setFormDirty(true);
-                      setForm({ ...form, phone: e.target.value });
+                      setForm({ ...form, phone: digitsOnly });
                     }}
+                    placeholder="09XXXXXXXXX"
                   />
                 </div>
                 <div className="form-group">

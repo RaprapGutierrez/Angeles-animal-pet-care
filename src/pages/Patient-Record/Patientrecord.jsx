@@ -3018,7 +3018,6 @@ const PatientRecord = () => {
   const [selectedOwnerProfile, setSelectedOwnerProfile] = useState(null);
   const [existingPatients, setExistingPatients] = useState([]);
   const [loadingExistingPatients, setLoadingExistingPatients] = useState(false);
-  const [petMode, setPetMode] = useState("new");
   const [existingAccModal, setExistingAccModal] = useState({
     show: false,
     email: "",
@@ -3132,7 +3131,7 @@ const PatientRecord = () => {
   const [sortDir, setSortDir] = useState("asc");
   const [deletedPatients, setDeletedPatients] = useState([]);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
-
+  const [selectedIds, setSelectedIds] = useState([]);
   const toggleSort = (field) => {
     if (sortField === field) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -3423,6 +3422,7 @@ const PatientRecord = () => {
   );
   useEffect(() => {
     setCurrentPage(1);
+    setSelectedIds([]);
   }, [search, statusFilter, speciesFilter, sortField, sortDir]);
 
   useEffect(() => {
@@ -3450,7 +3450,8 @@ const PatientRecord = () => {
       setOwnerSearchLoading(false);
     };
     if (!ownerSearchQuery.trim()) {
-      run();
+      setOwnerSearchRes([]);
+      setOwnerSearchLoading(false);
       return;
     }
     const t = setTimeout(run, 280);
@@ -3588,7 +3589,6 @@ const PatientRecord = () => {
     setOwnerSearchRes([]);
     setSelectedOwnerProfile(null);
     setExistingPatients([]);
-    setPetMode("new");
     fetchRooms();
     setActiveModal("add");
   };
@@ -4066,6 +4066,54 @@ const PatientRecord = () => {
     fetchDeletedPatients();
     closeModal();
   };
+
+  const toggleSelectRow = (id) =>
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
+    );
+
+  const toggleSelectAllOnPage = () => {
+    const pageIds = paginated.map((p) => p.id);
+    const allSelected = pageIds.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !pageIds.includes(id))
+        : [...new Set([...prev, ...pageIds])],
+    );
+  };
+
+  const bulkDeletePatients = () =>
+    showConfirm(
+      "Delete Patients",
+      `Move ${selectedIds.length} selected patient${selectedIds.length > 1 ? "s" : ""} to Recently Deleted?`,
+      async () => {
+        const toDelete = patients.filter((p) => selectedIds.includes(p.id));
+        const { error } = await supabase
+          .from(T_PATIENTS)
+          .update({ deleted_at: new Date().toISOString() })
+          .in("id", selectedIds);
+        if (error) {
+          showAlert("Error", error.message);
+          return;
+        }
+        await Promise.all(
+          toDelete.filter((p) => p.room).map((p) => freeRoom(p.room)),
+        );
+        logActivity(
+          user,
+          "Bulk deleted patient records",
+          `Moved ${selectedIds.length} patient(s) to Recently Deleted: ${selectedIds.join(", ")}`,
+        );
+        showToast(
+          `${selectedIds.length} patient(s) moved to Recently Deleted`,
+          "info",
+        );
+        setSelectedIds([]);
+        fetchPatients();
+        fetchRooms();
+        fetchDeletedPatients();
+      },
+    );
 
   const restorePatient = async (id, name) => {
     const { error } = await supabase
@@ -5053,7 +5101,6 @@ const PatientRecord = () => {
                           owner: p.full_name || prev.owner,
                           owner_email: p.email,
                         }));
-                        setPetMode("new");
                         fetchExistingPatientsForOwner(p.full_name, p.id);
                       }}
                       style={{
@@ -6013,6 +6060,70 @@ const PatientRecord = () => {
             }}
           >
             <h2 style={{ fontSize: 15, fontWeight: 700 }}>All Patients</h2>
+            {selectedIds.length > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                  background: "#fef2f2",
+                  border: "1.5px solid #fca5a5",
+                  borderRadius: 8,
+                  padding: "6px 12px",
+                }}
+              >
+                <span
+                  style={{ fontSize: 12, fontWeight: 700, color: "#991b1b" }}
+                >
+                  {selectedIds.length} selected
+                </span>
+                <button
+                  onClick={bulkDeletePatients}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 5,
+                    padding: "5px 12px",
+                    borderRadius: 6,
+                    border: "none",
+                    background: "#dc2626",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <polyline points="3 6 5 6 21 6" />
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                  </svg>
+                  Delete Selected
+                </button>
+                <button
+                  onClick={() => setSelectedIds([])}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#991b1b",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  Clear
+                </button>
+              </div>
+            )}
             <div
               className="fade-in"
               style={{
@@ -6188,6 +6299,20 @@ const PatientRecord = () => {
               >
                 <thead>
                   <tr>
+                    <th
+                      className="pr-th"
+                      style={{ width: 36, textAlign: "center" }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={
+                          paginated.length > 0 &&
+                          paginated.every((p) => selectedIds.includes(p.id))
+                        }
+                        onChange={toggleSelectAllOnPage}
+                        style={{ cursor: "pointer" }}
+                      />
+                    </th>
                     {[
                       "Patient",
                       "Owner",
@@ -6208,7 +6333,7 @@ const PatientRecord = () => {
                   {paginated.length === 0 ? (
                     <tr>
                       <td
-                        colSpan={8}
+                        colSpan={9}
                         style={{
                           textAlign: "center",
                           padding: "48px 20px",
@@ -6273,8 +6398,21 @@ const PatientRecord = () => {
                           }}
                           onClick={() => openView(p)}
                         >
+                          <td
+                            className="pr-td"
+                            style={{ textAlign: "center" }}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={selectedIds.includes(p.id)}
+                              onChange={() => toggleSelectRow(p.id)}
+                              style={{ cursor: "pointer" }}
+                            />
+                          </td>
                           {/* Patient */}
                           <td className="pr-td">
+                            {" "}
                             <div
                               style={{
                                 display: "flex",

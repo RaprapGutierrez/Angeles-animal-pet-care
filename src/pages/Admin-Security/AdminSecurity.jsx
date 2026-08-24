@@ -2091,13 +2091,21 @@ const AdminSecurity = () => {
           if (banError)
             console.warn("Ban warning (non-fatal):", banError.message);
 
-          const { error: profileError } = await supabaseAdmin
+         const { data: profileData, error: profileError } = await supabaseAdmin
             .from("profiles")
             .update({ deleted_at: new Date().toISOString() })
-            .eq("id", u.id);
+            .eq("id", u.id)
+            .select();
 
           if (profileError) {
             alert("Error: " + profileError.message);
+            return;
+          }
+
+          if (!profileData || profileData.length === 0) {
+            alert(
+              "Delete failed: no profile was updated. This usually means the update was blocked by row-level security — make sure supabaseAdmin is using the service-role key, not the anon key.",
+            );
             return;
           }
 
