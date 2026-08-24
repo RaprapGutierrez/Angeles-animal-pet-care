@@ -37,66 +37,33 @@ const EMPTY_FORM = {
   ownerSex: "",
   owner_id: null,
   contact: "",
-  purpose: "Checkup",
+ purpose: "Consultation",
+  imagingType: "",
   vet: "",
   notes: "",
   status: "Attended",
   mode: "new",
   existingId: null,
   price: "",
-};
-const PURPOSES = ["Checkup", "Grooming", "Vaccination", "Consultation"];
+};// Mirrors Appointments.jsx SERVICE_OPTIONS exactly, so walk-in and
+// scheduled appointment services stay in sync.
+const PURPOSES = ["Consultation", "Vaccination", "Deworming", "Imaging", "Diagnostics"];
 
 const SERVICE_META = {
-  Checkup: {
+  Consultation: {
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#475569"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ width: 16, height: 16 }}
-      >
-        <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="#475569" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+        <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.3.3 0 1 0 .3.3" />
+        <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" />
+        <circle cx="20" cy="10" r="2" />
       </svg>
     ),
     color: "#475569",
     bg: "#f8fafc",
   },
-  Grooming: {
-    icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#7c3aed"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ width: 16, height: 16 }}
-      >
-        <circle cx="6" cy="6" r="3" />
-        <circle cx="6" cy="18" r="3" />
-        <line x1="20" y1="4" x2="8.12" y2="15.88" />
-        <line x1="14.47" y1="14.48" x2="20" y2="20" />
-        <line x1="8.12" y1="8.12" x2="12" y2="12" />
-      </svg>
-    ),
-    color: "#7c3aed",
-    bg: "#f3e8ff",
-  },
   Vaccination: {
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#15803d"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ width: 16, height: 16 }}
-      >
+      <svg viewBox="0 0 24 24" fill="none" stroke="#15803d" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
         <path d="m18 2 4 4" />
         <path d="m17 7 3-3" />
         <path d="M19 9 8.7 19.3c-1 1-2.5 1-3.4 0l-.6-.6c-1-1-1-2.5 0-3.4L15 5" />
@@ -108,24 +75,41 @@ const SERVICE_META = {
     color: "#15803d",
     bg: "#f0fdf4",
   },
-  Consultation: {
+  Deworming: {
     icon: (
-      <svg
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="#1d4ed8"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ width: 16, height: 16 }}
-      >
-        <path d="M4.8 2.3A.3.3 0 1 0 5 2H4a2 2 0 0 0-2 2v5a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6V4a2 2 0 0 0-2-2h-1a.3.3 0 1 0 .3.3" />
-        <path d="M8 15v1a6 6 0 0 0 6 6v0a6 6 0 0 0 6-6v-4" />
-        <circle cx="20" cy="10" r="2" />
+      <svg viewBox="0 0 24 24" fill="none" stroke="#6d28d9" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+        <path d="M6 3c0 4 3 4 3 8s-3 4-3 8" />
+        <path d="M12 3c0 4 3 4 3 8s-3 4-3 8" />
+        <path d="M18 3c0 4 3 4 3 8s-3 4-3 8" />
+      </svg>
+    ),
+    color: "#6d28d9",
+    bg: "#f3e8ff",
+  },
+  Imaging: {
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <circle cx="9" cy="9" r="2" />
+        <path d="m21 15-5-5L5 21" />
       </svg>
     ),
     color: "#1d4ed8",
     bg: "#eff6ff",
+  },
+  Diagnostics: {
+    icon: (
+      <svg viewBox="0 0 24 24" fill="none" stroke="#dc2626" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: 16, height: 16 }}>
+        <path d="M6 2v6" />
+        <path d="M18 2v6" />
+        <path d="M3 8h18" />
+        <path d="M4 8v11a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8" />
+        <path d="M9 15h6" />
+        <path d="M12 12v6" />
+      </svg>
+    ),
+    color: "#dc2626",
+    bg: "#fee2e2",
   },
 };
 const DOG_BREEDS = [
@@ -718,25 +702,30 @@ const Walkin = () => {
       .then(({ data }) => setServices(data || []));
   }, []);
 
-  const getServicePrice = (purpose, branchId) => {
+   const getServicePrice = (purpose, branchId, imagingType) => {
     if (!purpose) return null;
+    const lookupName =
+      purpose === "Imaging" && imagingType
+        ? `Imaging - ${imagingType}`
+        : purpose;
     const exact = services.find(
-      (s) => s.name === purpose && String(s.branch_id) === String(branchId),
+      (s) => s.name === lookupName && String(s.branch_id) === String(branchId),
     );
     if (exact) return exact.price;
     const fallback = services.find(
-      (s) => s.name === purpose && s.branch_id == null,
+      (s) => s.name === lookupName && s.branch_id == null,
     );
     if (fallback) return fallback.price;
     return null;
   };
 
   const selectService = (val) => {
-    const looked = getServicePrice(val, user?.branchId);
+    const looked = getServicePrice(val, user?.branchId, null);
     setForm((prev) => ({
       ...prev,
       purpose: val,
-      price: looked != null ? looked : "",
+      imagingType: "",
+      price: val === "Imaging" ? "" : looked != null ? looked : "",
     }));
     setBookStep("form");
   };
@@ -1293,10 +1282,11 @@ const Walkin = () => {
 
   // ── Form validation ───────────────────────────────────────────────────────
   const isMainPetValid = () => {
-    if (form.mode === "existing") return !!form.existingId;
-    return !!form.patient.trim();
+    const patientOk =
+      form.mode === "existing" ? !!form.existingId : !!form.patient.trim();
+    const imagingOk = form.purpose !== "Imaging" || !!form.imagingType;
+    return patientOk && imagingOk;
   };
-
   const isOwnerValid = () => {
     if (ownerType === "registered") return !!selectedClient;
     if (!form.owner.trim()) return false;
@@ -1320,8 +1310,15 @@ const Walkin = () => {
       showAlert("Please enter the patient (pet) name.", "Missing Field");
       return;
     }
-    if (!form.owner.trim()) {
+   if (!form.owner.trim()) {
       showAlert("Please enter the owner name.", "Missing Field");
+      return;
+    }
+    if (form.purpose === "Imaging" && !form.imagingType) {
+      showAlert(
+        "Please select an imaging type (X-ray, Ultrasound, or CT-scan).",
+        "Missing Field",
+      );
       return;
     }
     if (conflictType) {
@@ -4108,8 +4105,9 @@ const Walkin = () => {
                     }}
                   >
                     {PURPOSES.map((opt) => {
-                      const meta = SERVICE_META[opt] || SERVICE_META.Checkup;
-                      const price = getServicePrice(opt, user?.branchId);
+                      const meta = SERVICE_META[opt] || SERVICE_META.Consultation;
+                      const price =
+                        opt === "Imaging" ? null : getServicePrice(opt, user?.branchId, null);
                       return (
                         <button
                           key={opt}
@@ -4128,28 +4126,16 @@ const Walkin = () => {
                             fontFamily: "inherit",
                           }}
                         >
-                          <span style={{ display: "inline-flex" }}>
-                            {meta.icon}
-                          </span>
-                          <span
-                            style={{
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: meta.color,
-                            }}
-                          >
+                          <span style={{ display: "inline-flex" }}>{meta.icon}</span>
+                          <span style={{ fontSize: 13, fontWeight: 700, color: meta.color }}>
                             {opt}
                           </span>
-                          <span
-                            style={{
-                              fontSize: 12,
-                              fontWeight: 600,
-                              color: "var(--muted)",
-                            }}
-                          >
-                            {price != null
-                              ? `₱${Number(price).toLocaleString()}`
-                              : "Contact clinic"}
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "var(--muted)" }}>
+                            {opt === "Imaging"
+                              ? "Choose type next"
+                              : price != null
+                                ? `₱${Number(price).toLocaleString()}`
+                                : "Contact clinic"}
                           </span>
                         </button>
                       );
@@ -5736,10 +5722,62 @@ const Walkin = () => {
                         borderBottom: "1px solid #e2e8f0",
                       }}
                     >
-                      <div
-                        style={{ padding: "10px 16px", gridColumn: "1 / -1" }}
-                      >
-                        {!isGrooming ? (
+                       <div style={{ padding: "10px 16px", gridColumn: "1 / -1" }}>
+                    {!isGrooming ? (                      <>
+                        <div
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: "#94a3b8",
+                            textTransform: "uppercase",
+                            letterSpacing: "0.8px",
+                            marginBottom: 6,
+                          }}
+                        >
+                          Assign Vet
+                        </div>
+                        <CustomSelect
+                          value={form.vet}
+                          onChange={(val) => setForm({ ...form, vet: val })}
+                          options={getAvailableVets()}
+                          placeholder="Unassigned"
+                        />
+                        <p
+                          style={{
+                            margin: "6px 0 0",
+                            fontSize: 10,
+                            color: "var(--muted)",
+                          }}
+                        >
+                          Showing vets available right now
+                        </p>
+                        {form.vet && vetSchedule[form.vet] && (
+                          <p
+                            style={{
+                              margin: "4px 0 0",
+                              fontSize: 10,
+                              color: "var(--muted)",
+                            }}
+                          >
+                            Available days:{" "}
+                            {vetSchedule[form.vet]
+                              .map((d) => DAY_NAMES[d])
+                              .join(", ")}
+                          </p>
+                        )}
+                        {form.vet && vetTimeSchedule[form.vet] && (
+                          <p
+                            style={{
+                              margin: "2px 0 0",
+                              fontSize: 10,
+                              color: "var(--muted)",
+                            }}
+                          >
+                            Available times:{" "}
+                            {vetTimeSchedule[form.vet].join(", ")}
+                          </p>
+                        )}
+                        {form.purpose === "Imaging" && (
                           <>
                             <div
                               style={{
@@ -5748,54 +5786,33 @@ const Walkin = () => {
                                 color: "#94a3b8",
                                 textTransform: "uppercase",
                                 letterSpacing: "0.8px",
-                                marginBottom: 6,
+                                margin: "10px 0 6px",
                               }}
                             >
-                              Assign Vet
+                              Imaging Type{" "}
+                              <span style={{ color: "#ef4444" }}>*</span>
                             </div>
                             <CustomSelect
-                              value={form.vet}
-                              onChange={(val) => setForm({ ...form, vet: val })}
-                              options={getAvailableVets()}
-                              placeholder="Unassigned"
-                            />
-                            <p
-                              style={{
-                                margin: "6px 0 0",
-                                fontSize: 10,
-                                color: "var(--muted)",
+                              value={form.imagingType}
+                              onChange={(val) => {
+                                const looked = getServicePrice(
+                                  form.purpose,
+                                  user?.branchId,
+                                  val,
+                                );
+                                setForm({
+                                  ...form,
+                                  imagingType: val,
+                                  price: looked != null ? looked : form.price,
+                                });
                               }}
-                            >
-                              Showing vets available right now
-                            </p>
-                            {form.vet && vetSchedule[form.vet] && (
-                              <p
-                                style={{
-                                  margin: "4px 0 0",
-                                  fontSize: 10,
-                                  color: "var(--muted)",
-                                }}
-                              >
-                                Available days:{" "}
-                                {vetSchedule[form.vet]
-                                  .map((d) => DAY_NAMES[d])
-                                  .join(", ")}
-                              </p>
-                            )}
-                            {form.vet && vetTimeSchedule[form.vet] && (
-                              <p
-                                style={{
-                                  margin: "2px 0 0",
-                                  fontSize: 10,
-                                  color: "var(--muted)",
-                                }}
-                              >
-                                Available times:{" "}
-                                {vetTimeSchedule[form.vet].join(", ")}
-                              </p>
-                            )}
+                              placeholder="— Select Imaging Type —"
+                              options={["X-ray", "Ultrasound", "CT-scan"]}
+                            />
                           </>
-                        ) : (
+                        )}
+                      </>
+                    ) : (
                           <div style={{ paddingTop: 4 }}>
                             <div
                               style={{
