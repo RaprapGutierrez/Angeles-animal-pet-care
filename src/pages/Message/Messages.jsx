@@ -840,6 +840,9 @@ const Messages = () => {
   const [deleting, setDeleting] = useState(false);
   const [unread, setUnread] = useState({});
   const [showAdd, setShowAdd] = useState(false);
+  const [pendingFile, setPendingFile] = useState(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef(null);
   const [modal, setModal] = useState({
     show: false,
     title: "",
@@ -1229,20 +1232,30 @@ const Messages = () => {
     if (!selected || !currentUser) return;
     fetchMessages(selected);
 
-    // Always mark both tables — ensures super_admin → manager messages get marked read
-    supabase
-      .from(CROSS_BRANCH_TABLE)
-      .update({ is_read: true })
-      .eq("recipient_id", currentUser.id)
-      .eq("sender_id", selected.id)
-      .eq("is_read", false);
-    supabase
-      .from(MESSAGES_TABLE)
-      .update({ is_read: true })
-      .eq("receiver_id", currentUser.id)
-      .eq("sender_id", selected.id)
-      .eq("is_read", false);
-    setUnread((prev) => ({ ...prev, [selected.id]: 0 }));
+    // Always mark both tables — ensures super_admin → manager messages get marked read.
+    // Await + check errors so a silent RLS failure doesn't leave is_read=false in the DB,
+    // which would otherwise make the next poll tick resurrect the badge.
+    (async () => {
+      const [{ error: crossErr }, { error: sameErr }] = await Promise.all([
+        supabase
+          .from(CROSS_BRANCH_TABLE)
+          .update({ is_read: true })
+          .eq("recipient_id", currentUser.id)
+          .eq("sender_id", selected.id)
+          .eq("is_read", false),
+        supabase
+          .from(MESSAGES_TABLE)
+          .update({ is_read: true })
+          .eq("receiver_id", currentUser.id)
+          .eq("sender_id", selected.id)
+          .eq("is_read", false),
+      ]);
+      if (crossErr) console.error("Mark-read (cross) failed:", crossErr.message);
+      if (sameErr) console.error("Mark-read (same) failed:", sameErr.message);
+      if (!crossErr && !sameErr) {
+        setUnread((prev) => ({ ...prev, [selected.id]: 0 }));
+      }
+    })();
 
     // Subscribe to BOTH tables so manager always sees super_admin messages in real time
     const channel = supabase
@@ -1327,6 +1340,12 @@ const Messages = () => {
       (crossUnread || []).forEach((m) => {
         counts[m.sender_id] = (counts[m.sender_id] || 0) + 1;
       });
+      // Never show a badge for the conversation that's currently open — the
+      // mark-read effect owns that count, so the poller shouldn't fight it.
+      setSelected((sel) => {
+        if (sel?.id) delete counts[sel.id];
+        return sel;
+      });
       setUnread(counts);
     };
     recompute();
@@ -1338,7 +1357,7 @@ const Messages = () => {
   // ── Send ──────────────────────────────────────────────────────────────────
   const sendMessage = async () => {
     const text = newMsg.trim();
-    if (!text || !selected || !currentUser?.id || sending) return;
+    if ((!text && !pendingFile) || !selected || !currentUser?.id || sending) return;
 
     // ── Pre-flight permission check ──────────────────────────────────────
     const senderRole = normRole(currentUser.role);
@@ -1362,17 +1381,43 @@ const Messages = () => {
 
     setSending(true);
 
+    let attachment_url = null,
+      attachment_name = null,
+      attachment_type = null;
+    if (pendingFile) {
+      setUploadingFile(true);
+      const ext = pendingFile.name.split(".").pop();
+      const path = `${currentUser.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("attachments")
+        .upload(path, pendingFile);
+      setUploadingFile(false);
+      if (upErr) {
+        setSending(false);
+        showModal("Upload Failed", upErr.message, "error");
+        return;
+      }
+      const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
+      attachment_url = pub?.publicUrl || null;
+      attachment_name = pendingFile.name;
+      attachment_type = pendingFile.type || null;
+    }
+
     const optimistic = {
       id: `tmp-${Date.now()}`,
       sender_id: currentUser.id,
       receiver_id: selected.id,
       message: text,
+      attachment_url,
+      attachment_name,
+      attachment_type,
       is_read: false,
       created_at: new Date().toISOString(),
       _pending: true,
     };
     setMessages((prev) => [...prev, optimistic]);
     setNewMsg("");
+    setPendingFile(null);
     setTimeout(
       () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
       80,
@@ -1402,6 +1447,9 @@ const Messages = () => {
             recipient_role: selected.role || "manager",
             recipient_branch: selected.branch || "head_office",
             content: text,
+             attachment_url,
+            attachment_name,
+            attachment_type,
           },
         ])
         .select()
@@ -1423,6 +1471,9 @@ const Messages = () => {
             message: text,
             is_read: false,
             branch_id: user?.branchId ?? null,
+            attachment_url,
+            attachment_name,
+            attachment_type,
           },
         ])
         .select()
@@ -2296,6 +2347,34 @@ const Messages = () => {
                             whiteSpace: "pre-wrap",
                           }}
                         >
+                          {item.attachment_url && (
+                            item.attachment_type?.startsWith("image/") ? (
+                              <a href={item.attachment_url} target="_blank" rel="noopener noreferrer">
+                                <img
+                                  src={item.attachment_url}
+                                  alt={item.attachment_name || "attachment"}
+                                  style={{ maxWidth: 220, borderRadius: 10, display: "block", marginBottom: item.message ? 6 : 0 }}
+                                />
+                              </a>
+                            ) : (
+                              
+                                href={item.attachment_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 6,
+                                  color: me ? "#fff" : "#4338ca",
+                                  textDecoration: "underline",
+                                  fontSize: 13,
+                                  marginBottom: item.message ? 6 : 0,
+                                }}
+                              >
+                                📎 {item.attachment_name || "Download file"}
+                              </a>
+                            )
+                          )}
                           {item.message}
                         </div>
                         <div
@@ -2352,6 +2431,35 @@ const Messages = () => {
                   zIndex: 2,
                 }}
               >
+                {pendingFile && (
+                  <div
+                    style={{
+                      margin: "8px 18px 0",
+                      padding: "8px 12px",
+                      background: "#f0f0ff",
+                      border: "1px solid #c7d2fe",
+                      borderRadius: 10,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      fontSize: 12,
+                      color: "#4338ca",
+                    }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4338ca" strokeWidth="2.2">
+                      <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.19 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49" />
+                    </svg>
+                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {pendingFile.name}
+                    </span>
+                    <span
+                      onClick={() => setPendingFile(null)}
+                      style={{ cursor: "pointer", fontWeight: 700, color: "#6366f1" }}
+                    >
+                      ✕
+                    </span>
+                  </div>
+                )}
                 <div
                   className="emoji-quick"
                   style={{ padding: "8px 18px 0", display: "flex", gap: 2 }}
@@ -2394,6 +2502,44 @@ const Messages = () => {
                   }}
                 >
                   <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      if (f.size > 5 * 1024 * 1024) {
+                        showModal("File Too Large", "Please choose a file under 5MB.", "error");
+                        e.target.value = "";
+                        return;
+                      }
+                      setPendingFile(f);
+                      e.target.value = "";
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Attach file"
+                    style={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: "50%",
+                      border: "1.5px solid #e5e7eb",
+                      background: "#f8f9fc",
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      flexShrink: 0,
+                    }}
+                  >
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.19 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49" />
+                    </svg>
+                  </button>
+                  <input
                     ref={inputRef}
                     className="msg-input"
                     value={newMsg}
@@ -2419,17 +2565,17 @@ const Messages = () => {
                   <button
                     className="send-btn"
                     onClick={sendMessage}
-                    disabled={sending || !newMsg.trim()}
+                    disabled={sending || (!newMsg.trim() && !pendingFile)}
                     style={{
                       width: 46,
                       height: 46,
                       borderRadius: "50%",
                       border: "none",
                       background:
-                        sending || !newMsg.trim()
+                        sending || (!newMsg.trim() && !pendingFile)
                           ? "#e5e7eb"
                           : "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                      cursor: sending || !newMsg.trim() ? "default" : "pointer",
+                      cursor: sending || (!newMsg.trim() && !pendingFile) ? "default" : "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",

@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import Layout from "../../components/layout";
-import { supabase } from "../../js/Utils/supabase";
+import { supabase, supabaseAdmin } from "../../js/Utils/supabase";
 import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
 import { logActivity } from "../../js/Utils/logActivity";
 import "../../styles/RoomAvailability.css";
@@ -2128,7 +2128,7 @@ const RoomAvailability = () => {
   const fetchRooms = async () => {
     if (userLoading || !user) return;
     setLoading(true);
-    let q = supabase
+    let q = supabaseAdmin
       .from("rooms")
       .select("*")
       .is("deleted_at", null)
@@ -2148,7 +2148,7 @@ const RoomAvailability = () => {
 
   const fetchDeletedRooms = async () => {
     if (userLoading || !user) return;
-    let q = supabase
+    let q = supabaseAdmin
       .from("rooms")
       .select("*")
       .not("deleted_at", "is", null)
@@ -2197,7 +2197,7 @@ const RoomAvailability = () => {
       room.patient = "";
       room.diagnosis = "";
       room.discharge_date = null;
-      await supabase
+      await supabaseAdmin
         .from("rooms")
         .update({
           status: "Available",
@@ -2325,7 +2325,7 @@ const RoomAvailability = () => {
     };
     if (formRoom) {
       // Edit
-      const { error } = await supabase
+      const { error } = await supabaseAdmin
         .from("rooms")
         .update(payload)
         .eq("id", formRoom.id);
@@ -2343,7 +2343,7 @@ const RoomAvailability = () => {
         showToast("Room number is required", "error");
         return;
       }
-      const { error } = await supabase.from("rooms").insert([
+      const { error } = await supabaseAdmin.from("rooms").insert([
         {
           ...payload,
           number: form.number,
@@ -2372,7 +2372,7 @@ const RoomAvailability = () => {
       confirmColor: "#dc2626",
       onConfirm: async () => {
         setConfirm({ show: false });
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
           .from("rooms")
           .update({ deleted_at: new Date().toISOString() })
           .eq("id", room.id);
@@ -2403,7 +2403,7 @@ const RoomAvailability = () => {
       confirmColor: "#16a34a",
       onConfirm: async () => {
         setConfirm({ show: false });
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
           .from("rooms")
           .update({ deleted_at: null })
           .eq("id", room.id);
@@ -2429,7 +2429,7 @@ const RoomAvailability = () => {
       confirmColor: "#dc2626",
       onConfirm: async () => {
         setConfirm({ show: false });
-        const { error } = await supabase
+        const { error } = await supabaseAdmin
           .from("rooms")
           .delete()
           .eq("id", room.id);

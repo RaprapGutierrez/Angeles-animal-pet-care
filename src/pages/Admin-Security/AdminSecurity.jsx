@@ -508,8 +508,8 @@ const ConfirmModal = ({
   const color = colors[type] || colors.primary;
   return (
     <>
-      <div onClick={onCancel} className="usr-confirm-scrim" />
-      <div className="usr-confirm-wrap">
+      <div onClick={onCancel} className="usr-confirm-scrim" style={{ zIndex: 10050 }} />
+      <div className="usr-confirm-wrap" style={{ zIndex: 10051 }}>
         <div className="usr-confirm-box">
           <div className="usr-confirm-card">
             <div
@@ -4561,8 +4561,8 @@ const AdminSecurity = () => {
                                 </svg>
                               )}
                             </div>
-                            <div style={{ display: "flex", gap: 6 }}>
-                              {r.system ? (
+                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                              {r.system && (
                                 <span
                                   style={{
                                     fontSize: 10,
@@ -4576,7 +4576,8 @@ const AdminSecurity = () => {
                                 >
                                   System
                                 </span>
-                              ) : isSuperAdmin ? (
+                              )}
+                              {isSuperAdmin ? (
                                 <>
                                   <button
                                     className="btn btn-ghost btn-sm"
@@ -4593,23 +4594,27 @@ const AdminSecurity = () => {
                                       setShowRoleModal(true);
                                     }}
                                   >
-                                    Edit
+                                    {r.system ? "View" : "Edit"}
                                   </button>
-                                  <button
-                                    className="btn btn-sm"
-                                    style={{
-                                      ...S.btn,
-                                      fontSize: 12,
-                                      color: "#dc2626",
-                                      background: "#fef2f2",
-                                      border: "1px solid #fca5a5",
-                                    }}
-                                    onClick={() => handleDeleteRole(r)}
-                                  >
-                                    Delete
-                                  </button>
+                                  {!r.system && (
+                                    <button
+                                      className="btn btn-sm"
+                                      style={{
+                                        ...S.btn,
+                                        fontSize: 12,
+                                        color: "#dc2626",
+                                        background: "#fef2f2",
+                                        border: "1px solid #fca5a5",
+                                      }}
+                                      onClick={() => handleDeleteRole(r)}
+                                    >
+                                      Delete
+                                    </button>
+                                  )}
                                 </>
-                              ) : null}
+                              ) : (
+                                !r.system && null
+                              )}
                             </div>
                           </div>
                           <h3

@@ -171,6 +171,7 @@ const T_VACCINATIONS = "vaccinations";
 const T_TREATMENTS = "treatments";
 const T_PRESCRIPTIONS = "prescriptions";
 const T_APPOINTMENTS = "appointments";
+const T_PATIENT_FILES = "patient_files";
 const ROWS_PER_PAGE = 10;
 const sanitizeContact = (v) => v.replace(/\D/g, "").slice(0, 11);
 const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, "");
@@ -2951,6 +2952,10 @@ const PatientRecord = () => {
   const [prescriptions, setPrescriptions] = useState([]);
   const [serviceHistory, setServiceHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [patientFiles, setPatientFiles] = useState([]);
+  const [loadingFiles, setLoadingFiles] = useState(false);
+  const [uploadingPatientFile, setUploadingPatientFile] = useState(false);
+  const patientFileInputRef = useRef(null);
   const [savingPatient, setSavingPatient] = useState(false);
   const [rxSaving, setRxSaving] = useState(false);
   const [vaxSaving, setVaxSaving] = useState(false);
@@ -3346,6 +3351,68 @@ const PatientRecord = () => {
     setPrescriptions(rx.data || []);
   };
 
+  const fetchPatientFiles = async (patientId) => {
+    setLoadingFiles(true);
+    const { data, error } = await supabase
+      .from(T_PATIENT_FILES)
+      .select("*")
+      .eq("patient_id", patientId)
+      .order("uploaded_at", { ascending: false });
+    if (!error) setPatientFiles(data || []);
+    setLoadingFiles(false);
+  };
+
+  const uploadPatientFile = async (file) => {
+    if (!file || !selectedPatient) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showAlert("File Too Large", "Please choose a file under 5MB.");
+      return;
+    }
+    setUploadingPatientFile(true);
+    const ext = file.name.split(".").pop();
+    const path = `patients/${selectedPatient.id}/${Date.now()}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("attachments")
+      .upload(path, file);
+    if (upErr) {
+      setUploadingPatientFile(false);
+      showAlert("Upload Failed", upErr.message);
+      return;
+    }
+    const { data: pub } = supabase.storage
+      .from("attachments")
+      .getPublicUrl(path);
+    const { error: insErr } = await supabase.from(T_PATIENT_FILES).insert([
+      {
+        patient_id: selectedPatient.id,
+        url: pub?.publicUrl || "",
+        name: file.name,
+        type: file.type || null,
+        uploaded_by: user?.id || null,
+      },
+    ]);
+    setUploadingPatientFile(false);
+    if (insErr) {
+      showAlert("Error", insErr.message);
+      return;
+    }
+    showToast("✓ File uploaded");
+    await fetchPatientFiles(selectedPatient.id);
+  };
+
+  const deletePatientFile = (fileId) => {
+    requireTypeToDelete(
+      "Delete File",
+      "This will permanently delete this file. This cannot be undone.",
+      "DELETE",
+      async () => {
+        await supabase.from(T_PATIENT_FILES).delete().eq("id", fileId);
+        showToast("File deleted", "info");
+        await fetchPatientFiles(selectedPatient.id);
+      },
+    );
+  };
+
   const fetchServiceHistory = async (patient) => {
     if (!patient?.name) {
       setServiceHistory([]);
@@ -3599,6 +3666,7 @@ const PatientRecord = () => {
     fetchMedical(p.id);
     fetchRooms();
     fetchServiceHistory(p);
+    fetchPatientFiles(p.id);
     setShowRxForm(false);
     setShowVaxForm(false);
     setShowTreatForm(false);
@@ -4627,6 +4695,7 @@ const PatientRecord = () => {
     "treatment",
     "prescription",
     "services",
+    "files",
   ];
 
   const TabBar = ({ tabs, active, onSelect, counts = {} }) => (
@@ -8209,6 +8278,7 @@ const PatientRecord = () => {
                   vaccination: vaccinations.length,
                   treatment: treatments.length,
                   services: serviceHistory.length,
+                  files: patientFiles.length,
                 }}
               />
             </div>
@@ -8940,6 +9010,221 @@ const PatientRecord = () => {
                           );
                         });
                       })()}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* ── FILES TAB ── */}
+              {activeTab === "files" && (
+                <div style={{ paddingTop: 4 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 18,
+                    }}
+                  >
+                    <div>
+                      <h4
+                        style={{
+                          margin: 0,
+                          fontSize: 14,
+                          fontWeight: 800,
+                          color: "#1e3a8a",
+                        }}
+                      >
+                        Patient Files
+                      </h4>
+                      <p
+                        style={{
+                          margin: "2px 0 0",
+                          fontSize: 12,
+                          color: "var(--muted)",
+                        }}
+                      >
+                        {patientFiles.length} file
+                        {patientFiles.length !== 1 ? "s" : ""} uploaded
+                      </p>
+                    </div>
+                    <input
+                      ref={patientFileInputRef}
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf,.doc,.docx"
+                      style={{ display: "none" }}
+                      onChange={(e) => {
+                        const f = e.target.files?.[0];
+                        if (f) uploadPatientFile(f);
+                        e.target.value = "";
+                      }}
+                    />
+                    <button
+                      className="btn btn-primary pr-btn-auto"
+                      disabled={uploadingPatientFile}
+                      onClick={() => patientFileInputRef.current?.click()}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                      }}
+                    >
+                      <Ic
+                        src={plusIcon}
+                        size={12}
+                        style={{
+                          mixBlendMode: "normal",
+                          filter: "brightness(0) invert(1)",
+                        }}
+                      />
+                      {uploadingPatientFile ? "Uploading..." : "Upload File"}
+                    </button>
+                  </div>
+
+                  {loadingFiles ? (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 12,
+                      }}
+                    >
+                      {[1, 2].map((i) => (
+                        <div
+                          key={i}
+                          style={{
+                            background: "var(--card)",
+                            border: "1.5px solid var(--border)",
+                            borderRadius: 12,
+                            padding: 16,
+                          }}
+                        >
+                          <Sk w="60%" h={14} style={{ marginBottom: 8 }} />
+                          <Sk w="40%" h={11} />
+                        </div>
+                      ))}
+                    </div>
+                  ) : patientFiles.length === 0 ? (
+                    <div style={{ textAlign: "center", padding: "40px 0" }}>
+                      <p
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 13,
+                          margin: 0,
+                        }}
+                      >
+                        No files uploaded yet.
+                      </p>
+                      <p
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 12,
+                          margin: "4px 0 0",
+                        }}
+                      >
+                        Accepts .jpg, .png, .pdf, .doc, .docx (max 5MB)
+                      </p>
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr 1fr",
+                        gap: 12,
+                      }}
+                    >
+                      {patientFiles.map((f) => {
+                        const isImage = f.type?.startsWith("image/");
+                        return (
+                          <div
+                            key={f.id}
+                            style={{
+                              background: "var(--card)",
+                              border: "1.5px solid var(--border)",
+                              borderRadius: 12,
+                              padding: 14,
+                              display: "flex",
+                              flexDirection: "column",
+                              gap: 8,
+                            }}
+                          >
+                            {isImage ? (
+                              <a
+                                href={f.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <img
+                                  src={f.url}
+                                  alt={f.name}
+                                  style={{
+                                    width: "100%",
+                                    height: 120,
+                                    objectFit: "cover",
+                                    borderRadius: 8,
+                                  }}
+                                />
+                              </a>
+                            ) : (
+                              <a
+                                href={f.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
+                                  height: 120,
+                                  justifyContent: "center",
+                                  background: "#f8fafc",
+                                  borderRadius: 8,
+                                  color: "#1d4ed8",
+                                  fontSize: 13,
+                                  fontWeight: 600,
+                                  textDecoration: "none",
+                                }}
+                              >
+                                📄 {f.name}
+                              </a>
+                            )}
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                              }}
+                            >
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  color: "var(--text)",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                  maxWidth: "70%",
+                                }}
+                                title={f.name}
+                              >
+                                {f.name}
+                              </span>
+                              <button
+                                onClick={() => deletePatientFile(f.id)}
+                                style={{
+                                  background: "none",
+                                  border: "none",
+                                  color: "#ef4444",
+                                  cursor: "pointer",
+                                  fontSize: 12,
+                                  fontWeight: 600,
+                                  fontFamily: "inherit",
+                                }}
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </div>
