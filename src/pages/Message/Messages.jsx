@@ -1250,7 +1250,8 @@ const Messages = () => {
           .eq("sender_id", selected.id)
           .eq("is_read", false),
       ]);
-      if (crossErr) console.error("Mark-read (cross) failed:", crossErr.message);
+      if (crossErr)
+        console.error("Mark-read (cross) failed:", crossErr.message);
       if (sameErr) console.error("Mark-read (same) failed:", sameErr.message);
       if (!crossErr && !sameErr) {
         setUnread((prev) => ({ ...prev, [selected.id]: 0 }));
@@ -1357,7 +1358,8 @@ const Messages = () => {
   // ── Send ──────────────────────────────────────────────────────────────────
   const sendMessage = async () => {
     const text = newMsg.trim();
-    if ((!text && !pendingFile) || !selected || !currentUser?.id || sending) return;
+    if ((!text && !pendingFile) || !selected || !currentUser?.id || sending)
+      return;
 
     // ── Pre-flight permission check ──────────────────────────────────────
     const senderRole = normRole(currentUser.role);
@@ -1397,7 +1399,9 @@ const Messages = () => {
         showModal("Upload Failed", upErr.message, "error");
         return;
       }
-      const { data: pub } = supabase.storage.from("attachments").getPublicUrl(path);
+      const { data: pub } = supabase.storage
+        .from("attachments")
+        .getPublicUrl(path);
       attachment_url = pub?.publicUrl || null;
       attachment_name = pendingFile.name;
       attachment_type = pendingFile.type || null;
@@ -1447,7 +1451,7 @@ const Messages = () => {
             recipient_role: selected.role || "manager",
             recipient_branch: selected.branch || "head_office",
             content: text,
-             attachment_url,
+            attachment_url,
             attachment_name,
             attachment_type,
           },
@@ -2347,17 +2351,26 @@ const Messages = () => {
                             whiteSpace: "pre-wrap",
                           }}
                         >
-                          {item.attachment_url && (
-                            item.attachment_type?.startsWith("image/") ? (
-                              <a href={item.attachment_url} target="_blank" rel="noopener noreferrer">
+                          {item.attachment_url &&
+                            (item.attachment_type?.startsWith("image/") ? (
+                              <a
+                                href={item.attachment_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
                                 <img
                                   src={item.attachment_url}
                                   alt={item.attachment_name || "attachment"}
-                                  style={{ maxWidth: 220, borderRadius: 10, display: "block", marginBottom: item.message ? 6 : 0 }}
+                                  style={{
+                                    maxWidth: 220,
+                                    borderRadius: 10,
+                                    display: "block",
+                                    marginBottom: item.message ? 6 : 0,
+                                  }}
                                 />
                               </a>
                             ) : (
-                              
+                              <a
                                 href={item.attachment_url}
                                 target="_blank"
                                 rel="noopener noreferrer"
@@ -2373,8 +2386,7 @@ const Messages = () => {
                               >
                                 📎 {item.attachment_name || "Download file"}
                               </a>
-                            )
-                          )}
+                            ))}
                           {item.message}
                         </div>
                         <div
@@ -2446,15 +2458,33 @@ const Messages = () => {
                       color: "#4338ca",
                     }}
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4338ca" strokeWidth="2.2">
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#4338ca"
+                      strokeWidth="2.2"
+                    >
                       <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.19 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49" />
                     </svg>
-                    <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    <span
+                      style={{
+                        flex: 1,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
                       {pendingFile.name}
                     </span>
                     <span
                       onClick={() => setPendingFile(null)}
-                      style={{ cursor: "pointer", fontWeight: 700, color: "#6366f1" }}
+                      style={{
+                        cursor: "pointer",
+                        fontWeight: 700,
+                        color: "#6366f1",
+                      }}
                     >
                       ✕
                     </span>
@@ -2510,7 +2540,11 @@ const Messages = () => {
                       const f = e.target.files?.[0];
                       if (!f) return;
                       if (f.size > 5 * 1024 * 1024) {
-                        showModal("File Too Large", "Please choose a file under 5MB.", "error");
+                        showModal(
+                          "File Too Large",
+                          "Please choose a file under 5MB.",
+                          "error",
+                        );
                         e.target.value = "";
                         return;
                       }
@@ -2535,7 +2569,16 @@ const Messages = () => {
                       flexShrink: 0,
                     }}
                   >
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      width="17"
+                      height="17"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#6366f1"
+                      strokeWidth="2.2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <path d="M21.44 11.05l-9.19 9.19a5 5 0 0 1-7.07-7.07l9.19-9.19a3 3 0 0 1 4.24 4.24l-9.19 9.19a1 1 0 0 1-1.41-1.41l8.48-8.49" />
                     </svg>
                   </button>
@@ -2575,7 +2618,10 @@ const Messages = () => {
                         sending || (!newMsg.trim() && !pendingFile)
                           ? "#e5e7eb"
                           : "linear-gradient(135deg,#6366f1,#8b5cf6)",
-                      cursor: sending || (!newMsg.trim() && !pendingFile) ? "default" : "pointer",
+                      cursor:
+                        sending || (!newMsg.trim() && !pendingFile)
+                          ? "default"
+                          : "pointer",
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
