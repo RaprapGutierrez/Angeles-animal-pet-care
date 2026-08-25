@@ -2133,6 +2133,12 @@ const RoomAvailability = () => {
   const fetchRooms = async () => {
     if (userLoading || !user) return;
     setLoading(true);
+    console.log(
+      "DEBUG user.branchId:",
+      user?.branchId,
+      "seeAllBranches:",
+      seeAllBranches,
+    );
     const client = isAdmin ? supabaseAdmin : supabase;
     let q = client
       .from("rooms")
