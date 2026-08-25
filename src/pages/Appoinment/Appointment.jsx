@@ -1652,6 +1652,7 @@ const Appointment = () => {
     "Deworming",
     "Imaging",
     "Diagnostics",
+    "Grooming",
   ];
 
   const getServicePrice = (purpose, branchId, imagingType) => {
@@ -5190,6 +5191,27 @@ const Appointment = () => {
                                 <path d="m21 15-5-5L5 21" />
                               </svg>
                             ),
+                          },
+                          Grooming: {
+                            icon: (
+                              <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="#7c3aed"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                style={{ width: 16, height: 16 }}
+                              >
+                                <circle cx="6" cy="6" r="3" />
+                                <circle cx="6" cy="18" r="3" />
+                                <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                                <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                                <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                              </svg>
+                            ),
+                            color: "#7c3aed",
+                            bg: "#f3e8ff",
                           },
                           Diagnostics: {
                             bg: "#fee2e2",

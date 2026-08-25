@@ -54,9 +54,31 @@ const PURPOSES = [
   "Deworming",
   "Imaging",
   "Diagnostics",
+  "Grooming",
 ];
 
 const SERVICE_META = {
+  Grooming: {
+    icon: (
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="#7c3aed"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        style={{ width: 16, height: 16 }}
+      >
+        <circle cx="6" cy="6" r="3" />
+        <circle cx="6" cy="18" r="3" />
+        <line x1="20" y1="4" x2="8.12" y2="15.88" />
+        <line x1="14.47" y1="14.48" x2="20" y2="20" />
+        <line x1="8.12" y1="8.12" x2="12" y2="12" />
+      </svg>
+    ),
+    color: "#7c3aed",
+    bg: "#f3e8ff",
+  },
   Consultation: {
     icon: (
       <svg
@@ -729,7 +751,7 @@ const Walkin = () => {
     species: "Dog",
     breed: "",
     room: "",
-    purpose: "Checkup",
+    purpose: "Consultation",
     vet: "",
     notes: "",
   };
@@ -752,10 +774,11 @@ const Walkin = () => {
 
   const getServicePrice = (purpose, branchId, imagingType) => {
     if (!purpose) return null;
+    const normalizedPurpose = purpose === "Checkup" ? "Consultation" : purpose;
     const lookupName =
-      purpose === "Imaging" && imagingType
+      normalizedPurpose === "Imaging" && imagingType
         ? `Imaging - ${imagingType}`
-        : purpose;
+        : normalizedPurpose;
     const exact = services.find(
       (s) => s.name === lookupName && String(s.branch_id) === String(branchId),
     );
@@ -850,14 +873,9 @@ const Walkin = () => {
   };
   const getAvailableVets = () => {
     const todayDow = new Date().getDay();
-    const nearestSlot = getNearestTimeSlot();
     const available = allVets.filter((vet) => {
       const days = vetSchedule[vet];
-      const times = vetTimeSchedule[vet];
-      const dayOk = !days || days.length === 0 || days.includes(todayDow);
-      const timeOk =
-        !times || times.length === 0 || times.includes(nearestSlot);
-      return dayOk && timeOk;
+      return !days || days.length === 0 || days.includes(todayDow);
     });
     return available.length > 0 ? available : allVets;
   };
@@ -1179,7 +1197,7 @@ const Walkin = () => {
       owner: w.owner || "",
       owner_id: w.owner_id || null,
       contact: w.contact || "",
-      purpose: w.purpose || "Checkup",
+      purpose: w.purpose || "Consultation",
       vet: w.vet || "",
       notes: w.notes || "",
       status: w.status || "Waiting",
@@ -5439,7 +5457,7 @@ const Walkin = () => {
                                 })
                               }
                               options={[
-                                "Checkup",
+                                "Consultation",
                                 "Vaccination",
                                 "Emergency",
                                 "Grooming",
