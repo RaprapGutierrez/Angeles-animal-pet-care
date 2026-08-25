@@ -1,9 +1,4 @@
-<<<<<<< HEAD
 node_modules/
 .env
 cypress/videos/
 cypress/screenshots/
-=======
-node_modules/
-.env
->>>>>>> ae3b2fad...
