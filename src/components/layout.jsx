@@ -2585,12 +2585,17 @@ export const Layout = ({ children }) => {
       }
     };
 
-    fetchEmergencyAlerts();
+   fetchEmergencyAlerts();
     fetchMessages();
     fetchStockAlerts();
     fetchNewPatients();
     fetchNewAppointments();
     fetchOccupiedRooms();
+
+    // Fallback poll — realtime channels can silently miss events (tab
+    // backgrounding, dropped websocket, etc). This guarantees the unread
+    // badge self-corrects within 15s even if that happens.
+    const msgPollInterval = setInterval(fetchMessages, 15000);
 
     // No branch filter here — branch names contain spaces which the Postgres Changes
     // filter syntax doesn't reliably encode, so filtered subscriptions silently never fire.
@@ -2616,6 +2621,18 @@ export const Layout = ({ children }) => {
           event: "*",
           schema: "public",
           table: "messages",
+        },
+        () => fetchMessages(),
+      )
+      .subscribe();
+    const crossMsgSub = supabase
+      .channel("cross-msg-layout")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cross_branch_messages",
         },
         () => fetchMessages(),
       )
@@ -2665,8 +2682,10 @@ export const Layout = ({ children }) => {
     fetchApprovedAccounts();
 
     return () => {
+      clearInterval(msgPollInterval);
       supabase.removeChannel(easSub);
       supabase.removeChannel(msgSub);
+      supabase.removeChannel(crossMsgSub);
       supabase.removeChannel(invSub);
       supabase.removeChannel(approvedSub);
       supabase.removeChannel(patientSub);
@@ -2674,7 +2693,6 @@ export const Layout = ({ children }) => {
       supabase.removeChannel(roomSub);
     };
   }, [isCustomer]);
-
   /* ── Fetch customer notifications (their own appointments) ── */
   // === FUNCTION: Layout > useEffect (customer's own appointment polling + realtime subscription) ===
   useEffect(() => {

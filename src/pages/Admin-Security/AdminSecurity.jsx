@@ -2083,29 +2083,21 @@ const AdminSecurity = () => {
       onConfirm: async () => {
         setConfirm(null);
         try {
-          // Block login immediately
-          const { error: banError } =
-            await supabaseAdmin.auth.admin.updateUserById(u.id, {
-              ban_duration: "876000h",
-            });
-          if (banError)
-            console.warn("Ban warning (non-fatal):", banError.message);
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          const res = await fetch("/.netlify/functions/admin-delete-user", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+            body: JSON.stringify({ userId: u.id }),
+          });
+          const result = await res.json();
 
-         const { data: profileData, error: profileError } = await supabaseAdmin
-            .from("profiles")
-            .update({ deleted_at: new Date().toISOString() })
-            .eq("id", u.id)
-            .select();
-
-          if (profileError) {
-            alert("Error: " + profileError.message);
-            return;
-          }
-
-          if (!profileData || profileData.length === 0) {
-            alert(
-              "Delete failed: no profile was updated. This usually means the update was blocked by row-level security — make sure supabaseAdmin is using the service-role key, not the anon key.",
-            );
+          if (!res.ok) {
+            alert("Error: " + (result.error || "Delete failed"));
             return;
           }
 
