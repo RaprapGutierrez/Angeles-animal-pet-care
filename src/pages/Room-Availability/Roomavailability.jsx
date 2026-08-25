@@ -519,47 +519,51 @@ const ViewModal = ({ room, onClose, onEdit, onDelete }) => {
             gap: 8,
           }}
         >
-          <button
-            className="room-action-btn"
-            style={{ background: "#eff6ff", color: "#1e40af" }}
-            onClick={onEdit}
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            >
-              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-            </svg>{" "}
-            Edit Room
-          </button>
-          <button
-            className="room-action-btn"
-            style={{ background: "#fef2f2", color: "#dc2626" }}
-            onClick={onDelete}
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            >
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-              <path d="M10 11v6" />
-              <path d="M14 11v6" />
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-            </svg>{" "}
-            Delete
-          </button>
+          {onEdit && onDelete && (
+            <>
+              <button
+                className="room-action-btn"
+                style={{ background: "#eff6ff", color: "#1e40af" }}
+                onClick={onEdit}
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                </svg>{" "}
+                Edit Room
+              </button>
+              <button
+                className="room-action-btn"
+                style={{ background: "#fef2f2", color: "#dc2626" }}
+                onClick={onDelete}
+              >
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                  <path d="M10 11v6" />
+                  <path d="M14 11v6" />
+                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                </svg>{" "}
+                Delete
+              </button>
+            </>
+          )}
           <button
             className="room-action-btn"
             style={{ background: "#f1f5f9", color: "#475569" }}
@@ -2040,6 +2044,7 @@ const RoomAvailability = () => {
   const {
     user,
     isAdmin,
+    isEmployee,
     seeAllBranches,
     loading: userLoading,
   } = useCurrentUser();
@@ -2128,7 +2133,8 @@ const RoomAvailability = () => {
   const fetchRooms = async () => {
     if (userLoading || !user) return;
     setLoading(true);
-    let q = supabaseAdmin
+    const client = isAdmin ? supabaseAdmin : supabase;
+    let q = client
       .from("rooms")
       .select("*")
       .is("deleted_at", null)
@@ -2197,7 +2203,8 @@ const RoomAvailability = () => {
       room.patient = "";
       room.diagnosis = "";
       room.discharge_date = null;
-      await supabaseAdmin
+      const client = isAdmin ? supabaseAdmin : supabase;
+      await client
         .from("rooms")
         .update({
           status: "Available",
@@ -2372,7 +2379,7 @@ const RoomAvailability = () => {
       confirmColor: "#dc2626",
       onConfirm: async () => {
         setConfirm({ show: false });
-        const { error } = await supabaseAdmin
+        const { error } = await supabase.supabaseAdmin
           .from("rooms")
           .update({ deleted_at: new Date().toISOString() })
           .eq("id", room.id);
@@ -2403,7 +2410,7 @@ const RoomAvailability = () => {
       confirmColor: "#16a34a",
       onConfirm: async () => {
         setConfirm({ show: false });
-        const { error } = await supabaseAdmin
+        const { error } = await supabase.supabaseAdmin
           .from("rooms")
           .update({ deleted_at: null })
           .eq("id", room.id);
@@ -2429,7 +2436,7 @@ const RoomAvailability = () => {
       confirmColor: "#dc2626",
       onConfirm: async () => {
         setConfirm({ show: false });
-        const { error } = await supabaseAdmin
+        const { error } = await supabase.supabaseAdmin
           .from("rooms")
           .delete()
           .eq("id", room.id);
@@ -2570,156 +2577,166 @@ const RoomAvailability = () => {
               />
             </div>
           )}
-          <button
-            onClick={() => setShowDeletedModal(true)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              background: "#fef2f2",
-              border: "1.5px solid #fca5a5",
-              color: "#dc2626",
-              borderRadius: 8,
-              padding: "8px 14px",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            >
-              <polyline points="3 6 5 6 21 6" />
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-            </svg>
-            Recently Deleted{" "}
-            {deletedRooms.length > 0 ? `(${deletedRooms.length})` : ""}
-          </button>
-          <div
-            className="fab-wrap"
-            style={{
-              position: "fixed",
-              bottom: 28,
-              right: 28,
-              zIndex: 999,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.querySelector(".fab-tooltip").style.opacity = "1";
-              e.currentTarget.querySelector(".fab-tooltip").style.transform =
-                "translateX(0)";
-              e.currentTarget.querySelector(".fab-btn").style.transform =
-                "scale(1.1)";
-              e.currentTarget.querySelector(".fab-btn").style.boxShadow =
-                "0 6px 28px rgba(30,58,138,0.5)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.querySelector(".fab-tooltip").style.opacity = "0";
-              e.currentTarget.querySelector(".fab-tooltip").style.transform =
-                "translateX(8px)";
-              e.currentTarget.querySelector(".fab-btn").style.transform =
-                "scale(1)";
-              e.currentTarget.querySelector(".fab-btn").style.boxShadow =
-                "0 4px 20px rgba(30,58,138,0.4)";
-            }}
-          >
-            <span
-              className="fab-tooltip"
-              style={{
-                opacity: 0,
-                transform: "translateX(8px)",
-                transition: "opacity 0.2s ease, transform 0.2s ease",
-                background: "linear-gradient(135deg,#0f172a,#1e3a8a)",
-                color: "#fff",
-                fontSize: 12,
-                fontWeight: 700,
-                padding: "8px 14px",
-                borderRadius: 10,
-                whiteSpace: "nowrap",
-                pointerEvents: "none",
-                boxShadow: "0 8px 24px rgba(30,58,138,0.35)",
-                border: "1px solid rgba(255,255,255,0.12)",
-                display: "flex",
-                alignItems: "center",
-                gap: 7,
-                position: "relative",
-              }}
-            >
-              <span
+          {!isEmployee && (
+            <>
+              <button
+                onClick={() => setShowDeletedModal(true)}
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  lineHeight: 1.2,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  background: "#fef2f2",
+                  border: "1.5px solid #fca5a5",
+                  color: "#dc2626",
+                  borderRadius: 8,
+                  padding: "8px 14px",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
                 }}
               >
-                <span style={{ fontSize: 12, fontWeight: 800, color: "#fff" }}>
-                  Add Room
-                </span>
+                <svg
+                  width="13"
+                  height="13"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <polyline points="3 6 5 6 21 6" />
+                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                </svg>
+                Recently Deleted{" "}
+                {deletedRooms.length > 0 ? `(${deletedRooms.length})` : ""}
+              </button>
+              <div
+                className="fab-wrap"
+                style={{
+                  position: "fixed",
+                  bottom: 28,
+                  right: 28,
+                  zIndex: 999,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.querySelector(".fab-tooltip").style.opacity =
+                    "1";
+                  e.currentTarget.querySelector(
+                    ".fab-tooltip",
+                  ).style.transform = "translateX(0)";
+                  e.currentTarget.querySelector(".fab-btn").style.transform =
+                    "scale(1.1)";
+                  e.currentTarget.querySelector(".fab-btn").style.boxShadow =
+                    "0 6px 28px rgba(30,58,138,0.5)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.querySelector(".fab-tooltip").style.opacity =
+                    "0";
+                  e.currentTarget.querySelector(
+                    ".fab-tooltip",
+                  ).style.transform = "translateX(8px)";
+                  e.currentTarget.querySelector(".fab-btn").style.transform =
+                    "scale(1)";
+                  e.currentTarget.querySelector(".fab-btn").style.boxShadow =
+                    "0 4px 20px rgba(30,58,138,0.4)";
+                }}
+              >
                 <span
+                  className="fab-tooltip"
                   style={{
-                    fontSize: 10,
-                    fontWeight: 500,
-                    color: "rgba(255,255,255,0.55)",
+                    opacity: 0,
+                    transform: "translateX(8px)",
+                    transition: "opacity 0.2s ease, transform 0.2s ease",
+                    background: "linear-gradient(135deg,#0f172a,#1e3a8a)",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    padding: "8px 14px",
+                    borderRadius: 10,
+                    whiteSpace: "nowrap",
+                    pointerEvents: "none",
+                    boxShadow: "0 8px 24px rgba(30,58,138,0.35)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    position: "relative",
                   }}
                 >
-                  Register new room
+                  <span
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      lineHeight: 1.2,
+                    }}
+                  >
+                    <span
+                      style={{ fontSize: 12, fontWeight: 800, color: "#fff" }}
+                    >
+                      Add Room
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 500,
+                        color: "rgba(255,255,255,0.55)",
+                      }}
+                    >
+                      Register new room
+                    </span>
+                  </span>
+                  <span
+                    style={{
+                      position: "absolute",
+                      right: -6,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: 0,
+                      height: 0,
+                      borderTop: "6px solid transparent",
+                      borderBottom: "6px solid transparent",
+                      borderLeft: "6px solid #1e3a8a",
+                    }}
+                  />
                 </span>
-              </span>
-              <span
-                style={{
-                  position: "absolute",
-                  right: -6,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  width: 0,
-                  height: 0,
-                  borderTop: "6px solid transparent",
-                  borderBottom: "6px solid transparent",
-                  borderLeft: "6px solid #1e3a8a",
-                }}
-              />
-            </span>
-            <button
-              onClick={openCreate}
-              className="fab-btn"
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg,#1e3a8a,#3b82f6)",
-                border: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 20px rgba(30,58,138,0.4)",
-                transition: "transform 0.2s, box-shadow 0.2s",
-                flexShrink: 0,
-              }}
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#fff"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
-          </div>
+                <button
+                  onClick={openCreate}
+                  className="fab-btn"
+                  style={{
+                    width: 56,
+                    height: 56,
+                    borderRadius: "50%",
+                    background: "linear-gradient(135deg,#1e3a8a,#3b82f6)",
+                    border: "none",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 4px 20px rgba(30,58,138,0.4)",
+                    transition: "transform 0.2s, box-shadow 0.2s",
+                    flexShrink: 0,
+                  }}
+                >
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fff"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <line x1="12" y1="5" x2="12" y2="19" />
+                    <line x1="5" y1="12" x2="19" y2="12" />
+                  </svg>
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -3236,8 +3253,8 @@ const RoomAvailability = () => {
         <ViewModal
           room={viewRoom}
           onClose={() => setViewRoom(null)}
-          onEdit={() => openEdit(viewRoom)}
-          onDelete={() => deleteRoom(viewRoom)}
+          onEdit={!isEmployee ? () => openEdit(viewRoom) : null}
+          onDelete={!isEmployee ? () => deleteRoom(viewRoom) : null}
         />
       )}
 
