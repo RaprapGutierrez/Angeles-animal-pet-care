@@ -2146,6 +2146,8 @@ const RoomAvailability = () => {
       const list = data || [];
       await autoDischargeExpiredRooms(list);
       setRooms(list);
+    } else {
+      console.error("fetchRooms error:", error.message);
     }
     setLoading(false);
   };
@@ -2379,7 +2381,7 @@ const RoomAvailability = () => {
       confirmColor: "#dc2626",
       onConfirm: async () => {
         setConfirm({ show: false });
-        const { error } = await supabase.supabaseAdmin
+        const { error } = await supabaseAdmin
           .from("rooms")
           .update({ deleted_at: new Date().toISOString() })
           .eq("id", room.id);
@@ -2410,7 +2412,7 @@ const RoomAvailability = () => {
       confirmColor: "#16a34a",
       onConfirm: async () => {
         setConfirm({ show: false });
-        const { error } = await supabase.supabaseAdmin
+        const { error } = await supabaseAdmin
           .from("rooms")
           .update({ deleted_at: null })
           .eq("id", room.id);
@@ -2436,7 +2438,7 @@ const RoomAvailability = () => {
       confirmColor: "#dc2626",
       onConfirm: async () => {
         setConfirm({ show: false });
-        const { error } = await supabase.supabaseAdmin
+        const { error } = await supabaseAdmin
           .from("rooms")
           .delete()
           .eq("id", room.id);
