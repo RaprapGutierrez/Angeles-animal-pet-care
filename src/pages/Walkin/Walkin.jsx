@@ -45,6 +45,7 @@ const EMPTY_FORM = {
   mode: "new",
   existingId: null,
   price: "",
+  time: "",
 }; // Mirrors Appointments.jsx SERVICE_OPTIONS exactly, so walk-in and
 // scheduled appointment services stay in sync.
 const PURPOSES = [
@@ -1416,6 +1417,7 @@ const Walkin = () => {
       vet: form.purpose === "Grooming" ? null : form.vet || null,
       notes: form.notes.trim(),
       status: form.status,
+      time: form.time || null,
     };
     if (editItem) {
       const { error } = await supabase
@@ -5840,7 +5842,9 @@ const Walkin = () => {
                             </div>
                             <CustomSelect
                               value={form.vet}
-                              onChange={(val) => setForm({ ...form, vet: val })}
+                              onChange={(val) =>
+                                setForm({ ...form, vet: val, time: "" })
+                              }
                               options={getAvailableVets()}
                               placeholder="Unassigned"
                             />
@@ -5867,17 +5871,42 @@ const Walkin = () => {
                                   .join(", ")}
                               </p>
                             )}
-                            {form.vet && vetTimeSchedule[form.vet] && (
-                              <p
-                                style={{
-                                  margin: "2px 0 0",
-                                  fontSize: 10,
-                                  color: "var(--muted)",
-                                }}
-                              >
-                                Available times:{" "}
-                                {vetTimeSchedule[form.vet].join(", ")}
-                              </p>
+                            {form.vet && (
+                              <div style={{ marginTop: 10 }}>
+                                <div
+                                  style={{
+                                    fontSize: 10,
+                                    fontWeight: 700,
+                                    color: "#94a3b8",
+                                    textTransform: "uppercase",
+                                    letterSpacing: "0.8px",
+                                    marginBottom: 6,
+                                  }}
+                                >
+                                  Assign Time
+                                </div>
+                                <CustomSelect
+                                  value={form.time}
+                                  onChange={(val) =>
+                                    setForm({ ...form, time: val })
+                                  }
+                                  placeholder="Select time"
+                                  options={TIME_SLOTS.map((t) => {
+                                    const sched = vetTimeSchedule[form.vet];
+                                    const available =
+                                      !sched ||
+                                      sched.length === 0 ||
+                                      sched.includes(t);
+                                    return {
+                                      value: t,
+                                      label: available
+                                        ? t
+                                        : `${t} — Not this vet's hours`,
+                                      disabled: !available,
+                                    };
+                                  })}
+                                />
+                              </div>
                             )}
                             {form.purpose === "Imaging" && (
                               <>
