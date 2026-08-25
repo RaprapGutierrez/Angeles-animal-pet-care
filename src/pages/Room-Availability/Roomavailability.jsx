@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import ReactDOM from "react-dom";
 import Layout from "../../components/layout";
-import { supabase, supabaseAdmin } from "../../js/Utils/supabase";
+import { supabase } from "../../js/Utils/supabase";
 import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
 import { logActivity } from "../../js/Utils/logActivity";
 import "../../styles/RoomAvailability.css";
@@ -2132,13 +2132,7 @@ const RoomAvailability = () => {
 
   const fetchRooms = async () => {
     if (userLoading || !user) return;
-    setLoading(true);
-    console.log(
-      "DEBUG user.branchId:",
-      user?.branchId,
-      "seeAllBranches:",
-      seeAllBranches,
-    );
+     setLoading(true);
     let q = supabase
       .from("rooms")
       .select("*")

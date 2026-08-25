@@ -739,6 +739,7 @@ const Walkin = () => {
   // ── Service step (mirrors Appointments.jsx booking flow) ────────────────
   const [bookStep, setBookStep] = useState("service"); // 'service' | 'form'
   const [services, setServices] = useState([]);
+  const [showVetSchedule, setShowVetSchedule] = useState(false);
 
   useEffect(() => {
     supabase
@@ -2267,6 +2268,39 @@ const Walkin = () => {
                 />
               </div>
             )}
+            <button
+              onClick={() => setShowVetSchedule(true)}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "7px 16px",
+                borderRadius: 8,
+                border: "1.5px solid #bfdbfe",
+                background: "#eff6ff",
+                color: "#1e40af",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+              Vet Schedules
+            </button>
             <div
               style={{
                 position: "fixed",
@@ -2848,10 +2882,10 @@ const Walkin = () => {
                         />
                       </th>
                       {[
-                        { label: "#", key: null },
                         { label: "Patient", key: "patient" },
                         { label: "Owner", key: "owner" },
                         { label: "Purpose", key: "purpose" },
+                        { label: "Price", key: null },
                         { label: "Vet / Service", key: "vet" },
                         { label: "Room", key: "room" },
                         { label: "Status", key: "status" },
@@ -3047,17 +3081,6 @@ const Walkin = () => {
                                 onChange={() => toggleSelectRow(w.id)}
                                 style={{ cursor: "pointer" }}
                               />
-                            </td>
-                            <td style={S.td}>
-                              <span
-                                style={{
-                                  fontSize: 11,
-                                  color: "var(--muted)",
-                                  fontWeight: 600,
-                                }}
-                              >
-                                {(safePage - 1) * ROWS_PER_PAGE + idx + 1}
-                              </span>
                             </td>
                             <td style={S.td}>
                               <div
@@ -3256,6 +3279,19 @@ const Walkin = () => {
                               >
                                 {purposeIcons[w.purpose] || purposeIcons.Other}{" "}
                                 {w.purpose}
+                              </span>
+                            </td>
+                            <td style={S.td}>
+                              <span
+                                style={{
+                                  fontSize: 12,
+                                  fontWeight: 700,
+                                  color: "#16a34a",
+                                }}
+                              >
+                                {w.price
+                                  ? `₱${Number(w.price).toLocaleString()}`
+                                  : "—"}
                               </span>
                             </td>
                             <td style={S.td}>
@@ -6269,6 +6305,196 @@ const Walkin = () => {
           </div>
         </div>
       )}
+      {/* ══ Vet Schedule (view-only) Modal ══ */}
+      {showVetSchedule && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10000,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--card)",
+              borderRadius: 14,
+              width: "100%",
+              maxWidth: 640,
+              maxHeight: "85vh",
+              display: "flex",
+              flexDirection: "column",
+              boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                background: "linear-gradient(135deg,#0f172a,#1e3a8a)",
+                padding: "16px 20px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 15,
+                    fontWeight: 800,
+                    color: "#fff",
+                  }}
+                >
+                  Veterinarian Schedules
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: 12,
+                    color: "rgba(255,255,255,0.75)",
+                  }}
+                >
+                  Days & times each vet is available.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowVetSchedule(false)}
+                style={{
+                  background: "rgba(255,255,255,0.15)",
+                  border: "none",
+                  borderRadius: 8,
+                  width: 30,
+                  height: 30,
+                  cursor: "pointer",
+                  color: "#fff",
+                  flexShrink: 0,
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ overflowY: "auto", flex: 1, padding: "16px 20px" }}>
+              {allVets.map((vet) => (
+                <div
+                  key={vet}
+                  style={{
+                    border: "1.5px solid var(--border)",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    marginBottom: 14,
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: "0 0 10px",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: "var(--text)",
+                    }}
+                  >
+                    {vet}
+                  </p>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.6px",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Available Days
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexWrap: "wrap",
+                      gap: 6,
+                      marginBottom: 12,
+                    }}
+                  >
+                    {DAY_NAMES.map((label, dIdx) => {
+                      const active = (vetSchedule[vet] || []).includes(dIdx);
+                      return (
+                        <span
+                          key={label}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            border: `1.5px solid ${active ? "#1e3a8a" : "var(--border)"}`,
+                            background: active ? "#dbeafe" : "transparent",
+                            color: active ? "#1e3a8a" : "var(--muted)",
+                          }}
+                        >
+                          {label}
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.6px",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Available Times
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {TIME_SLOTS.map((t) => {
+                      const active = (vetTimeSchedule[vet] || []).includes(t);
+                      return (
+                        <span
+                          key={t}
+                          style={{
+                            padding: "6px 12px",
+                            borderRadius: 8,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            border: `1.5px solid ${active ? "#16a34a" : "var(--border)"}`,
+                            background: active ? "#dcfce7" : "transparent",
+                            color: active ? "#15803d" : "var(--muted)",
+                          }}
+                        >
+                          {t}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                padding: "14px 20px",
+                borderTop: "1px solid var(--border)",
+              }}
+            >
+              <button
+                className="btn btn-ghost"
+                style={{ width: "auto" }}
+                onClick={() => setShowVetSchedule(false)}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══ Dialog Modal ══ */}
       {dialog.show && (
         <div
