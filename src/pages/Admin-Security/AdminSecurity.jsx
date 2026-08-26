@@ -2205,6 +2205,11 @@ const AdminSecurity = () => {
             },
           ]);
 
+          // Remove immediately from local state so the row disappears
+          // right away, instead of waiting on a realtime event that
+          // never fires for this table/action.
+          setDeletedUsers((prev) => prev.filter((x) => x.id !== u.id));
+
           showToast(`${fullName(u)} permanently deleted`, "info");
           fetchDeletedUsers();
         } catch (err) {
