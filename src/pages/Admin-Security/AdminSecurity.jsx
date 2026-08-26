@@ -2180,18 +2180,24 @@ const AdminSecurity = () => {
       onConfirm: async () => {
         setConfirm(null);
         try {
-          try {
-            await supabaseAdmin.auth.admin.deleteUser(u.id);
-          } catch (e) {
-            console.warn("Auth delete warning:", e.message);
-          }
+          const {
+            data: { session },
+          } = await supabase.auth.getSession();
+          const res = await fetch(
+            "/.netlify/functions/admin-permanent-delete-user",
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${session?.access_token}`,
+              },
+              body: JSON.stringify({ userId: u.id }),
+            },
+          );
+          const result = await res.json();
 
-          const { error: profileError } = await supabaseAdmin
-            .from("profiles")
-            .delete()
-            .eq("id", u.id);
-          if (profileError) {
-            alert("Profile delete error: " + profileError.message);
+          if (!res.ok) {
+            alert("Error: " + (result.error || "Delete failed"));
             return;
           }
 
@@ -2207,7 +2213,7 @@ const AdminSecurity = () => {
 
           // Remove immediately from local state so the row disappears
           // right away, instead of waiting on a realtime event that
-          // never fires for this table/action.
+          // never fires for a hard-deleted row.
           setDeletedUsers((prev) => prev.filter((x) => x.id !== u.id));
 
           showToast(`${fullName(u)} permanently deleted`, "info");
