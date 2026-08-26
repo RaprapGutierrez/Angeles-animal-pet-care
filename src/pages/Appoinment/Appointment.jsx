@@ -2362,7 +2362,7 @@ const Appointment = () => {
             .update({
               status: "Occupied",
               patient: form.patient,
-              diagnosis: form.purpose,
+              diagnosis: form.notes || "",
             })
             .eq("id", newRoomRow.id);
       }
@@ -2561,7 +2561,7 @@ const Appointment = () => {
           .update({
             status: "Occupied",
             patient: appt?.patient || "",
-            diagnosis: appt?.purpose || "",
+            diagnosis: appt?.notes || "",
           })
           .eq("id", roomRow.id);
       }

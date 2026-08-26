@@ -2955,6 +2955,8 @@ const PatientRecord = () => {
   const [patientFiles, setPatientFiles] = useState([]);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [uploadingPatientFile, setUploadingPatientFile] = useState(false);
+  const [previewFile, setPreviewFile] = useState(null);
+  const [previewZoom, setPreviewZoom] = useState(1);
   const patientFileInputRef = useRef(null);
   const [savingPatient, setSavingPatient] = useState(false);
   const [rxSaving, setRxSaving] = useState(false);
@@ -9149,27 +9151,27 @@ const PatientRecord = () => {
                             }}
                           >
                             {isImage ? (
-                              <a
-                                href={f.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <img
-                                  src={f.url}
-                                  alt={f.name}
-                                  style={{
-                                    width: "100%",
-                                    height: 120,
-                                    objectFit: "cover",
-                                    borderRadius: 8,
-                                  }}
-                                />
-                              </a>
+                              <img
+                                src={f.url}
+                                alt={f.name}
+                                onClick={() => {
+                                  setPreviewZoom(1);
+                                  setPreviewFile(f);
+                                }}
+                                style={{
+                                  width: "100%",
+                                  height: 120,
+                                  objectFit: "cover",
+                                  borderRadius: 8,
+                                  cursor: "pointer",
+                                }}
+                              />
                             ) : (
-                              <a
-                                href={f.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <div
+                                onClick={() => {
+                                  setPreviewZoom(1);
+                                  setPreviewFile(f);
+                                }}
                                 style={{
                                   display: "flex",
                                   alignItems: "center",
@@ -9181,11 +9183,11 @@ const PatientRecord = () => {
                                   color: "#1d4ed8",
                                   fontSize: 13,
                                   fontWeight: 600,
-                                  textDecoration: "none",
+                                  cursor: "pointer",
                                 }}
                               >
                                 📄 {f.name}
-                              </a>
+                              </div>
                             )}
                             <div
                               style={{
@@ -10212,6 +10214,208 @@ const PatientRecord = () => {
                 />
                 {editPatientSaving ? "Saving..." : "Save Changes"}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {/* File Preview Modal */}
+      {previewFile && (
+        <div
+          onClick={() => setPreviewFile(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100000,
+            background: "rgba(0,0,0,0.75)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              maxWidth: 900,
+              width: "100%",
+              maxHeight: "90vh",
+              background: "var(--card)",
+              borderRadius: 14,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "12px 18px",
+                borderBottom: "1px solid var(--border)",
+                flexShrink: 0,
+                gap: 10,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "var(--text)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+                title={previewFile.name}
+              >
+                {previewFile.name}
+              </span>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexShrink: 0,
+                }}
+              >
+                {previewFile.type?.startsWith("image/") && (
+                  <>
+                    <button
+                      onClick={() =>
+                        setPreviewZoom((z) =>
+                          Math.max(0.5, +(z - 0.25).toFixed(2)),
+                        )
+                      }
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        cursor: "pointer",
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "var(--text)",
+                      }}
+                    >
+                      −
+                    </button>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--muted)",
+                        minWidth: 36,
+                        textAlign: "center",
+                      }}
+                    >
+                      {Math.round(previewZoom * 100)}%
+                    </span>
+                    <button
+                      onClick={() =>
+                        setPreviewZoom((z) =>
+                          Math.min(4, +(z + 0.25).toFixed(2)),
+                        )
+                      }
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        cursor: "pointer",
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "var(--text)",
+                      }}
+                    >
+                      +
+                    </button>
+                  </>
+                )}
+                <a
+                  href={previewFile.url}
+                  download={previewFile.name}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    background: "var(--royal)",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    textDecoration: "none",
+                  }}
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fff"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Download
+                </a>
+                <button
+                  onClick={() => setPreviewFile(null)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: 20,
+                    cursor: "pointer",
+                    color: "var(--muted)",
+                    lineHeight: 1,
+                    padding: "2px 6px",
+                  }}
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+            <div
+              style={{
+                flex: 1,
+                overflow: "auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#0f172a",
+                padding: 20,
+              }}
+            >
+              {previewFile.type?.startsWith("image/") ? (
+                <img
+                  src={previewFile.url}
+                  alt={previewFile.name}
+                  style={{
+                    transform: `scale(${previewZoom})`,
+                    transition: "transform 0.15s",
+                    maxWidth: previewZoom === 1 ? "100%" : "none",
+                    maxHeight: previewZoom === 1 ? "100%" : "none",
+                  }}
+                />
+              ) : (
+                <div style={{ textAlign: "center", color: "#fff" }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>
+                  <p style={{ fontSize: 14, marginBottom: 4 }}>
+                    {previewFile.name}
+                  </p>
+                  <p style={{ fontSize: 12, color: "#94a3b8" }}>
+                    Preview not available for this file type. Use the Download
+                    button above.
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         </div>

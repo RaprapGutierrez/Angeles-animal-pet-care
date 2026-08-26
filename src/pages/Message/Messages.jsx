@@ -853,6 +853,8 @@ const Messages = () => {
     cancelText: null,
   });
   const [mobileView, setMobileView] = useState("list");
+  const [previewFile, setPreviewFile] = useState(null);
+  const [previewZoom, setPreviewZoom] = useState(1);
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -2351,24 +2353,27 @@ const Messages = () => {
                             whiteSpace: "pre-wrap",
                           }}
                         >
-                          {item.attachment_url &&
+                                                    {item.attachment_url &&
                             (item.attachment_type?.startsWith("image/") ? (
-                              <a
-                                href={item.attachment_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <img
-                                  src={item.attachment_url}
-                                  alt={item.attachment_name || "attachment"}
-                                  style={{
-                                    maxWidth: 220,
-                                    borderRadius: 10,
-                                    display: "block",
-                                    marginBottom: item.message ? 6 : 0,
-                                  }}
-                                />
-                              </a>
+                              <img
+                                src={item.attachment_url}
+                                alt={item.attachment_name || "attachment"}
+                                onClick={() => {
+                                  setPreviewZoom(1);
+                                  setPreviewFile({
+                                    url: item.attachment_url,
+                                    name: item.attachment_name,
+                                    type: item.attachment_type,
+                                  });
+                                }}
+                                style={{
+                                  maxWidth: 220,
+                                  borderRadius: 10,
+                                  display: "block",
+                                  marginBottom: item.message ? 6 : 0,
+                                  cursor: "pointer",
+                                }}
+                              />
                             ) : (
                               <a
                                 href={item.attachment_url}
@@ -2648,6 +2653,64 @@ const Messages = () => {
           )}
         </div>
       </div>
+
+      {/* File Preview Modal */}
+      {previewFile && (
+        <div
+          onClick={() => setPreviewFile(null)}
+          style={{ position: "fixed", inset: 0, zIndex: 100000, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{ maxWidth: 900, width: "100%", maxHeight: "90vh", background: "var(--card)", borderRadius: 14, display: "flex", flexDirection: "column", overflow: "hidden" }}
+          >
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--border)", flexShrink: 0, gap: 10 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={previewFile.name}>
+                {previewFile.name}
+              </span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                {previewFile.type?.startsWith("image/") && (
+                  <>
+                    <button onClick={() => setPreviewZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
+                      style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "var(--text)" }}>−</button>
+                    <span style={{ fontSize: 12, color: "var(--muted)", minWidth: 36, textAlign: "center" }}>{Math.round(previewZoom * 100)}%</span>
+                    <button onClick={() => setPreviewZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))}
+                      style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "var(--text)" }}>+</button>
+                  </>
+                )}
+                <a
+                  href={previewFile.url}
+                  download={previewFile.name}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "#6366f1", color: "#fff", fontSize: 12, fontWeight: 700, textDecoration: "none" }}
+                >
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                  Download
+                </a>
+                <button onClick={() => setPreviewFile(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--muted)", lineHeight: 1, padding: "2px 6px" }}>✕</button>
+              </div>
+            </div>
+            <div style={{ flex: 1, overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", padding: 20 }}>
+              {previewFile.type?.startsWith("image/") ? (
+                <img
+                  src={previewFile.url}
+                  alt={previewFile.name}
+                  style={{ transform: `scale(${previewZoom})`, transition: "transform 0.15s", maxWidth: previewZoom === 1 ? "100%" : "none", maxHeight: previewZoom === 1 ? "100%" : "none" }}
+                />
+              ) : (
+                <div style={{ textAlign: "center", color: "#fff" }}>
+                  <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>
+                  <p style={{ fontSize: 14, marginBottom: 4 }}>{previewFile.name}</p>
+                  <p style={{ fontSize: 12, color: "#94a3b8" }}>Preview not available for this file type. Use the Download button above.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 };
