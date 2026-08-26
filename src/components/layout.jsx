@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../js/Utils/supabase";
 import { getNavLinks, getBranchId } from "../js/Utils/branchTables";
+import { usePresence } from "../js/hooks/usePresence";
 import "../styles/Layout.css";
 
 // Converts a raw role string (from JWT/localStorage) into a canonical role name used across the app.
@@ -2331,6 +2332,8 @@ export const Layout = ({ children }) => {
       : rawUser.branch,
     role: dbRole ? normalizeRole(dbRole) : rawUser.role,
   };
+
+  usePresence(user.id);
 
   const isCustomer = roleIsCustomer(user.role);
   const isAdmin = user.role === "Admin" || user.role === "super_admin";

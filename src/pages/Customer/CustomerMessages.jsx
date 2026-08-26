@@ -1579,22 +1579,60 @@ const CustomerMessages = () => {
                                 }}
                               />
                             ) : (
-                              <a
-                                href={item.attachment_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
+                              <div
+                                onClick={() => {
+                                  setPreviewZoom(1);
+                                  setPreviewFile({
+                                    url: item.attachment_url,
+                                    name: item.attachment_name,
+                                    type: item.attachment_type,
+                                  });
+                                }}
                                 style={{
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: 6,
-                                  color: me ? "#fff" : "#4338ca",
-                                  textDecoration: "underline",
-                                  fontSize: 13,
+                                  gap: 10,
+                                  padding: "10px 12px",
+                                  borderRadius: 10,
+                                  cursor: "pointer",
                                   marginBottom: item.message ? 6 : 0,
+                                  background: me
+                                    ? "rgba(255,255,255,0.15)"
+                                    : "#f4f6fb",
+                                  border: `1px solid ${me ? "rgba(255,255,255,0.25)" : "#e5e7eb"}`,
                                 }}
                               >
-                                📎 {item.attachment_name || "Download file"}
-                              </a>
+                                <span
+                                  style={{
+                                    width: 34,
+                                    height: 34,
+                                    borderRadius: 8,
+                                    background: me
+                                      ? "rgba(255,255,255,0.2)"
+                                      : "#eef0fe",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                    fontSize: 16,
+                                  }}
+                                >
+                                  📄
+                                </span>
+                                <span
+                                  style={{
+                                    fontSize: 13,
+                                    fontWeight: 600,
+                                    color: me ? "#fff" : "#374151",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    maxWidth: 160,
+                                  }}
+                                >
+                                  {item.attachment_name || "File"}
+                                </span>
+                              </div>
                             ))}
                           {item.message}
                         </div>
