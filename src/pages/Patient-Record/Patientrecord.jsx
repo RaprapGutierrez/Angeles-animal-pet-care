@@ -10445,8 +10445,11 @@ const PatientRecord = () => {
                   style={{
                     transform: `scale(${previewZoom})`,
                     transition: "transform 0.15s",
+                    width: previewZoom === 1 ? "100%" : "auto",
+                    height: previewZoom === 1 ? "100%" : "auto",
                     maxWidth: previewZoom === 1 ? "100%" : "none",
                     maxHeight: previewZoom === 1 ? "100%" : "none",
+                    objectFit: "contain",
                   }}
                 />
               ) : previewFile.type === "application/pdf" ||
