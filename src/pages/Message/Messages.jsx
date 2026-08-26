@@ -855,10 +855,32 @@ const Messages = () => {
   const [mobileView, setMobileView] = useState("list");
   const [previewFile, setPreviewFile] = useState(null);
   const [previewZoom, setPreviewZoom] = useState(1);
+  const [downloadingPreview, setDownloadingPreview] = useState(false);
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
   const pollRef = useRef(null);
+
+  const downloadPreviewFile = async (file) => {
+    if (!file || downloadingPreview) return;
+    setDownloadingPreview(true);
+    try {
+      const res = await fetch(file.url);
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = file.name || "download";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      window.open(file.url, "_blank");
+    } finally {
+      setDownloadingPreview(false);
+    }
+  };
 
   const showModal = (
     title,
@@ -2353,7 +2375,7 @@ const Messages = () => {
                             whiteSpace: "pre-wrap",
                           }}
                         >
-                                                    {item.attachment_url &&
+                          {item.attachment_url &&
                             (item.attachment_type?.startsWith("image/") ? (
                               <img
                                 src={item.attachment_url}
@@ -2658,53 +2680,246 @@ const Messages = () => {
       {previewFile && (
         <div
           onClick={() => setPreviewFile(null)}
-          style={{ position: "fixed", inset: 0, zIndex: 100000, background: "rgba(0,0,0,0.75)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16 }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100000,
+            background: "rgba(0,0,0,0.75)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
         >
           <div
             onClick={(e) => e.stopPropagation()}
-            style={{ maxWidth: 900, width: "100%", maxHeight: "90vh", background: "var(--card)", borderRadius: 14, display: "flex", flexDirection: "column", overflow: "hidden" }}
+            style={{
+              maxWidth: "1400px",
+              width: "95vw",
+              height: "90vh",
+              maxHeight: "90vh",
+              background: "var(--card)",
+              borderRadius: 14,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
           >
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 18px", borderBottom: "1px solid var(--border)", flexShrink: 0, gap: 10 }}>
-              <span style={{ fontSize: 13, fontWeight: 700, color: "var(--text)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={previewFile.name}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                padding: "12px 18px",
+                borderBottom: "1px solid var(--border)",
+                flexShrink: 0,
+                gap: 10,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "var(--text)",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+                title={previewFile.name}
+              >
                 {previewFile.name}
               </span>
-              <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                  flexShrink: 0,
+                }}
+              >
                 {previewFile.type?.startsWith("image/") && (
                   <>
-                    <button onClick={() => setPreviewZoom((z) => Math.max(0.5, +(z - 0.25).toFixed(2)))}
-                      style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "var(--text)" }}>−</button>
-                    <span style={{ fontSize: 12, color: "var(--muted)", minWidth: 36, textAlign: "center" }}>{Math.round(previewZoom * 100)}%</span>
-                    <button onClick={() => setPreviewZoom((z) => Math.min(4, +(z + 0.25).toFixed(2)))}
-                      style={{ width: 30, height: 30, borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg)", cursor: "pointer", fontSize: 16, fontWeight: 700, color: "var(--text)" }}>+</button>
+                    <button
+                      onClick={() =>
+                        setPreviewZoom((z) =>
+                          Math.max(0.5, +(z - 0.25).toFixed(2)),
+                        )
+                      }
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        cursor: "pointer",
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "var(--text)",
+                      }}
+                    >
+                      −
+                    </button>
+                    <span
+                      style={{
+                        fontSize: 12,
+                        color: "var(--muted)",
+                        minWidth: 36,
+                        textAlign: "center",
+                      }}
+                    >
+                      {Math.round(previewZoom * 100)}%
+                    </span>
+                    <button
+                      onClick={() =>
+                        setPreviewZoom((z) =>
+                          Math.min(4, +(z + 0.25).toFixed(2)),
+                        )
+                      }
+                      style={{
+                        width: 30,
+                        height: 30,
+                        borderRadius: 8,
+                        border: "1px solid var(--border)",
+                        background: "var(--bg)",
+                        cursor: "pointer",
+                        fontSize: 16,
+                        fontWeight: 700,
+                        color: "var(--text)",
+                      }}
+                    >
+                      +
+                    </button>
                   </>
                 )}
-                <a
-                  href={previewFile.url}
-                  download={previewFile.name}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 12px", borderRadius: 8, background: "#6366f1", color: "#fff", fontSize: 12, fontWeight: 700, textDecoration: "none" }}
+                <button
+                  onClick={() => downloadPreviewFile(previewFile)}
+                  disabled={downloadingPreview}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "6px 12px",
+                    borderRadius: 8,
+                    background: "#6366f1",
+                    color: "#fff",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    textDecoration: "none",
+                    border: "none",
+                    cursor: downloadingPreview ? "default" : "pointer",
+                    opacity: downloadingPreview ? 0.75 : 1,
+                    fontFamily: "inherit",
+                  }}
                 >
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Download
-                </a>
-                <button onClick={() => setPreviewFile(null)} style={{ background: "none", border: "none", fontSize: 20, cursor: "pointer", color: "var(--muted)", lineHeight: 1, padding: "2px 6px" }}>✕</button>
+                  {downloadingPreview ? (
+                    <>
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#fff"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        style={{ animation: "spin 0.8s linear infinite" }}
+                      >
+                        <circle cx="12" cy="12" r="9" strokeOpacity="0.3" />
+                        <path d="M21 12a9 9 0 0 0-9-9" />
+                      </svg>
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#fff"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Download
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setPreviewFile(null)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    fontSize: 20,
+                    cursor: "pointer",
+                    color: "var(--muted)",
+                    lineHeight: 1,
+                    padding: "2px 6px",
+                  }}
+                >
+                  ✕
+                </button>
               </div>
             </div>
-            <div style={{ flex: 1, overflow: "auto", display: "flex", alignItems: "center", justifyContent: "center", background: "#0f172a", padding: 20 }}>
+            <div
+              style={{
+                flex: 1,
+                overflow: "auto",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                background: "#0f172a",
+                padding: previewFile.type?.startsWith("image/") ? 20 : 0,
+              }}
+            >
               {previewFile.type?.startsWith("image/") ? (
                 <img
                   src={previewFile.url}
                   alt={previewFile.name}
-                  style={{ transform: `scale(${previewZoom})`, transition: "transform 0.15s", maxWidth: previewZoom === 1 ? "100%" : "none", maxHeight: previewZoom === 1 ? "100%" : "none" }}
+                  style={{
+                    transform: `scale(${previewZoom})`,
+                    transition: "transform 0.15s",
+                    maxWidth: previewZoom === 1 ? "100%" : "none",
+                    maxHeight: previewZoom === 1 ? "100%" : "none",
+                  }}
+                />
+              ) : previewFile.type === "application/pdf" ||
+                previewFile.name?.toLowerCase().endsWith(".pdf") ? (
+                <iframe
+                  src={previewFile.url}
+                  title={previewFile.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    border: "none",
+                    background: "#fff",
+                  }}
+                />
+              ) : previewFile.name?.toLowerCase().endsWith(".doc") ||
+                previewFile.name?.toLowerCase().endsWith(".docx") ? (
+                <iframe
+                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(previewFile.url)}&embedded=true`}
+                  title={previewFile.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    border: "none",
+                    background: "#fff",
+                  }}
                 />
               ) : (
                 <div style={{ textAlign: "center", color: "#fff" }}>
                   <div style={{ fontSize: 48, marginBottom: 12 }}>📄</div>
-                  <p style={{ fontSize: 14, marginBottom: 4 }}>{previewFile.name}</p>
-                  <p style={{ fontSize: 12, color: "#94a3b8" }}>Preview not available for this file type. Use the Download button above.</p>
+                  <p style={{ fontSize: 14, marginBottom: 4 }}>
+                    {previewFile.name}
+                  </p>
+                  <p style={{ fontSize: 12, color: "#94a3b8" }}>
+                    Preview not available for this file type. Use the Download
+                    button above.
+                  </p>
                 </div>
               )}
             </div>

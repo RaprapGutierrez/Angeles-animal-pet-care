@@ -478,6 +478,7 @@ const CustomerMessages = () => {
   const [mobileView, setMobileView] = useState("list");
   const [previewFile, setPreviewFile] = useState(null);
   const [previewZoom, setPreviewZoom] = useState(1);
+  const [downloadingPreview, setDownloadingPreview] = useState(false);
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -485,6 +486,27 @@ const CustomerMessages = () => {
   const myName = user?.fullName || user?.email || "Customer";
 
   const closeModal = () => setModal((m) => ({ ...m, show: false }));
+
+  const downloadPreviewFile = async (file) => {
+    if (!file || downloadingPreview) return;
+    setDownloadingPreview(true);
+    try {
+      const res = await fetch(file.url);
+      const blob = await res.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = file.name || "download";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      window.open(file.url, "_blank");
+    } finally {
+      setDownloadingPreview(false);
+    }
+  };
   const showModal = (
     title,
     message,
@@ -2014,8 +2036,9 @@ const CustomerMessages = () => {
           <div
             onClick={(e) => e.stopPropagation()}
             style={{
-              maxWidth: 900,
-              width: "100%",
+              maxWidth: "1400px",
+              width: "95vw",
+              height: "90vh",
               maxHeight: "90vh",
               background: "#fff",
               borderRadius: 14,
@@ -2108,11 +2131,9 @@ const CustomerMessages = () => {
                     </button>
                   </>
                 )}
-                <a
-                  href={previewFile.url}
-                  download={previewFile.name}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={() => downloadPreviewFile(previewFile)}
+                  disabled={downloadingPreview}
                   style={{
                     display: "flex",
                     alignItems: "center",
@@ -2124,24 +2145,49 @@ const CustomerMessages = () => {
                     fontSize: 12,
                     fontWeight: 700,
                     textDecoration: "none",
+                    border: "none",
+                    cursor: downloadingPreview ? "default" : "pointer",
+                    opacity: downloadingPreview ? 0.75 : 1,
+                    fontFamily: "inherit",
                   }}
                 >
-                  <svg
-                    width="13"
-                    height="13"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#fff"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                    <polyline points="7 10 12 15 17 10" />
-                    <line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                  Download
-                </a>
+                  {downloadingPreview ? (
+                    <>
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#fff"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        style={{ animation: "spin 0.8s linear infinite" }}
+                      >
+                        <circle cx="12" cy="12" r="9" strokeOpacity="0.3" />
+                        <path d="M21 12a9 9 0 0 0-9-9" />
+                      </svg>
+                      Downloading...
+                    </>
+                  ) : (
+                    <>
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#fff"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                        <polyline points="7 10 12 15 17 10" />
+                        <line x1="12" y1="15" x2="12" y2="3" />
+                      </svg>
+                      Download
+                    </>
+                  )}
+                </button>
                 <button
                   onClick={() => setPreviewFile(null)}
                   style={{
@@ -2166,7 +2212,7 @@ const CustomerMessages = () => {
                 alignItems: "center",
                 justifyContent: "center",
                 background: "#0f172a",
-                padding: 20,
+                padding: previewFile.type?.startsWith("image/") ? 20 : 0,
               }}
             >
               {previewFile.type?.startsWith("image/") ? (
@@ -2178,6 +2224,30 @@ const CustomerMessages = () => {
                     transition: "transform 0.15s",
                     maxWidth: previewZoom === 1 ? "100%" : "none",
                     maxHeight: previewZoom === 1 ? "100%" : "none",
+                  }}
+                />
+              ) : previewFile.type === "application/pdf" ||
+                previewFile.name?.toLowerCase().endsWith(".pdf") ? (
+                <iframe
+                  src={previewFile.url}
+                  title={previewFile.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    border: "none",
+                    background: "#fff",
+                  }}
+                />
+              ) : previewFile.name?.toLowerCase().endsWith(".doc") ||
+                previewFile.name?.toLowerCase().endsWith(".docx") ? (
+                <iframe
+                  src={`https://docs.google.com/viewer?url=${encodeURIComponent(previewFile.url)}&embedded=true`}
+                  title={previewFile.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    border: "none",
+                    background: "#fff",
                   }}
                 />
               ) : (
