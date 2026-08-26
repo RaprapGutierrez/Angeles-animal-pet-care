@@ -508,7 +508,11 @@ const ConfirmModal = ({
   const color = colors[type] || colors.primary;
   return (
     <>
-      <div onClick={onCancel} className="usr-confirm-scrim" style={{ zIndex: 10050 }} />
+      <div
+        onClick={onCancel}
+        className="usr-confirm-scrim"
+        style={{ zIndex: 10050 }}
+      />
       <div className="usr-confirm-wrap" style={{ zIndex: 10051 }}>
         <div className="usr-confirm-box">
           <div className="usr-confirm-card">
@@ -4502,6 +4506,9 @@ const AdminSecurity = () => {
                             boxShadow: "var(--shadow)",
                             position: "relative",
                             overflow: "hidden",
+                            display: "flex",
+                            flexDirection: "column",
+                            height: "100%",
                           }}
                         >
                           <div
@@ -4561,7 +4568,13 @@ const AdminSecurity = () => {
                                 </svg>
                               )}
                             </div>
-                            <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 6,
+                                alignItems: "center",
+                              }}
+                            >
                               {r.system && (
                                 <span
                                   style={{
@@ -4672,7 +4685,7 @@ const AdminSecurity = () => {
                           </div>
                           <div
                             style={{
-                              marginTop: 14,
+                              marginTop: "auto",
                               paddingTop: 12,
                               borderTop: "1px solid var(--border)",
                               fontSize: 12,
