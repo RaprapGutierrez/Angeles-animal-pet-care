@@ -76,8 +76,8 @@ const BRANCH_DISPLAY_NAMES = {
   1: "Main",
   2: "Mabalacat 2",
   3: "Tarlac",
-  4: "San Fernando",
-  5: "Angeles",
+  4: "Angeles",
+  5: "San Fernando",
   6: "Magalang",
 };
 
@@ -140,7 +140,7 @@ const readUserInfo = () => {
     // IMPORTANT: role/branch must come from the signed JWT only.
     // Never trust localStorage overrides here — they're editable via DevTools
     // and would let anyone grant themselves admin/super_admin client-side.
-    const rawRole = appMeta.role || meta.role || payload.role || "Employee";
+    const rawRole = appMeta.role || meta.role || "Employee";
     const role = normalizeRole(rawRole);
     const email = payload.email || "";
     const branch = parseBranch(email) || appMeta.branch || null;
@@ -2271,13 +2271,14 @@ export const Layout = ({ children }) => {
   const [layoutAvatarUrl, setLayoutAvatarUrl] = useState(null);
   const [layoutFirstName, setLayoutFirstName] = useState(null);
   const [dbBranchId, setDbBranchId] = useState(null);
+  const [dbRole, setDbRole] = useState(null);
 
-  // === FUNCTION: Layout > useEffect (load + subscribe to profile avatar/name/branch changes) ===
+  // === FUNCTION: Layout > useEffect (load + subscribe to profile avatar/name/branch/role changes) ===
   useEffect(() => {
     if (!rawUser.id) return;
     supabase
       .from("profiles")
-      .select("avatar_url, first_name, last_name, branch_id")
+      .select("avatar_url, first_name, last_name, branch_id, role")
       .eq("id", rawUser.id)
       .single()
       .then(({ data }) => {
@@ -2287,6 +2288,7 @@ export const Layout = ({ children }) => {
             `${data.first_name || ""} ${data.last_name || ""}`.trim(),
           );
         if (data?.branch_id != null) setDbBranchId(data.branch_id);
+        if (data?.role) setDbRole(data.role);
       });
 
     const ch = supabase
@@ -2308,6 +2310,7 @@ export const Layout = ({ children }) => {
             );
           if (payload.new?.branch_id != null)
             setDbBranchId(payload.new.branch_id);
+          if (payload.new?.role) setDbRole(payload.new.role);
         },
       )
       .subscribe();
@@ -2326,6 +2329,7 @@ export const Layout = ({ children }) => {
     branch: dbBranchId
       ? BRANCH_DISPLAY_NAMES[dbBranchId] || rawUser.branch
       : rawUser.branch,
+    role: dbRole ? normalizeRole(dbRole) : rawUser.role,
   };
 
   const isCustomer = roleIsCustomer(user.role);
