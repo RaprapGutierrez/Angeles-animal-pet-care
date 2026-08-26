@@ -2222,10 +2222,11 @@ const CustomerMessages = () => {
                   style={{
                     transform: `scale(${previewZoom})`,
                     transition: "transform 0.15s",
-                    width: previewZoom === 1 ? "100%" : "auto",
-                    height: previewZoom === 1 ? "100%" : "auto",
-                    maxWidth: previewZoom === 1 ? "100%" : "none",
-                    maxHeight: previewZoom === 1 ? "100%" : "none",
+                    transformOrigin: "center center",
+                    width: "100%",
+                    height: "100%",
+                    maxWidth: "100%",
+                    maxHeight: "100%",
                     objectFit: "contain",
                   }}
                 />
