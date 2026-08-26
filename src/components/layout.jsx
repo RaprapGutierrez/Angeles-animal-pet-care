@@ -2267,17 +2267,18 @@ export const Layout = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const user = readUserInfo();
+  const rawUser = readUserInfo();
   const [layoutAvatarUrl, setLayoutAvatarUrl] = useState(null);
   const [layoutFirstName, setLayoutFirstName] = useState(null);
+  const [dbBranchId, setDbBranchId] = useState(null);
 
-  // === FUNCTION: Layout > useEffect (load + subscribe to profile avatar/name changes) ===
+  // === FUNCTION: Layout > useEffect (load + subscribe to profile avatar/name/branch changes) ===
   useEffect(() => {
-    if (!user.id) return;
+    if (!rawUser.id) return;
     supabase
       .from("profiles")
-      .select("avatar_url, first_name, last_name")
-      .eq("id", user.id)
+      .select("avatar_url, first_name, last_name, branch_id")
+      .eq("id", rawUser.id)
       .single()
       .then(({ data }) => {
         if (data?.avatar_url) setLayoutAvatarUrl(data.avatar_url);
@@ -2285,6 +2286,7 @@ export const Layout = ({ children }) => {
           setLayoutFirstName(
             `${data.first_name || ""} ${data.last_name || ""}`.trim(),
           );
+        if (data?.branch_id != null) setDbBranchId(data.branch_id);
       });
 
     const ch = supabase
@@ -2295,7 +2297,7 @@ export const Layout = ({ children }) => {
           event: "UPDATE",
           schema: "public",
           table: "profiles",
-          filter: `id=eq.${user.id}`,
+          filter: `id=eq.${rawUser.id}`,
         },
         (payload) => {
           if (payload.new?.avatar_url)
@@ -2304,13 +2306,27 @@ export const Layout = ({ children }) => {
             setLayoutFirstName(
               `${payload.new.first_name || ""} ${payload.new.last_name || ""}`.trim(),
             );
+          if (payload.new?.branch_id != null)
+            setDbBranchId(payload.new.branch_id);
         },
       )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [user.id]);
+  }, [rawUser.id]);
+
+  // readUserInfo() only guesses the branch from the JWT/email pattern — it has
+  // no idea about branch changes made later in Admin Security. Once the live
+  // profile row loads, its branch_id overrides that guess, so everything below
+  // (sidebar, topbar, filters) reflects the real database value.
+  const user = {
+    ...rawUser,
+    branchId: dbBranchId ?? rawUser.branchId,
+    branch: dbBranchId
+      ? BRANCH_DISPLAY_NAMES[dbBranchId] || rawUser.branch
+      : rawUser.branch,
+  };
 
   const isCustomer = roleIsCustomer(user.role);
   const isAdmin = user.role === "Admin" || user.role === "super_admin";
@@ -2585,7 +2601,7 @@ export const Layout = ({ children }) => {
       }
     };
 
-   fetchEmergencyAlerts();
+    fetchEmergencyAlerts();
     fetchMessages();
     fetchStockAlerts();
     fetchNewPatients();
