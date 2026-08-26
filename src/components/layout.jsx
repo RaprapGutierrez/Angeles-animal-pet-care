@@ -3534,10 +3534,11 @@ export const Layout = ({ children }) => {
           {/* ── Nav links ── */}
           <nav
             style={{
-              flex: 1,
+              flex: "1 1 auto",
               display: "flex",
               flexDirection: "column",
               alignItems: isExpanded ? "flex-start" : "center",
+              justifyContent: "flex-start",
               width: "100%",
               paddingLeft: 8,
               paddingRight: 8,
@@ -3605,6 +3606,8 @@ export const Layout = ({ children }) => {
               height: 1,
               background: "rgba(255,255,255,0.1)",
               marginBottom: 12,
+              marginTop: "auto",
+              flexShrink: 0,
               transition: "width 0.3s, margin-left 0.3s",
             }}
           />
