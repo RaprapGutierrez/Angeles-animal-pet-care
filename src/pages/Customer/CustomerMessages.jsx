@@ -479,6 +479,31 @@ const CustomerMessages = () => {
   const [previewFile, setPreviewFile] = useState(null);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [downloadingPreview, setDownloadingPreview] = useState(false);
+  const pinchRef = useRef({ startDist: 0, startZoom: 1 });
+
+  const getTouchDist = (touches) => {
+    const [a, b] = touches;
+    return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+  };
+  const handlePinchStart = (e) => {
+    if (e.touches.length === 2) {
+      pinchRef.current = {
+        startDist: getTouchDist(e.touches),
+        startZoom: previewZoom,
+      };
+    }
+  };
+  const handlePinchMove = (e) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dist = getTouchDist(e.touches);
+      const { startDist, startZoom } = pinchRef.current;
+      if (startDist > 0) {
+        const next = Math.min(4, Math.max(0.5, startZoom * (dist / startDist)));
+        setPreviewZoom(+next.toFixed(2));
+      }
+    }
+  };
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -1558,16 +1583,30 @@ const CustomerMessages = () => {
                           }}
                         >
                           {item.attachment_url &&
-                            (item.attachment_type?.startsWith("image/") ? (
+                            (item.attachment_type?.startsWith("image/") ||
+                            /\.(jpe?g|png|gif|webp)$/i.test(
+                              item.attachment_name || "",
+                            ) ? (
                               <img
                                 src={item.attachment_url}
                                 alt={item.attachment_name || "attachment"}
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.preventDefault();
                                   setPreviewZoom(1);
                                   setPreviewFile({
                                     url: item.attachment_url,
                                     name: item.attachment_name,
-                                    type: item.attachment_type,
+                                    type:
+                                      item.attachment_type ||
+                                      (/\.pdf$/i.test(
+                                        item.attachment_name || "",
+                                      )
+                                        ? "application/pdf"
+                                        : /\.docx?$/i.test(
+                                              item.attachment_name || "",
+                                            )
+                                          ? "application/msword"
+                                          : ""),
                                   });
                                 }}
                                 style={{
@@ -1580,12 +1619,23 @@ const CustomerMessages = () => {
                               />
                             ) : (
                               <div
-                                onClick={() => {
+                                onClick={(e) => {
+                                  e.preventDefault();
                                   setPreviewZoom(1);
                                   setPreviewFile({
                                     url: item.attachment_url,
                                     name: item.attachment_name,
-                                    type: item.attachment_type,
+                                    type:
+                                      item.attachment_type ||
+                                      (/\.pdf$/i.test(
+                                        item.attachment_name || "",
+                                      )
+                                        ? "application/pdf"
+                                        : /\.docx?$/i.test(
+                                              item.attachment_name || "",
+                                            )
+                                          ? "application/msword"
+                                          : ""),
                                   });
                                 }}
                                 style={{
@@ -2257,6 +2307,8 @@ const CustomerMessages = () => {
                 <img
                   src={previewFile.url}
                   alt={previewFile.name}
+                  onTouchStart={handlePinchStart}
+                  onTouchMove={handlePinchMove}
                   style={{
                     transform: `scale(${previewZoom})`,
                     transition: "transform 0.15s",
@@ -2266,6 +2318,7 @@ const CustomerMessages = () => {
                     maxWidth: "100%",
                     maxHeight: "100%",
                     objectFit: "contain",
+                    touchAction: "none",
                   }}
                 />
               ) : previewFile.type === "application/pdf" ||

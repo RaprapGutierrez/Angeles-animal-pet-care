@@ -2528,7 +2528,8 @@ const AdminSecurity = () => {
 
   const counts = {
     total: users.length,
-    active: users.filter((u) => onlineIds.has(u.id)).length,
+    active: users.filter((u) => onlineIds.has(u.id) || u.id === currentUser?.id)
+      .length,
     admins: users.filter((u) =>
       ["admin", "super_admin"].includes(u.role?.toLowerCase()),
     ).length,
@@ -3614,7 +3615,8 @@ const AdminSecurity = () => {
                                     <span className="usr-pill-dot" />
                                     Deactivated
                                   </span>
-                                ) : onlineIds.has(u.id) ? (
+                                ) : onlineIds.has(u.id) ||
+                                  u.id === currentUser?.id ? (
                                   <span className="usr-pill active">
                                     <span className="usr-pill-dot" />
                                     Active
@@ -5738,11 +5740,12 @@ const AdminSecurity = () => {
                   {viewUser.role || "—"}
                 </span>
                 <span
-                  className={`badge ${viewUser.status === "Inactive" ? "badge-red" : onlineIds.has(viewUser.id) ? "badge-green" : "badge-gray"}`}
+                  className={`badge ${viewUser.status === "Inactive" ? "badge-red" : onlineIds.has(viewUser.id) || viewUser.id === currentUser?.id ? "badge-green" : "badge-gray"}`}
                 >
                   {viewUser.status === "Inactive"
                     ? "Deactivated"
-                    : onlineIds.has(viewUser.id)
+                    : onlineIds.has(viewUser.id) ||
+                        viewUser.id === currentUser?.id
                       ? "Active"
                       : "Inactive"}
                 </span>
