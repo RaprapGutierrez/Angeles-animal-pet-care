@@ -2047,7 +2047,7 @@ const Branches = () => {
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
                 gap: 12,
-                alignItems: "start",
+                alignItems: "stretch",
               }}
             >
               {branches.map((b) => {
@@ -2065,6 +2065,9 @@ const Branches = () => {
                       boxShadow: isExpanded
                         ? "0 4px 24px rgba(30,58,138,0.13)"
                         : "var(--shadow)",
+                      display: "flex",
+                      flexDirection: "column",
+                      height: "100%",
                     }}
                   >
                     <div
@@ -2336,7 +2339,14 @@ const Branches = () => {
                         <polygon points="150,8 162,12 150,16" fill="#dc2626" />
                       </svg>
                     </div>
-                    <div style={{ padding: 16 }}>
+                    <div
+                      style={{
+                        padding: 16,
+                        display: "flex",
+                        flexDirection: "column",
+                        flex: 1,
+                      }}
+                    >
                       <div
                         style={{
                           display: "flex",
@@ -2391,6 +2401,11 @@ const Branches = () => {
                             fontSize: 12,
                             color: "var(--muted)",
                             margin: 0,
+                            display: "-webkit-box",
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: "vertical",
+                            overflow: "hidden",
+                            lineHeight: 1.4,
                           }}
                         >
                           {b.address}
@@ -2454,49 +2469,55 @@ const Branches = () => {
                       </div>
 
                       {/* Service badges (compact preview) */}
-                      {b.services && b.services.length > 0 && !isExpanded && (
-                        <div
-                          style={{
-                            display: "flex",
-                            flexWrap: "wrap",
-                            gap: 4,
-                            marginBottom: 12,
-                          }}
-                        >
-                          {b.services.slice(0, 3).map((svc) => (
-                            <span
-                              key={svc}
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                padding: "3px 10px",
-                                borderRadius: 99,
-                                background: "var(--light-blue)",
-                                color: "var(--royal)",
-                              }}
-                            >
-                              {svc}
-                            </span>
-                          ))}
-                          {b.services.length > 3 && (
-                            <span
-                              style={{
-                                fontSize: 11,
-                                fontWeight: 600,
-                                padding: "3px 10px",
-                                borderRadius: 99,
-                                background: "#f1f5f9",
-                                color: "var(--muted)",
-                              }}
-                            >
-                              +{b.services.length - 3} more
-                            </span>
-                          )}
-                        </div>
-                      )}
+                      <div style={{ minHeight: 26, marginBottom: 12 }}>
+                        {b.services && b.services.length > 0 && !isExpanded && (
+                          <div
+                            style={{
+                              display: "flex",
+                              flexWrap: "wrap",
+                              gap: 4,
+                            }}
+                          >
+                            {b.services.slice(0, 3).map((svc) => (
+                              <span
+                                key={svc}
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  padding: "3px 10px",
+                                  borderRadius: 99,
+                                  background: "var(--light-blue)",
+                                  color: "var(--royal)",
+                                }}
+                              >
+                                {svc}
+                              </span>
+                            ))}
+                            {b.services.length > 3 && (
+                              <span
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 600,
+                                  padding: "3px 10px",
+                                  borderRadius: 99,
+                                  background: "#f1f5f9",
+                                  color: "var(--muted)",
+                                }}
+                              >
+                                +{b.services.length - 3} more
+                              </span>
+                            )}
+                          </div>
+                        )}
+                      </div>
 
                       <div
-                        style={{ display: "flex", gap: 6, flexwrap: "wrap" }}
+                        style={{
+                          display: "flex",
+                          gap: 6,
+                          flexWrap: "wrap",
+                          marginTop: "auto",
+                        }}
                       >
                         <button
                           title="Edit"
@@ -3520,7 +3541,7 @@ const Branches = () => {
                     placeholder="Full address"
                   />
                 </div>
-               <div className="form-group">
+                <div className="form-group">
                   <label>
                     Phone <span style={{ color: "#dc2626" }}>*</span>
                   </label>
@@ -3530,7 +3551,9 @@ const Branches = () => {
                     maxLength={11}
                     value={form.phone}
                     onChange={(e) => {
-                      const digitsOnly = e.target.value.replace(/\D/g, "").slice(0, 11);
+                      const digitsOnly = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 11);
                       setFormDirty(true);
                       setForm({ ...form, phone: digitsOnly });
                     }}

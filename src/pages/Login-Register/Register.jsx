@@ -1205,8 +1205,9 @@ const Register = () => {
                 marginBottom: 8,
               }}
             >
-              By registering you agree to our terms of service and privacy
-              policy.
+              This registration is for customers only. If you are an employee,
+              please contact your branch manager or the admin to have an account
+              created for you.
             </p>
 
             <p
