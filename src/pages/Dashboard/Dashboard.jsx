@@ -217,13 +217,20 @@ const DashCard = ({
           to={viewAllTo}
           style={{
             fontSize: 12,
-            color: "var(--royal)",
+            color: "#60a5fa",
             textDecoration: "none",
-            fontWeight: 600,
+            fontWeight: 700,
             padding: "5px 10px",
             borderRadius: 8,
-            border: "1px solid rgba(30,58,138,0.15)",
-            transition: "background 0.15s",
+            background: "rgba(96,165,250,0.12)",
+            border: "1px solid rgba(96,165,250,0.3)",
+            transition: "background 0.15s, color 0.15s",
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = "rgba(96,165,250,0.22)";
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = "rgba(96,165,250,0.12)";
           }}
         >
           {viewAllLabel}
@@ -606,8 +613,8 @@ const Dashboard = () => {
     if (!user?.id) return;
 
     const recomputeUnread = async () => {
-      const [{ count: sameUnread }, { count: crossUnread }] =
-        await Promise.all([
+      const [{ count: sameUnread }, { count: crossUnread }] = await Promise.all(
+        [
           supabase
             .from("messages")
             .select("id", { count: "exact", head: true })
@@ -618,7 +625,8 @@ const Dashboard = () => {
             .select("id", { count: "exact", head: true })
             .eq("recipient_id", user.id)
             .eq("is_read", false),
-        ]);
+        ],
+      );
       setStats((prev) => ({
         ...prev,
         messages: (sameUnread || 0) + (crossUnread || 0),

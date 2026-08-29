@@ -2060,6 +2060,7 @@ function Hero({ onBrowse }) {
               Browse Branches
             </button>
             <button
+              onClick={() => (window.location.href = "/login")}
               className="pill"
               style={{
                 padding: "14px 32px",

@@ -438,7 +438,7 @@ const RoomSelect = ({ value, onChange, rooms, accent = "#6366f1" }) => {
       }}
       onMouseEnter={(e) => {
         if (!isSelected && !isEmpty)
-          e.currentTarget.style.background = "#f4f6fa";
+          e.currentTarget.style.background = "var(--bg)";
       }}
       onMouseLeave={(e) => {
         if (!isSelected)
@@ -1216,7 +1216,7 @@ const CustomSelect = ({
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected && !isEmpty)
-                      e.currentTarget.style.background = "#f4f6fa";
+                      e.currentTarget.style.background = "var(--bg)";
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected)
@@ -5202,7 +5202,7 @@ const PatientRecord = () => {
                         transition: "background 0.12s",
                       }}
                       onMouseOver={(e) =>
-                        (e.currentTarget.style.background = "#f0fdf4")
+                        (e.currentTarget.style.background = "var(--bg)")
                       }
                       onMouseOut={(e) =>
                         (e.currentTarget.style.background = "var(--card)")
@@ -5778,7 +5778,7 @@ const PatientRecord = () => {
           left: "var(--pr-topbar-left)",
           right: 0,
           zIndex: 40,
-          background: "#fff",
+          background: "var(--card)",
         }}
       >
         <div className="topbar-title">
