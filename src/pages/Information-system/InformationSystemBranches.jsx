@@ -2059,8 +2059,13 @@ function Hero({ onBrowse }) {
             >
               Browse Branches
             </button>
-            <button
-              onClick={() => (window.location.href = "/login")}
+           <button
+              onClick={() => {
+                const sessionUser = getSessionUser();
+                window.location.href = sessionUser
+                  ? "/appointments"
+                  : "/login";
+              }}
               className="pill"
               style={{
                 padding: "14px 32px",
@@ -2083,8 +2088,7 @@ function Hero({ onBrowse }) {
               }}
             >
               Book Appointment
-            </button>
-          </div>
+            </button>          </div>
         </div>
 
         {/* Stats */}

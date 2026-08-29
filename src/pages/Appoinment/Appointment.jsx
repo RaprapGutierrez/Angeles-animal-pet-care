@@ -249,7 +249,7 @@ const CustomSelect = ({
                       }}
                       onMouseEnter={(e) => {
                         if (!isSelected && !opt.disabled && !isEmpty)
-                          e.currentTarget.style.background = "#f4f6fa";
+                          e.currentTarget.style.background = "var(--bg)";
                       }}
                       onMouseLeave={(e) => {
                         if (!isSelected)
@@ -2827,8 +2827,8 @@ const Appointment = () => {
                   style={{
                     minHeight: 100,
                     borderRadius: 10,
-                    background: "#fafafa",
-                    border: "1px solid #f1f5f9",
+                    background: "var(--bg)",
+                    border: "1px solid var(--border)",
                   }}
                 />
               );
@@ -2853,13 +2853,15 @@ const Appointment = () => {
                 key={i}
                 style={{
                   minHeight: 70,
-                  border: isToday ? "2px solid #3b82f6" : "1px solid #e8edf4",
+                  border: isToday
+                    ? "2px solid #3b82f6"
+                    : "1px solid var(--border)",
                   borderRadius: 8,
                   background: isToday
-                    ? "#eff6ff"
+                    ? "rgba(59,130,246,0.12)"
                     : isSun || isSat
-                      ? "#fafbff"
-                      : "#fff",
+                      ? "var(--bg)"
+                      : "var(--card)",
                   position: "relative",
                   transition: "box-shadow 0.15s, transform 0.15s",
                   overflow: "hidden",
@@ -4320,7 +4322,7 @@ const Appointment = () => {
           left: "var(--current-sidebar-w, 62px)",
           right: 0,
           zIndex: 40,
-          background: "#fff",
+          background: "var(--card)",
           flexWrap: "wrap",
         }}
       >
@@ -4423,7 +4425,7 @@ const Appointment = () => {
                 style={{
                   padding: "7px 18px",
                   border: "none",
-                  background: view === v ? "var(--royal)" : "#fff",
+                  background: view === v ? "var(--royal)" : "var(--card)",
                   color: view === v ? "#fff" : "var(--muted)",
                   fontSize: 13,
                   fontWeight: 600,

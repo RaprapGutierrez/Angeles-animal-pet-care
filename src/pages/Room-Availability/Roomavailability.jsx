@@ -689,7 +689,7 @@ const CustomSelect = ({
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected && !isEmpty)
-                      e.currentTarget.style.background = "#f4f6fa";
+                      e.currentTarget.style.background = "var(--bg)";
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected)
@@ -773,9 +773,7 @@ const CustomSelect = ({
           padding: "8px 34px 8px 12px",
           border: "1.5px solid",
           borderRadius: 9,
-          background: open
-            ? "linear-gradient(135deg,#ffffff,#f5f3ff)"
-            : "linear-gradient(to bottom,#ffffff,#f8fafc)",
+          background: "var(--card)",
           fontSize: 13,
           fontWeight: 600,
           color: value ? "var(--text)" : "#b0bac9",
@@ -784,8 +782,8 @@ const CustomSelect = ({
           boxSizing: "border-box",
           boxShadow: open
             ? `0 0 0 3px ${accent}22, 0 2px 8px rgba(0,0,0,0.08)`
-            : "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)",
-          borderColor: open ? accent : "#dde3ec",
+            : "0 1px 3px rgba(0,0,0,0.06)",
+          borderColor: open ? accent : "var(--border)",
           transition: "border-color 0.18s, box-shadow 0.18s, background 0.18s",
           display: "flex",
           alignItems: "center",
@@ -797,15 +795,13 @@ const CustomSelect = ({
         onMouseEnter={(e) => {
           if (!open) {
             e.currentTarget.style.borderColor = "#a5b4fc";
-            e.currentTarget.style.boxShadow =
-              "0 2px 8px rgba(99,102,241,0.10), inset 0 1px 0 rgba(255,255,255,0.9)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(99,102,241,0.10)";
           }
         }}
         onMouseLeave={(e) => {
           if (!open) {
-            e.currentTarget.style.borderColor = "#dde3ec";
-            e.currentTarget.style.boxShadow =
-              "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)";
+            e.currentTarget.style.borderColor = "var(--border)";
+            e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
           }
         }}
       >
@@ -828,7 +824,7 @@ const CustomSelect = ({
             width: 20,
             height: 20,
             borderRadius: 6,
-            background: open ? accent : "#f1f5f9",
+            background: open ? accent : "var(--bg)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1214,16 +1210,14 @@ const RoomFormModal = ({
             gap: 8,
             padding: "8px 12px",
             border: "1.5px solid",
-            borderColor: open ? "#6366f1" : "#dde3ec",
+            borderColor: open ? "#6366f1" : "var(--border)",
             borderRadius: 9,
-            background: open
-              ? "linear-gradient(135deg,#ffffff,#f5f3ff)"
-              : "linear-gradient(to bottom,#ffffff,#f8fafc)",
+            background: "var(--card)",
             cursor: "pointer",
             userSelect: "none",
             boxShadow: open
               ? "0 0 0 3px rgba(99,102,241,0.12),0 2px 8px rgba(0,0,0,0.08)"
-              : "0 1px 3px rgba(0,0,0,0.06),inset 0 1px 0 rgba(255,255,255,0.9)",
+              : "0 1px 3px rgba(0,0,0,0.06)",
             transition: "all 0.18s",
           }}
         >
@@ -1232,7 +1226,7 @@ const RoomFormModal = ({
               width: 20,
               height: 20,
               borderRadius: 6,
-              background: open ? "#6366f1" : "#f1f5f9",
+              background: open ? "#6366f1" : "var(--bg)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -1567,7 +1561,7 @@ const RoomFormModal = ({
             <div
               style={{
                 background: "#f1f5f9",
-                borderBottom: "1px solid #e2e8f0",
+                borderBottom: "1px solid var(--border)",
                 padding: "6px 16px",
               }}
             >
@@ -1577,7 +1571,7 @@ const RoomFormModal = ({
                   fontWeight: 800,
                   textTransform: "uppercase",
                   letterSpacing: "1px",
-                  color: "#64748b",
+                  color: "var(--muted)",
                 }}
               >
                 Current Occupant
@@ -2132,7 +2126,7 @@ const RoomAvailability = () => {
 
   const fetchRooms = async () => {
     if (userLoading || !user) return;
-     setLoading(true);
+    setLoading(true);
     let q = supabase
       .from("rooms")
       .select("*")
@@ -2555,9 +2549,10 @@ const RoomAvailability = () => {
           left: "var(--current-sidebar-w, 62px)",
           right: 0,
           zIndex: 40,
-          background: "#fff",
+          background: "var(--card)",
         }}
       >
+        {" "}
         <div className="topbar-title">
           <img src="/icon/room.png" alt="" />
           <div>
