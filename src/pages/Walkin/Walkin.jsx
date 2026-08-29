@@ -329,7 +329,7 @@ const CustomSelect = ({
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected && !opt.disabled && !isEmpty)
-                      e.currentTarget.style.background = "#f4f6fa";
+                      e.currentTarget.style.background = "var(--bg)";
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected)
@@ -413,9 +413,7 @@ const CustomSelect = ({
           padding: "8px 34px 8px 12px",
           border: "1.5px solid",
           borderRadius: 9,
-          background: open
-            ? "linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%)"
-            : "linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%)",
+          background: "var(--card)",
           fontSize: 13,
           fontWeight: 600,
           color: value ? "var(--text)" : "#b0bac9",
@@ -424,8 +422,8 @@ const CustomSelect = ({
           boxSizing: "border-box",
           boxShadow: open
             ? `0 0 0 3px ${accent}22, 0 2px 8px rgba(0,0,0,0.08)`
-            : "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)",
-          borderColor: open ? accent : "#dde3ec",
+            : "0 1px 3px rgba(0,0,0,0.06)",
+          borderColor: open ? accent : "var(--border)",
           transition: "border-color 0.18s, box-shadow 0.18s, background 0.18s",
           display: "flex",
           alignItems: "center",
@@ -437,15 +435,13 @@ const CustomSelect = ({
         onMouseEnter={(e) => {
           if (!open) {
             e.currentTarget.style.borderColor = "#a5b4fc";
-            e.currentTarget.style.boxShadow =
-              "0 2px 8px rgba(99,102,241,0.10), inset 0 1px 0 rgba(255,255,255,0.9)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(99,102,241,0.10)";
           }
         }}
         onMouseLeave={(e) => {
           if (!open) {
-            e.currentTarget.style.borderColor = "#dde3ec";
-            e.currentTarget.style.boxShadow =
-              "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)";
+            e.currentTarget.style.borderColor = "var(--border)";
+            e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
           }
         }}
       >
@@ -468,7 +464,7 @@ const CustomSelect = ({
             width: 20,
             height: 20,
             borderRadius: 6,
-            background: open ? accent : "#f1f5f9",
+            background: open ? accent : "var(--bg)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -2531,6 +2527,7 @@ const Walkin = () => {
                       opacity:
                         statusFilter && statusFilter !== sc.filter ? 0.55 : 1,
                       transition: "opacity 0.15s",
+                      background: "var(--card)",
                     }}
                   >
                     <div style={{ display: "flex", alignItems: "flex-start" }}>
@@ -3939,7 +3936,7 @@ const Walkin = () => {
                       <div
                         key={label}
                         style={{
-                          background: "#f8fafc",
+                          background: "var(--bg)",
                           border: "1.5px solid var(--border)",
                           borderRadius: 10,
                           padding: "12px 14px",
@@ -4281,14 +4278,14 @@ const Walkin = () => {
                           display: "inline-flex",
                           alignItems: "center",
                           gap: 6,
-                          background: "#eff6ff",
-                          border: "1px solid #bfdbfe",
+                          background: "rgba(59,130,246,0.15)",
+                          border: "1px solid rgba(59,130,246,0.35)",
                           borderRadius: 6,
                           padding: "4px 10px",
                           marginBottom: 10,
                           fontSize: 11,
                           fontWeight: 700,
-                          color: "#1e40af",
+                          color: "#60a5fa",
                         }}
                       >
                         <svg
@@ -4338,7 +4335,9 @@ const Walkin = () => {
                               fontFamily: "inherit",
                               transition: "all 0.15s",
                               background:
-                                ownerType === key ? "var(--royal)" : "#fff",
+                                ownerType === key
+                                  ? "var(--royal)"
+                                  : "var(--card)",
                               color:
                                 ownerType === key ? "#fff" : "var(--muted)",
                             }}
@@ -4637,7 +4636,7 @@ const Walkin = () => {
                                   padding: "9px 12px",
                                   border: `1.5px solid ${showOwnerDrop ? "var(--royal)" : "var(--border)"}`,
                                   borderRadius: 8,
-                                  background: "#fff",
+                                  background: "var(--card)",
                                   cursor: "text",
                                   boxSizing: "border-box",
                                   transition: "border-color 0.15s",
@@ -4699,7 +4698,7 @@ const Walkin = () => {
                                     top: "100%",
                                     left: 0,
                                     right: 0,
-                                    background: "#fff",
+                                    background: "var(--card)",
                                     border: "1.5px solid var(--border)",
                                     borderRadius: 10,
                                     boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
@@ -4974,7 +4973,9 @@ const Walkin = () => {
                               cursor: "pointer",
                               fontFamily: "inherit",
                               background:
-                                form.mode === key ? "var(--royal)" : "#fff",
+                                form.mode === key
+                                  ? "var(--royal)"
+                                  : "var(--card)",
                               color:
                                 form.mode === key ? "#fff" : "var(--muted)",
                             }}
@@ -5021,7 +5022,7 @@ const Walkin = () => {
                               width: "100%",
                               border: "1.5px solid var(--border)",
                               borderRadius: 8,
-                              background: "#fff",
+                              background: "var(--card)",
                               fontSize: 13,
                               fontWeight: 600,
                               color: "var(--text)",
@@ -5031,6 +5032,7 @@ const Walkin = () => {
                               boxSizing: "border-box",
                             }}
                           >
+                            {" "}
                             <option value="">— Select a pet —</option>
                             {existingPatients.map((ep) => (
                               <option key={ep.id} value={ep.id}>
@@ -5252,7 +5254,9 @@ const Walkin = () => {
                                   fontFamily: "inherit",
                                   transition: "all 0.15s",
                                   background:
-                                    p.mode === key ? "var(--royal)" : "#fff",
+                                    p.mode === key
+                                      ? "var(--royal)"
+                                      : "var(--card)",
                                   color:
                                     p.mode === key ? "#fff" : "var(--muted)",
                                 }}
@@ -5299,7 +5303,7 @@ const Walkin = () => {
                                   width: "100%",
                                   border: "1.5px solid var(--border)",
                                   borderRadius: 8,
-                                  background: "#fff",
+                                  background: "var(--card)",
                                   fontSize: 13,
                                   fontWeight: 600,
                                   color: "var(--text)",

@@ -1407,6 +1407,7 @@ const PointOfSale = () => {
                       <img
                         src={getCategoryIcon(p.category)}
                         alt={p.category}
+                        className="pos-cat-icon"
                         style={{ width: 28, height: 28, objectFit: "contain" }}
                       />
                     </div>
@@ -1511,6 +1512,7 @@ const PointOfSale = () => {
                 <img
                   src={ICONS.cart}
                   alt="Cart"
+                  className="pos-cat-icon"
                   style={{ width: 20, height: 20, objectFit: "contain" }}
                 />
                 <strong style={{ fontSize: 15, fontWeight: 700 }}>Cart</strong>

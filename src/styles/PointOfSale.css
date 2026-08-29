@@ -158,6 +158,23 @@ html.dark .pos-topbar-icon {
   filter: brightness(0) invert(1);
 }
 
+html.dark .pos-cat-icon {
+  filter: brightness(0) invert(1);
+}
+
+html.dark .product-card {
+  background: var(--card) !important;
+}
+html.dark .product-card:hover {
+  background: #263548 !important;
+  border-color: var(--royal) !important;
+}
+
+html.dark .process-btn:disabled {
+  background: #334155 !important;
+  color: #64748b !important;
+}
+
 @media (max-width: 768px) {
   .pos-topbar {
     position: static !important;
