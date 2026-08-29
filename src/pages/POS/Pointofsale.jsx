@@ -1431,6 +1431,7 @@ const PointOfSale = () => {
                       {p.category}
                     </p>
                     <p
+                      className="pos-item-price"
                       style={{
                         fontSize: 14,
                         fontWeight: 800,
@@ -1594,6 +1595,7 @@ const PointOfSale = () => {
                       setClientType(key);
                       clearClient();
                     }}
+                    className="client-toggle-btn"
                     style={{
                       flex: 1,
                       padding: "7px 0",
@@ -1603,7 +1605,8 @@ const PointOfSale = () => {
                       cursor: "pointer",
                       fontFamily: "inherit",
                       transition: "all 0.15s",
-                      background: clientType === key ? "var(--royal)" : "#fff",
+                      background:
+                        clientType === key ? "var(--royal)" : "var(--card)",
                       color: clientType === key ? "#fff" : "var(--muted)",
                     }}
                   >
@@ -2103,6 +2106,7 @@ const PointOfSale = () => {
                   <img
                     src={ICONS.cart}
                     alt="Cart"
+                    className="pos-cat-icon"
                     style={{
                       width: 36,
                       height: 36,
@@ -2399,7 +2403,7 @@ const PointOfSale = () => {
                   <button
                     key={m}
                     onClick={() => setPayMethod(m)}
-                    className="pay-method"
+                    className="pay-method cash-btn"
                     style={{
                       flex: 1,
                       padding: "9px 0",

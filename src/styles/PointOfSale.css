@@ -175,6 +175,21 @@ html.dark .process-btn:disabled {
   color: #64748b !important;
 }
 
+html.dark .client-toggle-btn {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+}
+
+html.dark .pos-item-price {
+  color: #60a5fa !important;
+}
+
+html.dark .cash-btn {
+  background: #3b82f6 !important;
+  border-color: #3b82f6 !important;
+  color: #fff !important;
+}
+
 @media (max-width: 768px) {
   .pos-topbar {
     position: static !important;

@@ -93,6 +93,32 @@
   transform: scale(1.35);
 }
 
+html.dark .msg-chat-bg {
+  background: var(--bg) !important;
+}
+
+html.dark .msg-bubble-incoming {
+  background: var(--card) !important;
+  color: var(--text) !important;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3) !important;
+}
+
+html.dark .msg-footer {
+  background: var(--card) !important;
+  border-top-color: var(--border) !important;
+}
+
+html.dark .msg-text-input {
+  background: var(--bg) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+html.dark .msg-attach-btn {
+  background: var(--bg) !important;
+  border-color: var(--border) !important;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);

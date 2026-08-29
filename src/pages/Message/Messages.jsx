@@ -2293,7 +2293,7 @@ const Messages = () => {
               )}
 
               <div
-                className="chat-scroll"
+                className="chat-scroll msg-chat-bg"
                 style={{
                   flex: 1,
                   overflowY: "auto",
@@ -2381,6 +2381,7 @@ const Messages = () => {
                       )}
                       <div style={{ maxWidth: "62%" }}>
                         <div
+                          className={me ? "" : "msg-bubble-incoming"}
                           style={{
                             background: me
                               ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
@@ -2551,6 +2552,7 @@ const Messages = () => {
               </div>
 
               <div
+                className="msg-footer"
                 style={{
                   background: "#fff",
                   borderTop: "1.5px solid #eef0f6",
@@ -2671,6 +2673,7 @@ const Messages = () => {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     title="Attach file"
+                    className="msg-attach-btn"
                     style={{
                       width: 40,
                       height: 40,
@@ -2709,6 +2712,7 @@ const Messages = () => {
                       }
                     }}
                     placeholder={`Message ${selected.full_name || selected.email}…`}
+                    className="msg-text-input"
                     style={{
                       flex: 1,
                       padding: "12px 18px",

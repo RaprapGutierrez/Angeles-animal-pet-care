@@ -194,6 +194,7 @@ const CustomSelect = ({
       <div
         ref={triggerRef}
         onClick={handleOpen}
+        className="report-select-trigger"
         style={{
           width: "100%",
           padding: "8px 34px 8px 12px",
@@ -1321,20 +1322,21 @@ const Report = () => {
             left: "var(--current-sidebar-w, 62px)",
             right: 0,
             zIndex: 40,
-            background: "#fff",
+            background: "var(--card)",
           }}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img
               src="/icon/reports.png"
               alt=""
+              className="report-topbar-icon"
               style={{
                 width: 22,
                 height: 22,
                 filter:
                   "brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)",
               }}
-            />
+            />{" "}
             <div>
               <h1
                 style={{
@@ -1398,7 +1400,7 @@ const Report = () => {
 
             {/* ── All Transactions Button ── */}
             <button
-              className="btn btn-outline"
+              className="btn btn-outline report-outline-btn"
               onClick={() => {
                 setShowAllTx(true);
                 fetchAllTransactions();
@@ -1427,7 +1429,7 @@ const Report = () => {
 
             {/* ── PDF Export Button ── */}
             <button
-              className="btn btn-outline export-btn"
+              className="btn btn-outline export-btn report-outline-btn"
               onClick={handleExportPDF}
               disabled={loading || !!exporting}
               style={{
