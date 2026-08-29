@@ -402,7 +402,7 @@ const CustomSelect = ({
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected)
-                      e.currentTarget.style.background = "#f4f6fa";
+                      e.currentTarget.style.background = "var(--bg)";
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected)
@@ -484,9 +484,7 @@ const CustomSelect = ({
           padding: "8px 34px 8px 12px",
           border: "1.5px solid",
           borderRadius: 9,
-          background: open
-            ? "linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%)"
-            : "linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%)",
+          background: "var(--card)",
           fontSize: 13,
           fontWeight: 600,
           color: "var(--text)",
@@ -495,8 +493,8 @@ const CustomSelect = ({
           boxSizing: "border-box",
           boxShadow: open
             ? `0 0 0 3px ${accent}22, 0 2px 8px rgba(0,0,0,0.08)`
-            : "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)",
-          borderColor: open ? accent : "#dde3ec",
+            : "0 1px 3px rgba(0,0,0,0.06)",
+          borderColor: open ? accent : "var(--border)",
           transition: "border-color 0.18s, box-shadow 0.18s, background 0.18s",
           display: "flex",
           alignItems: "center",
@@ -508,15 +506,13 @@ const CustomSelect = ({
         onMouseEnter={(e) => {
           if (!open) {
             e.currentTarget.style.borderColor = "#a5b4fc";
-            e.currentTarget.style.boxShadow =
-              "0 2px 8px rgba(99,102,241,0.10), inset 0 1px 0 rgba(255,255,255,0.9)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(99,102,241,0.10)";
           }
         }}
         onMouseLeave={(e) => {
           if (!open) {
-            e.currentTarget.style.borderColor = "#dde3ec";
-            e.currentTarget.style.boxShadow =
-              "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)";
+            e.currentTarget.style.borderColor = "var(--border)";
+            e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
           }
         }}
       >
@@ -539,7 +535,7 @@ const CustomSelect = ({
             width: 20,
             height: 20,
             borderRadius: 6,
-            background: open ? accent : "#f1f5f9",
+            background: open ? accent : "var(--bg)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1388,12 +1384,13 @@ const PointOfSale = () => {
                     onClick={() => addToCart(p)}
                     style={{
                       background: "var(--card)",
-                      border: "1px solid var(--border)",
+                      border: "1.5px solid var(--border)",
                       borderRadius: 10,
                       padding: 14,
                       cursor: "pointer",
                       textAlign: "center",
                       animationDelay: `${idx * 0.07}s`,
+                      boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
                     }}
                   >
                     <div
@@ -1701,7 +1698,7 @@ const PointOfSale = () => {
                         border: `1.5px solid ${showDropdown ? "var(--royal)" : "var(--border)"}`,
                         borderRadius: 8,
                         boxSizing: "border-box",
-                        background: "var(--card)",
+                        background: "var(--bg)",
                         cursor: "text",
                         transition: "border-color 0.15s",
                       }}
@@ -2581,7 +2578,7 @@ const PointOfSale = () => {
         <div style={S.overlay}>
           <div
             style={{
-              background: "#fff",
+              background: "var(--card)",
               borderRadius: 14,
               width: "100%",
               maxWidth: 400,
@@ -2608,7 +2605,8 @@ const PointOfSale = () => {
                   background: "#fff",
                   borderRadius: 8,
                   padding: "20px 16px",
-                  border: "1px dashed var(--border)",
+                  border: "1px dashed #cbd5e1",
+                  boxShadow: "0 2px 10px rgba(0,0,0,0.15)",
                 }}
                 dangerouslySetInnerHTML={{
                   __html: generateReceiptHTML(lastTx),
@@ -2759,7 +2757,7 @@ const PointOfSale = () => {
         <div style={S.overlay}>
           <div
             style={{
-              background: "#fff",
+              background: "var(--card)",
               borderRadius: 14,
               width: "100%",
               maxWidth: 750,

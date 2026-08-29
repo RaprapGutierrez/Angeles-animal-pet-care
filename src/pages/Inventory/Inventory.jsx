@@ -139,7 +139,7 @@ const CustomSelect = ({
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected && !opt.disabled && !isEmpty)
-                      e.currentTarget.style.background = "#f4f6fa";
+                      e.currentTarget.style.background = "var(--bg)";
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected)
@@ -223,9 +223,7 @@ const CustomSelect = ({
           padding: "8px 34px 8px 12px",
           border: "1.5px solid",
           borderRadius: 9,
-          background: open
-            ? "linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%)"
-            : "linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%)",
+          background: "var(--card)",
           fontSize: 13,
           fontWeight: 600,
           color: value ? "var(--text)" : "#b0bac9",
@@ -234,8 +232,8 @@ const CustomSelect = ({
           boxSizing: "border-box",
           boxShadow: open
             ? `0 0 0 3px ${accent}22, 0 2px 8px rgba(0,0,0,0.08)`
-            : "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)",
-          borderColor: open ? accent : "#dde3ec",
+            : "0 1px 3px rgba(0,0,0,0.06)",
+          borderColor: open ? accent : "var(--border)",
           transition: "border-color 0.18s, box-shadow 0.18s, background 0.18s",
           display: "flex",
           alignItems: "center",
@@ -247,15 +245,13 @@ const CustomSelect = ({
         onMouseEnter={(e) => {
           if (!open) {
             e.currentTarget.style.borderColor = "#a5b4fc";
-            e.currentTarget.style.boxShadow =
-              "0 2px 8px rgba(99,102,241,0.10), inset 0 1px 0 rgba(255,255,255,0.9)";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(99,102,241,0.10)";
           }
         }}
         onMouseLeave={(e) => {
           if (!open) {
-            e.currentTarget.style.borderColor = "#dde3ec";
-            e.currentTarget.style.boxShadow =
-              "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)";
+            e.currentTarget.style.borderColor = "var(--border)";
+            e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
           }
         }}
       >
@@ -278,7 +274,7 @@ const CustomSelect = ({
             width: 20,
             height: 20,
             borderRadius: 6,
-            background: open ? accent : "#f1f5f9",
+            background: open ? accent : "var(--bg)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -1386,9 +1382,22 @@ const ViewModal = ({ item, onClose, onEdit, onDelete }) => {
                     justifyContent: "center",
                     border: "2px solid rgba(255,255,255,0.2)",
                     color: "rgba(255,255,255,0.9)",
+                    overflow: "hidden",
                   }}
                 >
-                  {React.cloneElement(icon, { width: 22, height: 22 })}
+                  {item.image_url ? (
+                    <img
+                      src={item.image_url}
+                      alt=""
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        objectFit: "cover",
+                      }}
+                    />
+                  ) : (
+                    React.cloneElement(icon, { width: 22, height: 22 })
+                  )}
                 </div>
                 <div style={{ flex: "1 1 140px", minWidth: 0 }}>
                   <h2
@@ -1720,7 +1729,32 @@ const ItemFormModal = ({ item, onClose, onSave, saving }) => {
   const [otherSupplier, setOtherSupplier] = useState(
     () => !!form.supplier && !SUPPLIER_OPTIONS.includes(form.supplier),
   );
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const imageInputRef = useRef(null);
 
+  const uploadItemImage = async (file) => {
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Please choose an image under 5MB.");
+      return;
+    }
+    setUploadingImage(true);
+    const ext = file.name.split(".").pop();
+    const path = `inventory/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error: upErr } = await supabase.storage
+      .from("attachments")
+      .upload(path, file);
+    if (upErr) {
+      setUploadingImage(false);
+      alert("Upload failed: " + upErr.message);
+      return;
+    }
+    const { data: pub } = supabase.storage
+      .from("attachments")
+      .getPublicUrl(path);
+    set("image_url", pub?.publicUrl || "");
+    setUploadingImage(false);
+  };
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
   const catStyle = CAT_COLOR[form.category] || CAT_COLOR.Other;
   const icon = CAT_ICON[form.category] || "📦";
@@ -1852,6 +1886,146 @@ const ItemFormModal = ({ item, onClose, onSave, saving }) => {
           {/* ── Section: Item Identity ── */}
           <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
             <div className="inv-section-label">Item Information</div>
+
+            {/* Row: Item Photo */}
+            <div
+              style={{
+                padding: "14px 16px",
+                borderBottom: "1px solid #e2e8f0",
+                display: "flex",
+                alignItems: "center",
+                gap: 14,
+              }}
+            >
+              <div
+                onClick={() => imageInputRef.current?.click()}
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 12,
+                  border: `1.5px dashed ${catStyle.border}`,
+                  background: form.image_url ? "transparent" : catStyle.bg,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  flexShrink: 0,
+                  overflow: "hidden",
+                  position: "relative",
+                }}
+              >
+                {uploadingImage ? (
+                  <svg
+                    width="18"
+                    height="18"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={catStyle.text}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    style={{ animation: "spin 0.8s linear infinite" }}
+                  >
+                    <circle cx="12" cy="12" r="9" strokeOpacity="0.3" />
+                    <path d="M21 12a9 9 0 0 0-9-9" />
+                  </svg>
+                ) : form.image_url ? (
+                  <img
+                    src={form.image_url}
+                    alt=""
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "cover",
+                    }}
+                  />
+                ) : (
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke={catStyle.text}
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  >
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="9" cy="9" r="2" />
+                    <path d="m21 15-5-5L5 21" />
+                  </svg>
+                )}
+              </div>
+              <div style={{ flex: 1 }}>
+                <div
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#94a3b8",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.8px",
+                    marginBottom: 6,
+                  }}
+                >
+                  Item Photo{" "}
+                  <span style={{ fontWeight: 400, textTransform: "none" }}>
+                    (optional)
+                  </span>
+                </div>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) uploadItemImage(f);
+                    e.target.value = "";
+                  }}
+                />
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    type="button"
+                    onClick={() => imageInputRef.current?.click()}
+                    disabled={uploadingImage}
+                    style={{
+                      padding: "6px 12px",
+                      borderRadius: 8,
+                      border: `1.5px solid ${catStyle.border}`,
+                      background: catStyle.bg,
+                      color: catStyle.text,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: uploadingImage ? "default" : "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    {uploadingImage
+                      ? "Uploading..."
+                      : form.image_url
+                        ? "Change Photo"
+                        : "Upload Photo"}
+                  </button>
+                  {form.image_url && (
+                    <button
+                      type="button"
+                      onClick={() => set("image_url", "")}
+                      style={{
+                        padding: "6px 12px",
+                        borderRadius: 8,
+                        border: "1.5px solid #fca5a5",
+                        background: "#fef2f2",
+                        color: "#dc2626",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
 
             {/* Row 1: Name · Category */}
             <div
@@ -2805,6 +2979,7 @@ const Inventory = () => {
       expiry: form.expiry || null,
       supplier: form.supplier,
       description: form.description || null,
+      image_url: form.image_url || null,
     };
     if (form.id) {
       const { error } = await supabase
@@ -3757,22 +3932,35 @@ const Inventory = () => {
                                   display: "flex",
                                   alignItems: "center",
                                   justifyContent: "center",
+                                  overflow: "hidden",
                                 }}
                               >
-                                <svg
-                                  width="16"
-                                  height="16"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke={cs.text}
-                                  strokeWidth="2"
-                                  strokeLinecap="round"
-                                >
-                                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                                  <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                                  <line x1="12" y1="22.08" x2="12" y2="12" />
-                                </svg>
-                              </div>
+                                {item.image_url ? (
+                                  <img
+                                    src={item.image_url}
+                                    alt=""
+                                    style={{
+                                      width: "100%",
+                                      height: "100%",
+                                      objectFit: "cover",
+                                    }}
+                                  />
+                                ) : (
+                                  <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke={cs.text}
+                                    strokeWidth="2"
+                                    strokeLinecap="round"
+                                  >
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                                    <line x1="12" y1="22.08" x2="12" y2="12" />
+                                  </svg>
+                                )}
+                              </div>{" "}
                               <div>
                                 <div
                                   style={{
@@ -3997,8 +4185,8 @@ const Inventory = () => {
                                 <button
                                   onClick={() => openView(item)}
                                   style={{
-                                    background: "none",
-                                    border: "1px solid #bfdbfe",
+                                    background: "#eff6ff",
+                                    border: "1.5px solid #bfdbfe",
                                     borderRadius: 20,
                                     height: 28,
                                     padding: "0 10px",
@@ -4006,7 +4194,7 @@ const Inventory = () => {
                                     alignItems: "center",
                                     gap: 5,
                                     cursor: "pointer",
-                                    color: "#2563eb",
+                                    color: "#1d4ed8",
                                     fontSize: 11,
                                     fontWeight: 600,
                                     fontFamily: "inherit",
@@ -4018,7 +4206,7 @@ const Inventory = () => {
                                     viewBox="0 0 24 24"
                                     fill="none"
                                     stroke="currentColor"
-                                    strokeWidth="2"
+                                    strokeWidth="2.5"
                                     strokeLinecap="round"
                                   >
                                     <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -4030,8 +4218,8 @@ const Inventory = () => {
                                   <button
                                     onClick={(e) => openEdit(item, e)}
                                     style={{
-                                      background: "none",
-                                      border: "1px solid #e2e8f0",
+                                      background: "#f8fafc",
+                                      border: "1.5px solid #e2e8f0",
                                       borderRadius: 20,
                                       height: 28,
                                       padding: "0 10px",
@@ -4039,7 +4227,7 @@ const Inventory = () => {
                                       alignItems: "center",
                                       gap: 5,
                                       cursor: "pointer",
-                                      color: "#64748b",
+                                      color: "#475569",
                                       fontSize: 11,
                                       fontWeight: 600,
                                       fontFamily: "inherit",
@@ -4051,7 +4239,7 @@ const Inventory = () => {
                                       viewBox="0 0 24 24"
                                       fill="none"
                                       stroke="currentColor"
-                                      strokeWidth="2"
+                                      strokeWidth="2.5"
                                       strokeLinecap="round"
                                     >
                                       <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
@@ -4067,8 +4255,8 @@ const Inventory = () => {
                                       setDeleteId(item.id);
                                     }}
                                     style={{
-                                      background: "none",
-                                      border: "1px solid #fca5a5",
+                                      background: "#fef2f2",
+                                      border: "1.5px solid #fca5a5",
                                       borderRadius: 20,
                                       height: 28,
                                       padding: "0 10px",
@@ -4088,7 +4276,7 @@ const Inventory = () => {
                                       viewBox="0 0 24 24"
                                       fill="none"
                                       stroke="currentColor"
-                                      strokeWidth="2"
+                                      strokeWidth="2.5"
                                       strokeLinecap="round"
                                     >
                                       <polyline points="3 6 5 6 21 6" />
@@ -4098,7 +4286,7 @@ const Inventory = () => {
                                     </svg>
                                     Delete
                                   </button>
-                                )}
+                                )}{" "}
                               </div>
                             </td>
                           )}
