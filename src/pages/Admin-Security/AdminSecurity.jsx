@@ -206,6 +206,7 @@ const CustomSelect = ({
       <div
         ref={triggerRef}
         onClick={handleOpen}
+        className="admsec-select-trigger"
         style={{
           width: "100%",
           padding: "8px 34px 8px 12px",
@@ -3478,20 +3479,13 @@ const AdminSecurity = () => {
                           paginated.map((u, idx) => (
                             <tr
                               key={u.id}
-                              className="fade-in"
+                              className="fade-in admsec-row-hover"
                               style={{
                                 background:
                                   idx % 2 === 0 ? "transparent" : "var(--bg)",
                                 transition: "background 0.15s",
                                 animationDelay: `${paginated.indexOf(u) * 0.06}s`,
                               }}
-                              onMouseEnter={(e) =>
-                                (e.currentTarget.style.background = "#f0f7ff")
-                              }
-                              onMouseLeave={(e) =>
-                                (e.currentTarget.style.background =
-                                  idx % 2 === 0 ? "transparent" : "var(--bg)")
-                              }
                             >
                               <td style={{ ...S.td, overflow: "hidden" }}>
                                 <div
@@ -4848,17 +4842,11 @@ const AdminSecurity = () => {
                         paginatedLogs.map((l, idx) => (
                           <tr
                             key={l.id}
+                            className="admsec-row-hover"
                             style={{
                               background:
                                 idx % 2 === 0 ? "transparent" : "var(--bg)",
                             }}
-                            onMouseEnter={(e) =>
-                              (e.currentTarget.style.background = "#f0f7ff")
-                            }
-                            onMouseLeave={(e) =>
-                              (e.currentTarget.style.background =
-                                idx % 2 === 0 ? "transparent" : "var(--bg)")
-                            }
                           >
                             <td style={S.td}>
                               <div

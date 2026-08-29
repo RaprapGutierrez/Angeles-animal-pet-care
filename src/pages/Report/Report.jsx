@@ -113,15 +113,13 @@ const CustomSelect = ({
                     opacity: opt.disabled ? 0.45 : 1,
                     marginBottom: 1,
                   }}
+                  className="report-select-option"
                   onMouseEnter={(e) => {
                     if (!isSelected && !opt.disabled && !isEmpty)
-                      e.currentTarget.style.background = "#f4f6fa";
+                      e.currentTarget.classList.add("hover");
                   }}
                   onMouseLeave={(e) => {
-                    if (!isSelected)
-                      e.currentTarget.style.background = isSelected
-                        ? `${accent}12`
-                        : "transparent";
+                    e.currentTarget.classList.remove("hover");
                   }}
                 >
                   <div

@@ -131,6 +131,14 @@ html.dark .client-row:hover {
   background: rgba(255, 255, 255, 0.04);
 }
 
+.msg-client-row:hover {
+  background: #f8f9fc;
+}
+
+html.dark .msg-client-row:hover {
+  background: rgba(255, 255, 255, 0.05) !important;
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);

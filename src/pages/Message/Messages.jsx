@@ -2023,7 +2023,7 @@ const Messages = () => {
                 return (
                   <div
                     key={c.id}
-                    className={`client-row ${isActive ? "active" : ""}`}
+                    className={`client-row msg-client-row ${isActive ? "active" : ""}`}
                     onClick={() => {
                       setSelected(c);
                       setMobileView("chat");
@@ -2037,6 +2037,7 @@ const Messages = () => {
                       borderLeft: `3px solid ${isActive ? "#6366f1" : "transparent"}`,
                     }}
                   >
+                    {" "}
                     <Avatar
                       name={c.full_name || c.email}
                       size={44}

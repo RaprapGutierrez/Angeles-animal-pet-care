@@ -144,6 +144,10 @@ html.dark .report-pdf-icon {
   padding: 1px;
 }
 
+html.dark .report-select-option.hover {
+  background: rgba(124, 58, 237, 0.15) !important;
+}
+
 @media (max-width: 768px) {
   .report-topbar {
     position: static !important;

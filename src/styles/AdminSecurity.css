@@ -670,6 +670,20 @@
   margin-bottom: 6px;
 }
 
+html.dark .admsec-select-trigger {
+  background: var(--card) !important;
+  border-color: var(--border) !important;
+  color: var(--text) !important;
+}
+
+.admsec-row-hover:hover {
+  background: #f0f7ff !important;
+}
+
+html.dark .admsec-row-hover:hover {
+  background: rgba(99, 102, 241, 0.12) !important;
+}
+
 @media (max-width: 768px) {
   .usr-table-hide-mobile {
     display: none !important;

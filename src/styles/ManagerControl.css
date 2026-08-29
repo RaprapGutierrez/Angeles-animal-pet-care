@@ -176,6 +176,48 @@
   flex-wrap: wrap;
   left: 0 !important;
 }
+
+.mc-page select,
+.mc-input {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--card);
+  color: var(--text);
+  outline: none;
+  box-sizing: border-box;
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='3'><polyline points='6 9 12 15 18 9'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: 32px;
+}
+
+.mc-page select:focus,
+.mc-input:focus {
+  border-color: var(--royal);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+}
+
+.mc-input-err {
+  border-color: #f87171 !important;
+}
+
+html.dark .mc-page select,
+html.dark .mc-input {
+  background-color: var(--card);
+  color: var(--text);
+  border-color: var(--border);
+}
+
+html.dark .mc-page select option {
+  background: var(--card);
+  color: var(--text);
+}
 @media (min-width: 769px) {
   .mc-topbar {
     left: var(--current-sidebar-w, 62px) !important;

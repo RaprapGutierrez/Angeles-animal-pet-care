@@ -400,7 +400,7 @@ const Modal = ({ modal, onClose }) => {
                 padding: "9px 20px",
                 border: `1.5px solid ${T.border}`,
                 borderRadius: 9,
-                background: "#fff",
+                background: "var(--card, #fff)",
                 color: T.text,
                 fontSize: 13,
                 fontWeight: 600,
@@ -648,7 +648,7 @@ const ImageCropModal = ({ imageSrc, onCancel, onSave }) => {
               padding: "10px 16px",
               border: `1.5px solid ${T.border}`,
               borderRadius: 10,
-              background: "#fff",
+              background: "var(--card, #fff)",
               color: T.text,
               fontSize: 13,
               fontWeight: 600,
@@ -1929,9 +1929,10 @@ const Profile = () => {
                       <tr
                         key={a.id}
                         className="profile-schedule-row"
+                        className={isToday ? "profile-today-row" : ""}
                         style={{
                           background: isToday
-                            ? "#eff6ff"
+                            ? undefined
                             : i % 2 === 0
                               ? "var(--card, #fff)"
                               : T.bg,
