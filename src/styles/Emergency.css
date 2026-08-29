@@ -57,6 +57,18 @@
   animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+html.dark .emg-topbar-icon {
+  filter: brightness(0) invert(1) !important;
+}
+
+html.dark .emg-select-dropdown {
+  border-color: var(--border) !important;
+}
+
+html.dark .emg-select-option.hover {
+  background: rgba(220, 38, 38, 0.15) !important;
+}
+
 @keyframes shimmer {
   0% {
     background-position: -600px 0;

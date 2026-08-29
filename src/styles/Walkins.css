@@ -116,6 +116,11 @@
   filter: brightness(0) saturate(100%) invert(52%) sepia(90%) saturate(600%)
     hue-rotate(10deg) brightness(0.9);
 }
+
+html.dark .walkin-topbar-icon {
+  filter: brightness(0) invert(1) !important;
+}
+
 @keyframes fadeSlideUp {
   from {
     opacity: 0;

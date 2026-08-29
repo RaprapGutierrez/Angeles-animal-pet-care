@@ -2043,6 +2043,7 @@ const Branches = () => {
             </div>
           ) : (
             <div
+              className="branch-cards-grid"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(auto-fill,minmax(260px,1fr))",
@@ -2647,8 +2648,9 @@ const Branches = () => {
           }}
         >
           <div
+            className="branch-view-modal-box"
             style={{
-              background: "#fff",
+              background: "var(--card)",
               borderRadius: 14,
               width: "100%",
               maxWidth: 520,
@@ -3076,7 +3078,7 @@ const Branches = () => {
           <div
             className="branch-modal-box"
             style={{
-              background: "#fff",
+              background: "var(--card)",
               borderRadius: 14,
               width: "100%",
               maxWidth: 600,

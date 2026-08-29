@@ -119,6 +119,18 @@ html.dark .msg-attach-btn {
   border-color: var(--border) !important;
 }
 
+.client-row.active {
+  background: #eff0fe;
+}
+
+html.dark .client-row.active {
+  background: rgba(99, 102, 241, 0.18) !important;
+}
+
+html.dark .client-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 @keyframes spin {
   from {
     transform: rotate(0deg);

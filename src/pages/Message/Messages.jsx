@@ -2035,7 +2035,6 @@ const Messages = () => {
                       gap: 12,
                       padding: "12px 18px",
                       borderLeft: `3px solid ${isActive ? "#6366f1" : "transparent"}`,
-                      background: isActive ? "#eff0fe" : "transparent",
                     }}
                   >
                     <Avatar

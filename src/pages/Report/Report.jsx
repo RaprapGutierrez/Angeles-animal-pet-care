@@ -1450,6 +1450,7 @@ const Report = () => {
                   <img
                     src="/icon/pdf-file.png"
                     alt="PDF"
+                    className="report-pdf-icon"
                     style={{ width: 16, height: 16, objectFit: "contain" }}
                   />
                   PDF

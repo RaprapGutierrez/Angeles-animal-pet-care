@@ -147,6 +147,26 @@
   box-sizing: border-box;
 }
 
+.branch-cards-grid {
+  grid-auto-rows: 1fr;
+}
+
+html.dark .branch-modal-banner {
+  background: #1e293b !important;
+}
+
+html.dark .branch-modal-box .form-group input,
+html.dark .branch-modal-box .form-group select {
+  background: var(--card) !important;
+  color: var(--text) !important;
+  border-color: var(--border) !important;
+}
+
+html.dark .branch-view-modal-box div[style*="background: rgb(248, 250, 252)"],
+html.dark .branch-view-modal-box div[style*="background:#f8fafc"] {
+  background: var(--bg) !important;
+}
+
 @media (max-width: 768px) {
   .branches-content {
     padding: 16px !important;

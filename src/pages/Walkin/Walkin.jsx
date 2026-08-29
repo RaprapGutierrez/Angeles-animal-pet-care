@@ -2245,6 +2245,7 @@ const Walkin = () => {
             <img
               src="/icon/walkin.png"
               alt=""
+              className="walkin-topbar-icon"
               style={{
                 width: 22,
                 height: 22,

@@ -84,6 +84,7 @@ const CustomSelect = ({
       ? ReactDOM.createPortal(
           <div
             ref={ref}
+            className="emg-select-dropdown"
             style={{
               position: "absolute",
               top: dropPos.top,
@@ -134,13 +135,13 @@ const CustomSelect = ({
                     opacity: isDisabled ? 0.5 : 1,
                     marginBottom: 1,
                   }}
+                  className="emg-select-option"
                   onMouseEnter={(e) => {
                     if (!isSelected && !isDisabled)
-                      e.currentTarget.style.background = "#fef2f2";
+                      e.currentTarget.classList.add("hover");
                   }}
                   onMouseLeave={(e) => {
-                    if (!isSelected)
-                      e.currentTarget.style.background = "transparent";
+                    e.currentTarget.classList.remove("hover");
                   }}
                 >
                   <div
@@ -2417,13 +2418,14 @@ const AdminView = ({
           <img
             src="/icon/emergency_2.png"
             alt=""
+            className="emg-topbar-icon"
             style={{
               width: 22,
               height: 22,
               filter:
                 "brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)",
             }}
-          />
+          />{" "}
           <div>
             <h1
               style={{
@@ -3291,13 +3293,14 @@ const StaffView = ({
           <img
             src="/icon/emergency_2.png"
             alt=""
+            className="emg-topbar-icon"
             style={{
               width: 22,
               height: 22,
               filter:
                 "brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)",
             }}
-          />
+          />{" "}
           <div>
             <h1
               style={{

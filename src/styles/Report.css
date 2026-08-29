@@ -138,6 +138,12 @@ html.dark .btn-primary.export-btn {
   border-color: #3b82f6 !important;
 }
 
+html.dark .report-pdf-icon {
+  background: #fff;
+  border-radius: 3px;
+  padding: 1px;
+}
+
 @media (max-width: 768px) {
   .report-topbar {
     position: static !important;
