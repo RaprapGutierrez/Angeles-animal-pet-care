@@ -133,6 +133,11 @@ html.dark ::-webkit-scrollbar-thumb {
   background: #334155;
 }
 
+html.dark .topbar-title img,
+html.dark .icon-tint {
+  filter: brightness(0) invert(1);
+}
+
 html.dark .badge {
   opacity: 1 !important;
   color: inherit !important;

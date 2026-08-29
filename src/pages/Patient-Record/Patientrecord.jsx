@@ -5782,12 +5782,13 @@ const PatientRecord = () => {
         }}
       >
         <div className="topbar-title">
-          <img src="/icon/patient_record.png" alt="" />
+          <img className="icon-tint" src="/icon/patient_record.png" alt="" />
           <div>
             <h1>Patient Records</h1>
             <p>Manage all patient medical records</p>
           </div>
         </div>
+        
         <div className="topbar-actions">
           {seeAllBranches && (
             <div style={{ position: "relative", width: 190 }}>
