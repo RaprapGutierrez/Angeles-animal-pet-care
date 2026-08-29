@@ -42,10 +42,6 @@
   background: var(--card);
 }
 
-.emg-topbar-white {
-  background: #fff;
-}
-
 .emg-content {
   padding: 24px 28px;
   padding-top: 126px;

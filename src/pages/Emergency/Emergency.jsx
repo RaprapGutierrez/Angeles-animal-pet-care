@@ -1659,7 +1659,7 @@ const EmergencyForm = memo(
     };
 
     return (
-      <div>
+      <div style={{ height: "100%", display: "flex", flexDirection: "column" }}>
         <div
           style={{
             background: "var(--card)",
@@ -1667,6 +1667,9 @@ const EmergencyForm = memo(
             border: "1px solid var(--border)",
             padding: 24,
             boxShadow: "var(--shadow)",
+            flex: 1,
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <h3
@@ -1950,7 +1953,7 @@ const EmergencyForm = memo(
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "1fr 1fr",
+              gridTemplateColumns: "1fr",
               gap: 12,
               marginBottom: 14,
             }}
@@ -2031,7 +2034,7 @@ const EmergencyForm = memo(
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "1fr 1fr",
+                gridTemplateColumns: "1fr",
                 gap: 12,
                 marginBottom: 14,
               }}
@@ -3288,7 +3291,7 @@ const StaffView = ({
   );
   return (
     <div className="emg-page">
-      <div className="emergency-topbar emg-topbar-pos emg-topbar-white">
+      <div className="emergency-topbar emg-topbar-pos emg-topbar-card">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <img
             src="/icon/emergency_2.png"

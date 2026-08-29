@@ -11,12 +11,13 @@ const HEALTH_BADGE = {
 };
 const STATUS_BADGE = { Admitted: "badge-blue", Outpatient: "badge-gray" };
 
-const DogIcon = ({ size = 24, color = "currentColor" }) => (
+const DogIcon = ({ size = 24, color = "currentColor", className = "" }) => (
   <svg
     width={size}
     height={size}
     viewBox="0 0 16 16"
     fill={color}
+    className={className}
     xmlns="http://www.w3.org/2000/svg"
   >
     <path
@@ -26,12 +27,13 @@ const DogIcon = ({ size = 24, color = "currentColor" }) => (
     />
   </svg>
 );
-const CatIcon = ({ size = 24, color = "currentColor" }) => (
+const CatIcon = ({ size = 24, color = "currentColor", className = "" }) => (
   <svg
     width={size}
     height={size}
     viewBox="0 0 16 16"
     fill={color}
+    className={className}
     xmlns="http://www.w3.org/2000/svg"
   >
     <path
@@ -314,8 +316,9 @@ const CustomerPets = () => {
   };
 
   const getSpeciesIcon = (species, size = 30, color = "var(--royal)") => {
-    if (species === "Cat") return <CatIcon size={size} color={color} />;
-    return <DogIcon size={size} color={color} />;
+    if (species === "Cat")
+      return <CatIcon size={size} color={color} className="pet-species-icon" />;
+    return <DogIcon size={size} color={color} className="pet-species-icon" />;
   };
 
   const renderPetAvatar = (pet, size = 30, shape = "circle") => {
@@ -451,6 +454,7 @@ const CustomerPets = () => {
             <img
               src="/icon/paw.png"
               alt="Paw"
+              className="cp-topbar-icon"
               width={22}
               height={22}
               flexShrink={0}

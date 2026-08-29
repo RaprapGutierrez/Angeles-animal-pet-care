@@ -254,6 +254,7 @@ const CustomSelect = ({
               return (
                 <div
                   key={i}
+                  className="cs-select-option"
                   onClick={() => {
                     if ((!opt.disabled && optVal !== "") || optVal === "") {
                       onChange(optVal);
@@ -366,6 +367,7 @@ const CustomSelect = ({
     <div style={{ position: "relative", width: "100%" }}>
       <div
         ref={triggerRef}
+        className="cs-select-trigger"
         onClick={handleOpen}
         style={{
           width: "100%",
@@ -419,6 +421,7 @@ const CustomSelect = ({
           {label}
         </span>
         <div
+          className="cs-select-arrow"
           style={{
             position: "absolute",
             right: 10,
@@ -2202,6 +2205,7 @@ const CustomerAppointment = () => {
             <img
               src="/icon/attended.png"
               alt="Appointments"
+              className="ca-topbar-icon"
               width={isMobile ? 18 : 20}
               height={isMobile ? 18 : 20}
             />

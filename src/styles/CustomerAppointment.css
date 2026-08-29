@@ -1,14 +1,41 @@
 @keyframes shimmer {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
 }
 @keyframes fadeSlideUp {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 .fade-in {
   animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+
+html.dark .cs-select-trigger {
+  background: linear-gradient(135deg, #1e293b 0%, #1e1b4b 100%) !important;
+  border-color: var(--border) !important;
+}
+html.dark .cs-select-arrow {
+  background: rgba(255, 255, 255, 0.08) !important;
+}
+html.dark .cs-select-option:hover {
+  background: rgba(99, 102, 241, 0.18) !important;
+}
+
+html.dark .ca-topbar-icon {
+  filter: brightness(0) invert(1);
+}
 @media (max-width: 768px) {
-  .branches-topbar { left: 0 !important; }
+  .branches-topbar {
+    left: 0 !important;
+  }
 }

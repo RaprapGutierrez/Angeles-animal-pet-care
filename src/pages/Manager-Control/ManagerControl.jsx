@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
+import ReactDOM from "react-dom";
 import Layout from "../../components/layout";
 import { supabase, supabaseAdmin } from "../../js/Utils/supabase";
 import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
@@ -20,6 +21,289 @@ const AVATAR_COLORS = {
   Manager: { bg: "#dbeafe", color: "#1d4ed8" },
   Employee: { bg: "#dcfce7", color: "#15803d" },
   Customer: { bg: "#f3f4f6", color: "#4b5563" },
+};
+
+// ── Custom dropdown (matches AdminSecurity.jsx) ──
+const getOptValue = (opt) => (typeof opt === "string" ? opt : opt.value);
+const getOptLabel = (opt) => (typeof opt === "string" ? opt : opt.label);
+const getOptDisabled = (opt) =>
+  typeof opt === "string" ? false : !!opt.disabled;
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  placeholder = "—",
+  accent = "#6366f1",
+}) => {
+  const [open, setOpen] = React.useState(false);
+  const [dropPos, setDropPos] = React.useState({ top: 0, left: 0, width: 0 });
+  const triggerRef = React.useRef(null);
+  const ref = React.useRef(null);
+  const selected = options.find((o) => getOptValue(o) === value);
+  const label = selected ? getOptLabel(selected) : placeholder;
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (
+        ref.current &&
+        !ref.current.contains(e.target) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target)
+      )
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleOpen = () => {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = Math.min((options.length + 1) * 38, 240);
+      const showAbove = spaceBelow < dropHeight + 10;
+      setDropPos({
+        top: showAbove
+          ? rect.top + window.scrollY - dropHeight - 6
+          : rect.bottom + window.scrollY + 6,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+    setOpen((o) => !o);
+  };
+
+  const portal =
+    open && typeof document !== "undefined"
+      ? ReactDOM.createPortal(
+          <div
+            ref={ref}
+            style={{
+              position: "absolute",
+              top: dropPos.top,
+              left: dropPos.left,
+              width: dropPos.width,
+              background: "var(--card)",
+              borderRadius: 12,
+              zIndex: 99999,
+              boxShadow:
+                "0 16px 40px rgba(0,0,0,0.13), 0 4px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06)",
+              border: "1.5px solid #e8edf4",
+              maxHeight: 260,
+              overflowY: "auto",
+              padding: "5px",
+            }}
+          >
+            {[{ value: "", label: placeholder }, ...options].map((opt, i) => {
+              const optVal = getOptValue(opt);
+              const optLabel = getOptLabel(opt);
+              const optDisabled = getOptDisabled(opt);
+              const isSelected = optVal === value;
+              const isEmpty = optVal === "";
+              return (
+                <div
+                  key={i}
+                  onClick={() => {
+                    if ((!optDisabled && optVal !== "") || optVal === "") {
+                      onChange(optVal);
+                      setOpen(false);
+                    }
+                  }}
+                  style={{
+                    padding: "8px 10px",
+                    fontSize: 13,
+                    fontWeight: isSelected ? 700 : 500,
+                    color: optDisabled
+                      ? "#cbd5e1"
+                      : isEmpty
+                        ? "#b0bac9"
+                        : isSelected
+                          ? accent
+                          : "var(--text)",
+                    cursor: optDisabled
+                      ? "not-allowed"
+                      : isEmpty
+                        ? "default"
+                        : "pointer",
+                    transition: "background 0.12s, color 0.12s",
+                    background: isSelected ? `${accent}12` : "transparent",
+                    borderRadius: 8,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    opacity: optDisabled ? 0.45 : 1,
+                    marginBottom: 1,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isSelected && !optDisabled && !isEmpty)
+                      e.currentTarget.style.background = "#f4f6fa";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isSelected)
+                      e.currentTarget.style.background = isSelected
+                        ? `${accent}12`
+                        : "transparent";
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      minWidth: 0,
+                    }}
+                  >
+                    {!isEmpty && (
+                      <div
+                        style={{
+                          width: 6,
+                          height: 6,
+                          borderRadius: "50%",
+                          flexShrink: 0,
+                          background: isSelected ? accent : "transparent",
+                          border: `1.5px solid ${isSelected ? accent : optDisabled ? "#e2e8f0" : "#cbd5e1"}`,
+                          transition: "background 0.15s, border-color 0.15s",
+                        }}
+                      />
+                    )}
+                    <span
+                      style={{
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {optLabel}
+                    </span>
+                  </div>
+                  {isSelected && !isEmpty && (
+                    <div
+                      style={{
+                        width: 18,
+                        height: 18,
+                        borderRadius: 5,
+                        background: accent,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                      }}
+                    >
+                      <svg
+                        width="9"
+                        height="9"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#fff"
+                        strokeWidth="3.5"
+                        strokeLinecap="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <div style={{ position: "relative", width: "100%" }}>
+      <div
+        ref={triggerRef}
+        onClick={handleOpen}
+        style={{
+          width: "100%",
+          padding: "8px 34px 8px 12px",
+          border: "1.5px solid",
+          borderRadius: 9,
+          background: open
+            ? "linear-gradient(135deg, #ffffff 0%, #f5f3ff 100%)"
+            : "linear-gradient(to bottom, #ffffff 0%, #f8fafc 100%)",
+          fontSize: 13,
+          fontWeight: 600,
+          color: value ? "var(--text)" : "#b0bac9",
+          cursor: "pointer",
+          userSelect: "none",
+          boxSizing: "border-box",
+          boxShadow: open
+            ? `0 0 0 3px ${accent}22, 0 2px 8px rgba(0,0,0,0.08)`
+            : "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)",
+          borderColor: open ? accent : "#dde3ec",
+          transition: "border-color 0.18s, box-shadow 0.18s, background 0.18s",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          position: "relative",
+          minHeight: 36,
+        }}
+        onMouseEnter={(e) => {
+          if (!open) {
+            e.currentTarget.style.borderColor = "#a5b4fc";
+            e.currentTarget.style.boxShadow =
+              "0 2px 8px rgba(99,102,241,0.10), inset 0 1px 0 rgba(255,255,255,0.9)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!open) {
+            e.currentTarget.style.borderColor = "#dde3ec";
+            e.currentTarget.style.boxShadow =
+              "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)";
+          }
+        }}
+      >
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            flex: 1,
+          }}
+        >
+          {label}
+        </span>
+        <div
+          style={{
+            position: "absolute",
+            right: 10,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 20,
+            height: 20,
+            borderRadius: 6,
+            background: open ? accent : "#f1f5f9",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "background 0.18s",
+            flexShrink: 0,
+          }}
+        >
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={open ? "#fff" : "#94a3b8"}
+            strokeWidth="3"
+            strokeLinecap="round"
+            style={{
+              transition: "transform 0.2s, stroke 0.18s",
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </div>
+      {portal}
+    </div>
+  );
 };
 
 const generateEmail = (
@@ -1828,18 +2112,15 @@ const ManagerControl = () => {
                       }}
                     />
                   </div>
-                  <select
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value)}
-                    className="mc-input"
-                    style={{ width: 140 }}
-                  >
-                    <option value="">All Roles</option>
-                    <option>Admin</option>
-                    <option>Manager</option>
-                    <option>Employee</option>
-                    <option>Customer</option>
-                  </select>
+                  <div style={{ width: 150, flexShrink: 0 }}>
+                    <CustomSelect
+                      value={roleFilter}
+                      onChange={setRoleFilter}
+                      placeholder="All Roles"
+                      accent="#1e3a8a"
+                      options={["Admin", "Manager", "Employee", "Customer"]}
+                    />
+                  </div>
                 </div>
 
                 <div
@@ -2612,18 +2893,15 @@ const ManagerControl = () => {
                       }}
                     />
                   </div>
-                  <select
-                    value={logRole}
-                    onChange={(e) => setLogRole(e.target.value)}
-                    className="mc-input"
-                    style={{ width: 140 }}
-                  >
-                    <option value="">All Roles</option>
-                    <option>Admin</option>
-                    <option>Manager</option>
-                    <option>Employee</option>
-                    <option>Customer</option>
-                  </select>
+                  <div style={{ width: 150, flexShrink: 0 }}>
+                    <CustomSelect
+                      value={logRole}
+                      onChange={setLogRole}
+                      placeholder="All Roles"
+                      accent="#1e3a8a"
+                      options={["Admin", "Manager", "Employee", "Customer"]}
+                    />
+                  </div>
                 </div>
                 <div style={{ overflowX: "auto" }}>
                   <table
@@ -3300,17 +3578,16 @@ const ManagerControl = () => {
                 <label>
                   Sex <span style={{ color: "#dc2626" }}>*</span>
                 </label>
-                <select
+                <CustomSelect
                   value={addForm.sex}
-                  onChange={(e) => {
-                    setAddForm((f) => ({ ...f, sex: e.target.value }));
+                  onChange={(val) => {
+                    setAddForm((f) => ({ ...f, sex: val }));
                     setAddErrors((er) => ({ ...er, sex: "" }));
                   }}
-                  className={addErrors.sex ? "mc-input-err" : ""}
-                >
-                  <option>Male</option>
-                  <option>Female</option>
-                </select>
+                  placeholder="— Select —"
+                  accent="#1e3a8a"
+                  options={["Male", "Female"]}
+                />
                 {addErrors.sex && (
                   <div className="mc-err-msg">{addErrors.sex}</div>
                 )}
@@ -3325,10 +3602,9 @@ const ManagerControl = () => {
               >
                 <div className="form-group" style={{ margin: 0 }}>
                   <label>Role</label>
-                  <select
+                  <CustomSelect
                     value={addForm.role}
-                    onChange={(e) => {
-                      const newRole = e.target.value;
+                    onChange={(newRole) => {
                       const existing = users
                         .map((u) => u.email?.toLowerCase())
                         .filter(Boolean);
@@ -3347,12 +3623,10 @@ const ManagerControl = () => {
                       }));
                       setAddErrors((er) => ({ ...er, role: "" }));
                     }}
-                    className={addErrors.role ? "mc-input-err" : ""}
-                  >
-                    <option>Employee</option>
-                    <option>Manager</option>
-                    <option>Customer</option>
-                  </select>
+                    placeholder="— Select Role —"
+                    accent="#1e3a8a"
+                    options={["Employee", "Manager", "Customer"]}
+                  />
                   {addErrors.role && (
                     <div className="mc-err-msg">{addErrors.role}</div>
                   )}

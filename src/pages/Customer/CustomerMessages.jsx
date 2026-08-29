@@ -1057,7 +1057,7 @@ const CustomerMessages = () => {
           bottom: 0,
           display: "grid",
           gridTemplateColumns: isMobile ? "1fr" : "300px 1fr",
-          background: "#f4f6fb",
+          background: "var(--page-bg, #f4f6fb)",
           overflow: "hidden",
         }}
       >
@@ -1066,8 +1066,8 @@ const CustomerMessages = () => {
           style={{
             display: isMobile && mobileView === "chat" ? "none" : "flex",
             flexDirection: "column",
-            background: "#fff",
-            borderRight: "1.5px solid #eef0f6",
+            background: "var(--panel-bg, #fff)",
+            borderRight: "1.5px solid var(--border-color, #eef0f6)",
             boxShadow: "3px 0 12px rgba(0,0,0,0.04)",
             minHeight: 0,
             overflow: "hidden",
@@ -1077,7 +1077,7 @@ const CustomerMessages = () => {
             className="sidebar-header"
             style={{
               padding: "18px 18px 12px",
-              borderBottom: "1px solid #f0f2f8",
+              borderBottom: "1px solid var(--border-color, #f0f2f8)",
             }}
           >
             <div
@@ -1094,7 +1094,7 @@ const CustomerMessages = () => {
                   style={{
                     fontWeight: 700,
                     fontSize: 14,
-                    color: "#111827",
+                    color: "var(--text-primary, #111827)",
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -1154,10 +1154,10 @@ const CustomerMessages = () => {
                   width: "100%",
                   padding: "9px 12px 9px 32px",
                   borderRadius: 10,
-                  border: "1.5px solid #eef0f6",
-                  background: "#f8f9fc",
+                  border: "1.5px solid var(--border-color, #eef0f6)",
+                  background: "var(--input-bg, #f8f9fc)",
                   fontSize: 13,
-                  color: "#111827",
+                  color: "var(--text-primary, #111827)",
                   outline: "none",
                   fontFamily: "inherit",
                 }}
@@ -1177,7 +1177,7 @@ const CustomerMessages = () => {
               style={{
                 fontSize: 11,
                 fontWeight: 700,
-                color: "#9ca3af",
+                color: "var(--text-muted, #9ca3af)",
                 textTransform: "uppercase",
                 letterSpacing: "0.6px",
               }}
@@ -1302,7 +1302,7 @@ const CustomerMessages = () => {
                         style={{
                           fontWeight: badge > 0 ? 700 : 600,
                           fontSize: 13.5,
-                          color: "#111827",
+                          color: "var(--text-primary, #111827)",
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",
@@ -1313,7 +1313,10 @@ const CustomerMessages = () => {
                       <div
                         style={{
                           fontSize: 11.5,
-                          color: badge > 0 ? "#6366f1" : "#9ca3af",
+                          color:
+                            badge > 0
+                              ? "#6366f1"
+                              : "var(--text-muted, #9ca3af)",
                           marginTop: 2,
                           whiteSpace: "nowrap",
                           overflow: "hidden",
@@ -1360,7 +1363,7 @@ const CustomerMessages = () => {
                 alignItems: "center",
                 justifyContent: "center",
                 gap: 16,
-                background: "#f4f6fb",
+                background: "var(--page-bg, #f4f6fb)",
               }}
             >
               <div
@@ -1393,13 +1396,15 @@ const CustomerMessages = () => {
                   style={{
                     fontSize: 18,
                     fontWeight: 700,
-                    color: "#374151",
+                    color: "var(--text-secondary, #374151)",
                     marginBottom: 6,
                   }}
                 >
                   Your Messages
                 </div>
-                <div style={{ fontSize: 13, color: "#9ca3af" }}>
+                <div
+                  style={{ fontSize: 13, color: "var(--text-muted, #9ca3af)" }}
+                >
                   Select a staff member to start messaging
                 </div>
               </div>
@@ -1413,8 +1418,8 @@ const CustomerMessages = () => {
                   alignItems: "center",
                   gap: 12,
                   padding: "12px 20px",
-                  background: "#fff",
-                  borderBottom: "1.5px solid #eef0f6",
+                  background: "var(--panel-bg, #fff)",
+                  borderBottom: "1.5px solid var(--border-color, #eef0f6)",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
                   flexShrink: 0,
                 }}
@@ -1439,11 +1444,21 @@ const CustomerMessages = () => {
                 <Avatar name={selected.full_name || selected.email} size={44} />
                 <div style={{ flex: 1 }}>
                   <div
-                    style={{ fontWeight: 700, fontSize: 15, color: "#111827" }}
+                    style={{
+                      fontWeight: 700,
+                      fontSize: 15,
+                      color: "var(--text-primary, #111827)",
+                    }}
                   >
                     {selected.full_name || selected.email}
                   </div>
-                  <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 1 }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--text-muted, #9ca3af)",
+                      marginTop: 1,
+                    }}
+                  >
                     {selected.role || ""}
                   </div>
                 </div>
@@ -1476,7 +1491,7 @@ const CustomerMessages = () => {
                   display: "flex",
                   flexDirection: "column",
                   gap: 2,
-                  background: "#f4f6fb",
+                  background: "var(--page-bg, #f4f6fb)",
                 }}
               >
                 {messages.length === 0 && !deleting && (
@@ -1566,8 +1581,8 @@ const CustomerMessages = () => {
                           style={{
                             background: me
                               ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
-                              : "#fff",
-                            color: me ? "#fff" : "#111827",
+                              : "var(--panel-bg, #fff)",
+                            color: me ? "#fff" : "var(--text-primary, #111827)",
                             padding: "10px 14px",
                             borderRadius: me
                               ? "18px 18px 4px 18px"
@@ -1726,8 +1741,8 @@ const CustomerMessages = () => {
 
               <div
                 style={{
-                  background: "#fff",
-                  borderTop: "1.5px solid #eef0f6",
+                  background: "var(--panel-bg, #fff)",
+                  borderTop: "1.5px solid var(--border-color, #eef0f6)",
                   flexShrink: 0,
                 }}
               >
@@ -1831,8 +1846,8 @@ const CustomerMessages = () => {
                       width: 40,
                       height: 40,
                       borderRadius: "50%",
-                      border: "1.5px solid #e5e7eb",
-                      background: "#f8f9fc",
+                      border: "1.5px solid var(--border-color-2, #e5e7eb)",
+                      background: "var(--input-bg, #f8f9fc)",
                       cursor: "pointer",
                       display: "flex",
                       alignItems: "center",
@@ -1869,10 +1884,10 @@ const CustomerMessages = () => {
                       flex: 1,
                       padding: "12px 18px",
                       borderRadius: 26,
-                      border: "1.5px solid #e5e7eb",
-                      background: "#f8f9fc",
+                      border: "1.5px solid var(--border-color-2, #e5e7eb)",
+                      background: "var(--input-bg, #f8f9fc)",
                       fontSize: 14,
-                      color: "#111827",
+                      color: "var(--text-primary, #111827)",
                       fontFamily: "inherit",
                       transition: "border-color 0.15s, box-shadow 0.15s",
                     }}
@@ -2027,10 +2042,10 @@ const CustomerMessages = () => {
                     width: "100%",
                     padding: "9px 12px 9px 32px",
                     borderRadius: 10,
-                    border: "1.5px solid #eef0f6",
-                    background: "#f8f9fc",
+                    border: "1.5px solid var(--border-color, #eef0f6)",
+                    background: "var(--input-bg, #f8f9fc)",
                     fontSize: 13,
-                    color: "#111827",
+                    color: "var(--text-primary, #111827)",
                     outline: "none",
                     fontFamily: "inherit",
                   }}

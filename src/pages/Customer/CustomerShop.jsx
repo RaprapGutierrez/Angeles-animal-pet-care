@@ -404,20 +404,58 @@ const CustomerShop = () => {
 
   const ICONS = {
     Medicine: (
-      <img src="/icon/medicine.png" alt="Medicine" width={40} height={40} />
+      <img
+        className="cshop-cat-icon"
+        src="/icon/medicine.png"
+        alt="Medicine"
+        width={40}
+        height={40}
+      />
     ),
     Vaccine: (
-      <img src="/icon/vaccines.png" alt="Vaccine" width={40} height={40} />
+      <img
+        className="cshop-cat-icon"
+        src="/icon/vaccines.png"
+        alt="Vaccine"
+        width={40}
+        height={40}
+      />
     ),
     Supplies: (
-      <img src="/icon/pet-supplies.png" alt="Supplies" width={40} height={40} />
+      <img
+        className="cshop-cat-icon"
+        src="/icon/pet-supplies.png"
+        alt="Supplies"
+        width={40}
+        height={40}
+      />
     ),
-    Food: <img src="/icon/pet-food.png" alt="Food" width={40} height={40} />,
+    Food: (
+      <img
+        className="cshop-cat-icon"
+        src="/icon/pet-food.png"
+        alt="Food"
+        width={40}
+        height={40}
+      />
+    ),
     Equipment: (
-      <img src="/icon/equipments.png" alt="Equipment" width={40} height={40} />
+      <img
+        className="cshop-cat-icon"
+        src="/icon/equipments.png"
+        alt="Equipment"
+        width={40}
+        height={40}
+      />
     ),
     Other: (
-      <img src="/icon/inventory_2.png" alt="Other" width={40} height={40} />
+      <img
+        className="cshop-cat-icon"
+        src="/icon/inventory_2.png"
+        alt="Other"
+        width={40}
+        height={40}
+      />
     ),
   };
 
@@ -561,6 +599,7 @@ const CustomerShop = () => {
             }}
           >
             <img
+              className="cshop-cat-icon"
               src="/icon/shopping_cart.png"
               alt="Shop"
               width={22}
@@ -618,7 +657,13 @@ const CustomerShop = () => {
                 flex: isMobile ? 1 : "none",
               }}
             >
-              <img src="/icon/search.png" alt="Search" width={14} height={14} />
+              <img
+                className="cshop-cat-icon"
+                src="/icon/search.png"
+                alt="Search"
+                width={14}
+                height={14}
+              />
               <input
                 type="text"
                 placeholder="Search products..."
@@ -831,6 +876,7 @@ const CustomerShop = () => {
                   >
                     {ICONS[p.category] || (
                       <img
+                        className="cshop-cat-icon"
                         src="/icon/inventory_2.png"
                         alt={p.category}
                         width={40}
@@ -1449,6 +1495,7 @@ Payment  : ${tx.payment}
                                 {tx.payment}
                               </span>
                               <strong
+                                className="cshop-price"
                                 style={{ fontSize: 15, color: "var(--royal)" }}
                               >
                                 ₱{Number(tx.total).toFixed(2)}
@@ -1551,7 +1598,7 @@ Payment  : ${tx.payment}
                 Close
               </button>
               <button
-                className="btn btn-outline"
+                className="btn btn-outline cshop-refresh-btn"
                 style={{
                   ...S.btn,
                   display: "flex",
@@ -1614,6 +1661,7 @@ Payment  : ${tx.payment}
             >
               {ICONS[selectedProduct.category] || (
                 <img
+                  className="cshop-cat-icon"
                   src="/icon/inventory_2.png"
                   alt={selectedProduct.category}
                   width={isMobile ? 44 : 56}

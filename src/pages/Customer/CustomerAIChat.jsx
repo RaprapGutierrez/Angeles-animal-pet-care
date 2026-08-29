@@ -235,7 +235,7 @@ const CustomSelect = ({
               zIndex: 99999,
               boxShadow:
                 "0 16px 40px rgba(0,0,0,0.13), 0 4px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06)",
-              border: "1.5px solid var(--border)",
+              border: "1.5px solid #e8edf4",
               maxHeight: 260,
               overflowY: "auto",
               padding: "5px",
@@ -265,7 +265,7 @@ const CustomSelect = ({
                         ? "#b0bac9"
                         : isSelected
                           ? accent
-                          : "#1e293b",
+                          : "var(--text)",
                     cursor: opt.disabled ? "not-allowed" : "pointer",
                     transition: "background 0.12s, color 0.12s",
                     background: isSelected ? `${accent}12` : "transparent",
@@ -279,7 +279,7 @@ const CustomSelect = ({
                   }}
                   onMouseEnter={(e) => {
                     if (!isSelected && !opt.disabled && !isEmpty)
-                      e.currentTarget.style.background = "#f4f6fa";
+                      e.currentTarget.style.background = "var(--bg, #f4f6fa)";
                   }}
                   onMouseLeave={(e) => {
                     if (!isSelected)
@@ -360,36 +360,40 @@ const CustomSelect = ({
         onClick={handleOpen}
         style={{
           width: "100%",
-          padding: "10px 34px 10px 12px",
+          padding: "8px 34px 8px 12px",
           border: "1.5px solid",
-          borderRadius: 10,
-          background: "var(--card)",
-          fontSize: 14,
+          borderRadius: 9,
+          background: "var(--card, #fff)",
+          fontSize: 13,
           fontWeight: 600,
-          color: value ? "var(--text)" : "var(--muted)",
+          color: value ? "var(--text)" : "#b0bac9",
           cursor: "pointer",
           userSelect: "none",
           boxSizing: "border-box",
           boxShadow: open
             ? `0 0 0 3px ${accent}22, 0 2px 8px rgba(0,0,0,0.08)`
             : "0 1px 3px rgba(0,0,0,0.06)",
-          borderColor: open ? accent : "var(--border)",
+          borderColor: open ? accent : "var(--border, #dde3ec)",
           transition: "border-color 0.18s, box-shadow 0.18s, background 0.18s",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
           gap: 8,
           position: "relative",
-          minHeight: 42,
+          minHeight: 36,
         }}
         onMouseEnter={(e) => {
           if (!open) {
             e.currentTarget.style.borderColor = "#a5b4fc";
+            e.currentTarget.style.boxShadow =
+              "0 2px 8px rgba(99,102,241,0.10), inset 0 1px 0 rgba(255,255,255,0.9)";
           }
         }}
         onMouseLeave={(e) => {
           if (!open) {
-            e.currentTarget.style.borderColor = "var(--border)";
+            e.currentTarget.style.borderColor = "#dde3ec";
+            e.currentTarget.style.boxShadow =
+              "0 1px 3px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,0.9)";
           }
         }}
       >
@@ -2186,9 +2190,11 @@ Rules:
                       style={{
                         padding: "6px 16px",
                         borderRadius: 8,
-                        border: `1.5px solid ${petMode === key ? "#1e3a8a" : "#e2e8f0"}`,
-                        background: petMode === key ? "#1e3a8a" : "#fff",
-                        color: petMode === key ? "#fff" : "#374151",
+                        border: `1.5px solid ${petMode === key ? "#1e3a8a" : "var(--border, #e2e8f0)"}`,
+                        background:
+                          petMode === key ? "#1e3a8a" : "var(--card, #fff)",
+                        color:
+                          petMode === key ? "#fff" : "var(--text, #374151)",
                         fontFamily: "inherit",
                         fontSize: 12,
                         fontWeight: 700,
@@ -2256,9 +2262,9 @@ Rules:
                           fontSize: 13,
                           fontWeight: 700,
                           cursor: "pointer",
-                          border: `1.5px solid ${active ? "#1e3a8a" : "#e2e8f0"}`,
-                          background: active ? "#1e3a8a" : "#fff",
-                          color: active ? "#fff" : "#374151",
+                          border: `1.5px solid ${active ? "#1e3a8a" : "var(--border, #e2e8f0)"}`,
+                          background: active ? "#1e3a8a" : "var(--card, #fff)",
+                          color: active ? "#fff" : "var(--text, #374151)",
                           transition: "all 0.15s",
                           display: "flex",
                           alignItems: "center",
@@ -2271,7 +2277,7 @@ Rules:
                             width="18"
                             height="18"
                             viewBox="0 0 16 16"
-                            fill={active ? "#fff" : "#374151"}
+                            fill={active ? "#fff" : "var(--text, #374151)"}
                             xmlns="http://www.w3.org/2000/svg"
                           >
                             <path
@@ -2286,7 +2292,7 @@ Rules:
                             width="18"
                             height="18"
                             viewBox="0 0 16 16"
-                            fill={active ? "#fff" : "#374151"}
+                            fill={active ? "#fff" : "var(--text, #374151)"}
                             xmlns="http://www.w3.org/2000/svg"
                           >
                             <path
@@ -2323,9 +2329,9 @@ Rules:
                           fontWeight: 500,
                           cursor: "pointer",
                           textAlign: "left",
-                          border: `1.5px solid ${active ? "#1e3a8a" : "#e2e8f0"}`,
-                          background: active ? "#e8edf8" : "#fff",
-                          color: active ? "#1e3a8a" : "#374151",
+                          border: `1.5px solid ${active ? "#1e3a8a" : "var(--border, #e2e8f0)"}`,
+                          background: active ? "#e8edf8" : "var(--card, #fff)",
+                          color: active ? "#1e3a8a" : "var(--text, #374151)",
                           display: "flex",
                           alignItems: "center",
                           gap: 10,
@@ -2338,7 +2344,7 @@ Rules:
                             height: 16,
                             borderRadius: "50%",
                             flexShrink: 0,
-                            border: `2px solid ${active ? "#1e3a8a" : "#d1d5db"}`,
+                            border: `2px solid ${active ? "#1e3a8a" : "var(--border, #d1d5db)"}`,
                             background: active ? "#1e3a8a" : "transparent",
                             transition: "all 0.15s",
                           }}

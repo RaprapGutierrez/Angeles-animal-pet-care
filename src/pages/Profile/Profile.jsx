@@ -1824,11 +1824,12 @@ const Profile = () => {
                   fontSize: 13,
                   fontWeight: 700,
                   transition: "all .15s",
-                  background:
-                    tab === t.key ? "var(--card, #fff)" : "transparent",
-                  color: tab === t.key ? T.royal : T.muted,
+                  background: tab === t.key ? T.royal : "transparent",
+                  color: tab === t.key ? "#fff" : T.muted,
                   boxShadow:
-                    tab === t.key ? "0 1px 4px rgba(0,0,0,.08)" : "none",
+                    tab === t.key
+                      ? "0 2px 8px rgba(37,99,235,.35)"
+                      : "none",
                 }}
               >
                 {t.label}
