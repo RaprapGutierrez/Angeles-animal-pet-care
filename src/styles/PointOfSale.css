@@ -150,6 +150,14 @@ html.dark .modal-footer {
   border-color: var(--border);
 }
 
+.pos-topbar-icon {
+  filter: brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%)
+    hue-rotate(210deg);
+}
+html.dark .pos-topbar-icon {
+  filter: brightness(0) invert(1);
+}
+
 @media (max-width: 768px) {
   .pos-topbar {
     position: static !important;

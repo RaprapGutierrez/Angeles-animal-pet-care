@@ -1124,13 +1124,12 @@ const PointOfSale = () => {
             <img
               src="/icon/point_of_sale.png"
               alt=""
+              className="pos-topbar-icon"
               style={{
                 width: 22,
                 height: 22,
-                filter:
-                  "brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)",
               }}
-            />
+            />{" "}
             <div>
               <h1
                 style={{
