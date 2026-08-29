@@ -175,11 +175,14 @@ html.dark .process-btn:disabled {
   color: #64748b !important;
 }
 
-html.dark .client-toggle-btn {
+html.dark .client-toggle-btn.inactive {
   background: var(--card) !important;
-  border-color: var(--border) !important;
+  color: var(--muted) !important;
 }
-
+html.dark .client-toggle-btn.active {
+  background: #3b82f6 !important;
+  color: #fff !important;
+}
 html.dark .pos-item-price {
   color: #60a5fa !important;
 }
@@ -188,6 +191,20 @@ html.dark .cash-btn {
   background: #3b82f6 !important;
   border-color: #3b82f6 !important;
   color: #fff !important;
+}
+
+html.dark .process-btn:disabled {
+  background: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+html.dark .cart-count-badge {
+  background: #3b82f6 !important;
+  color: #fff !important;
+}
+
+html.dark .pos-total-price {
+  color: #60a5fa !important;
 }
 
 @media (max-width: 768px) {

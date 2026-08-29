@@ -33,7 +33,13 @@ function useAnimatedNumber(value, duration = 350) {
   return display;
 }
 
-function AnimatedPrice({ value, style = {}, prefix = "₱", duration = 350 }) {
+function AnimatedPrice({
+  value,
+  style = {},
+  prefix = "₱",
+  duration = 350,
+  className = "",
+}) {
   const animated = useAnimatedNumber(value, duration);
   const prevRef = useRef(value);
   const [bump, setBump] = useState(false);
@@ -55,6 +61,7 @@ function AnimatedPrice({ value, style = {}, prefix = "₱", duration = 350 }) {
     color === "up" ? "#16a34a" : color === "down" ? "#dc2626" : null;
   return (
     <span
+      className={className}
       style={{
         display: "inline-block",
         color: flash || style.color || "inherit",
@@ -1519,6 +1526,7 @@ const PointOfSale = () => {
                 <strong style={{ fontSize: 15, fontWeight: 700 }}>Cart</strong>
                 {cart.length > 0 && (
                   <span
+                    className="cart-count-badge"
                     style={{
                       background: "var(--royal)",
                       color: "#fff",
@@ -1595,7 +1603,7 @@ const PointOfSale = () => {
                       setClientType(key);
                       clearClient();
                     }}
-                    className="client-toggle-btn"
+                    className={`client-toggle-btn ${clientType === key ? "active" : "inactive"}`}
                     style={{
                       flex: 1,
                       padding: "7px 0",
@@ -2142,6 +2150,7 @@ const PointOfSale = () => {
                       <img
                         src={item.customIcon || getCategoryIcon(item.category)}
                         alt={item.category}
+                        className="pos-cat-icon"
                         style={{
                           width: 20,
                           height: 20,
@@ -2395,6 +2404,7 @@ const PointOfSale = () => {
                     fontWeight: 800,
                     color: "var(--royal)",
                   }}
+                  className="pos-total-price"
                 />
               </div>
 
