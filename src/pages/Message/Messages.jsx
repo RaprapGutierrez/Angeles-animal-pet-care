@@ -1273,7 +1273,7 @@ const Messages = () => {
                 prev &&
                 (prev.id === msg.sender_id || prev.id === msg.recipient_id)
               ) {
-                fetchMessages(prev);
+                fetchMessages(prev, true);
               }
               return prev;
             });
