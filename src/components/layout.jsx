@@ -63,6 +63,11 @@ const BRANCH_NAME_TO_ID = {
   sanfernando: 5,
   sf: 5,
   magalang: 6,
+  olongapo: 7,
+  cabanatuan: 8,
+  baguio: 9,
+  sucat: 10,
+  cebu: 11,
 };
 
 const BRANCH_COLORS = {
@@ -72,6 +77,11 @@ const BRANCH_COLORS = {
   4: "#7C3AED",
   5: "#F59E0B",
   6: "#EF4444",
+  7: "#EC4899",
+  8: "#14B8A6",
+  9: "#8B5CF6",
+  10: "#0EA5E9",
+  11: "#10B981",
 };
 
 const BRANCH_DISPLAY_NAMES = {
@@ -81,6 +91,11 @@ const BRANCH_DISPLAY_NAMES = {
   4: "Angeles",
   5: "San Fernando",
   6: "Magalang",
+  7: "Olongapo",
+  8: "Cabanatuan",
+  9: "Baguio",
+  10: "Sucat",
+  11: "Cebu",
 };
 
 // Fallback palette for branches not in BRANCH_COLORS (i.e. any branch added

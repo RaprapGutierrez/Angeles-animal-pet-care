@@ -362,11 +362,11 @@ const App = () => {
           }
         />
 
-        {/* ── Manager + Admin ── */}
+        {/* ── Manager only ── */}
         <Route
           path="/manager-control"
           element={
-            <PrivateRoute allowedRoles={["Admin", "Manager"]}>
+            <PrivateRoute allowedRoles={["Manager"]}>
               <ManagerControl />
             </PrivateRoute>
           }

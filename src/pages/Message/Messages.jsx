@@ -1163,9 +1163,16 @@ const Messages = () => {
 
   // ── Fetch messages ────────────────────────────────────────────────────────
   // keepOptimistic: preserve _pending messages during a background refresh (avoids flicker)
+  const chatScrollRef = useRef(null);
+  const isNearBottom = () => {
+    const el = chatScrollRef.current;
+    if (!el) return true;
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+  };
   const fetchMessages = useCallback(
     async (partner, keepOptimistic = false) => {
       if (!partner?.id || !currentUser?.id) return;
+      const shouldAutoScroll = !keepOptimistic || isNearBottom();
 
       const isCrossRead =
         !!partner.isCrossBranch ||
@@ -1226,10 +1233,12 @@ const Messages = () => {
         const pending = keepOptimistic ? prev.filter((m) => m._pending) : [];
         return [...fetched, ...pending];
       });
-      setTimeout(
-        () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
-        80,
-      );
+      if (shouldAutoScroll) {
+        setTimeout(
+          () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
+          80,
+        );
+      }
     },
     [currentUser],
   );
@@ -2293,6 +2302,7 @@ const Messages = () => {
               )}
 
               <div
+                ref={chatScrollRef}
                 className="chat-scroll msg-chat-bg"
                 style={{
                   flex: 1,
@@ -2409,6 +2419,7 @@ const Messages = () => {
                               <img
                                 src={item.attachment_url}
                                 alt={item.attachment_name || "attachment"}
+                                loading="lazy"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   setPreviewZoom(1);
@@ -2429,11 +2440,16 @@ const Messages = () => {
                                   });
                                 }}
                                 style={{
-                                  maxWidth: 220,
+                                  maxWidth: 320,
+                                  maxHeight: 320,
+                                  width: "auto",
+                                  height: "auto",
                                   borderRadius: 10,
                                   display: "block",
                                   marginBottom: item.message ? 6 : 0,
                                   cursor: "pointer",
+                                  imageRendering: "auto",
+                                  objectFit: "contain",
                                 }}
                               />
                             ) : (
@@ -2656,10 +2672,10 @@ const Messages = () => {
                     onChange={(e) => {
                       const f = e.target.files?.[0];
                       if (!f) return;
-                      if (f.size > 5 * 1024 * 1024) {
+                      if (f.size > 15 * 1024 * 1024) {
                         showModal(
                           "File Too Large",
-                          "Please choose a file under 5MB.",
+                          "Please choose a file under 15MB.",
                           "error",
                         );
                         e.target.value = "";
