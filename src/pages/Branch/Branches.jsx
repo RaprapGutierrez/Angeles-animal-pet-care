@@ -2028,7 +2028,14 @@ const Branches = () => {
                   >
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   </svg>
-                  <h2 style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0 }}>
+                  <h2
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: "#fff",
+                      margin: 0,
+                    }}
+                  >
                     Branch Performance Overview
                   </h2>
                 </div>
@@ -2049,44 +2056,81 @@ const Branches = () => {
               <div style={{ overflowX: "auto" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                   <thead>
-                    <tr>
-                      {["Branch", "Status", "Services", "Modules Enabled"].map((h) => (
-                        <th
-                          key={h}
-                          style={{
-                            textAlign: "left",
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: "rgba(255,255,255,0.5)",
-                            textTransform: "uppercase",
-                            letterSpacing: 0.5,
-                            padding: "6px 10px",
-                            borderBottom: "1px solid rgba(255,255,255,0.12)",
-                          }}
-                        >
-                          {h}
-                        </th>
-                      ))}
+                    <tr style={{ background: "transparent" }}>
+                      {["Branch", "Status", "Services", "Modules Enabled"].map(
+                        (h) => (
+                          <th
+                            key={h}
+                            style={{
+                              textAlign: "left",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "rgba(255,255,255,0.5)",
+                              textTransform: "uppercase",
+                              letterSpacing: 0.5,
+                              padding: "6px 10px",
+                              background: "transparent",
+                              borderBottom: "1px solid rgba(255,255,255,0.12)",
+                            }}
+                          >
+                            {h}
+                          </th>
+                        ),
+                      )}
                     </tr>
                   </thead>
                   <tbody>
                     {branches.map((b) => {
-                      const totalModules = Object.values(b.modules || {}).reduce(
-                        (sum, arr) => sum + (arr?.length || 0),
-                        0,
-                      );
+                      const totalModules = Object.values(
+                        b.modules || {},
+                      ).reduce((sum, arr) => sum + (arr?.length || 0), 0);
                       return (
-                        <tr key={b.id}>
-                          <td style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#fff" }}>
+                        <tr
+                          key={b.id}
+                          style={{ transition: "background 0.15s" }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.background =
+                              "rgba(255,255,255,0.06)")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.background = "transparent")
+                          }
+                        >
+                          <td
+                            style={{
+                              padding: "8px 10px",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: "#fff",
+                            }}
+                          >
                             {b.name}
                           </td>
-                          <td style={{ padding: "8px 10px", fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
+                          <td
+                            style={{
+                              padding: "8px 10px",
+                              fontSize: 12,
+                              color: "rgba(255,255,255,0.75)",
+                            }}
+                          >
                             {b.status}
                           </td>
-                          <td style={{ padding: "8px 10px", fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
+                          <td
+                            style={{
+                              padding: "8px 10px",
+                              fontSize: 12,
+                              color: "rgba(255,255,255,0.75)",
+                            }}
+                          >
                             {(b.services || []).length}
                           </td>
-                          <td style={{ padding: "8px 10px", fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
+                          <td
+                            style={{
+                              padding: "8px 10px",
+                              fontSize: 12,
+                              color: "rgba(255,255,255,0.75)",
+                            }}
+                          >
                             {totalModules}
                           </td>
                         </tr>
