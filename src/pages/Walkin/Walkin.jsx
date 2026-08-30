@@ -690,9 +690,11 @@ const Walkin = () => {
   const {
     user,
     isAdmin,
+    isSuperAdmin,
     seeAllBranches,
     loading: userLoading,
   } = useCurrentUser();
+  const isAdminLevel = isAdmin || isSuperAdmin;
 
   const [toasts, setToasts] = useState([]);
   const [walkinCredentials, setWalkinCredentials] = useState(null);
@@ -2660,6 +2662,144 @@ const Walkin = () => {
               </div>
             );
           })()}
+
+          {/* ── Admin/Super Admin Insights Panel ── */}
+          {isAdminLevel && (
+            <div
+              style={{
+                background: "linear-gradient(135deg,#1e1b4b,#312e81)",
+                borderRadius: 14,
+                padding: "18px 22px",
+                marginBottom: 20,
+                boxShadow: "0 8px 24px rgba(49,46,129,0.25)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 14,
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fbbf24"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  <h2
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: "#fff",
+                      margin: 0,
+                    }}
+                  >
+                    Admin Walk-In Insights
+                  </h2>
+                </div>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#fbbf24",
+                    background: "rgba(251,191,36,0.15)",
+                    border: "1px solid rgba(251,191,36,0.3)",
+                    padding: "3px 9px",
+                    borderRadius: 20,
+                  }}
+                >
+                  {isSuperAdmin
+                    ? "Super Admin — Full Access"
+                    : "Administrator View"}
+                </span>
+              </div>
+              {(() => {
+                const totalRevenue = walkins.reduce(
+                  (s, w) => s + (Number(w.price) || 0),
+                  0,
+                );
+                const registeredCount = walkins.filter(
+                  (w) => w.owner_id,
+                ).length;
+                const guestCount = walkins.length - registeredCount;
+                const cancelledCount = walkins.filter(
+                  (w) => w.status === "Cancelled",
+                ).length;
+                const groomingWaiting = walkins.filter(
+                  (w) => w.purpose === "Grooming" && w.status === "Waiting",
+                ).length;
+
+                const stats = [
+                  {
+                    label: "Total Walk-In Revenue",
+                    value: `₱${totalRevenue.toLocaleString()}`,
+                  },
+                  { label: "Registered Clients", value: registeredCount },
+                  { label: "Walk-in Guests", value: guestCount },
+                  { label: "Cancelled Visits", value: cancelledCount },
+                  {
+                    label: "Groomer Slots Used",
+                    value: `${groomingWaiting}/${MAX_GROOMERS}`,
+                  },
+                ];
+
+                return (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))",
+                      gap: 12,
+                    }}
+                  >
+                    {stats.map((s) => (
+                      <div
+                        key={s.label}
+                        style={{
+                          background: "rgba(255,255,255,0.06)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 10,
+                          padding: "12px 14px",
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin: "0 0 4px",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: "rgba(255,255,255,0.55)",
+                            textTransform: "uppercase",
+                            letterSpacing: 0.5,
+                          }}
+                        >
+                          {s.label}
+                        </p>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 18,
+                            fontWeight: 800,
+                            color: "#fff",
+                          }}
+                        >
+                          {s.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          )}
 
           <div style={S.card}>
             <div

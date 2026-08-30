@@ -598,9 +598,12 @@ const Report = () => {
   const {
     user,
     isAdmin,
+    isSuperAdmin,
+    isManager,
     seeAllBranches,
     loading: userLoading,
   } = useCurrentUser();
+  const isAdminLevel = isAdmin || isSuperAdmin;
 
   const [range, setRange] = useState("This Week");
   const [branchFilter, setBranchFilter] = useState("");
@@ -631,6 +634,51 @@ const Report = () => {
   const [showAllTx, setShowAllTx] = useState(false);
   const [allTransactions, setAllTransactions] = useState([]);
   const [txLoading, setTxLoading] = useState(false);
+  const [branchStats, setBranchStats] = useState([]);
+  const [branchStatsLoading, setBranchStatsLoading] = useState(false);
+
+  const fetchBranchComparison = useCallback(async () => {
+    if (!isAdminLevel || !seeAllBranches) return;
+    setBranchStatsLoading(true);
+    const { data: allBranches } = await supabase
+      .from("branches")
+      .select("id, name")
+      .order("name");
+    const results = await Promise.all(
+      (allBranches || []).map(async (b) => {
+        const [tx, appts, pat] = await Promise.all([
+          supabase
+            .from("transactions")
+            .select("total,status")
+            .eq("branch_id", b.id),
+          supabase
+            .from("appointments")
+            .select("id", { count: "exact" })
+            .eq("branch_id", b.id),
+          supabase
+            .from("patients")
+            .select("id", { count: "exact" })
+            .eq("branch_id", b.id)
+            .is("deleted_at", null),
+        ]);
+        const activeTx = (tx.data || []).filter((t) => t.status !== "Voided");
+        return {
+          id: b.id,
+          name: b.name,
+          sales: activeTx.reduce((s, t) => s + Number(t.total || 0), 0),
+          voided: (tx.data || []).length - activeTx.length,
+          appointments: appts.count || 0,
+          patients: pat.count || 0,
+        };
+      }),
+    );
+    setBranchStats(results.sort((a, b) => b.sales - a.sales));
+    setBranchStatsLoading(false);
+  }, [isAdminLevel, seeAllBranches]);
+
+  useEffect(() => {
+    fetchBranchComparison();
+  }, [fetchBranchComparison]);
 
   const fetchAllTransactions = useCallback(async () => {
     setTxLoading(true);
@@ -1396,34 +1444,36 @@ const Report = () => {
               />
             </div>
 
-            {/* ── All Transactions Button ── */}
-            <button
-              className="btn btn-outline report-outline-btn"
-              onClick={() => {
-                setShowAllTx(true);
-                fetchAllTransactions();
-              }}
-              style={{
-                width: "auto",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
+            {/* ── All Transactions Button (admin/super admin/manager only) ── */}
+            {(isAdminLevel || isManager) && (
+              <button
+                className="btn btn-outline report-outline-btn"
+                onClick={() => {
+                  setShowAllTx(true);
+                  fetchAllTransactions();
+                }}
+                style={{
+                  width: "auto",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
               >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-              </svg>
-              All Transactions
-            </button>
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <polyline points="14 2 14 8 20 8" />
+                </svg>
+                All Transactions
+              </button>
+            )}
 
             {/* ── PDF Export Button ── */}
             <button
@@ -1881,6 +1931,200 @@ const Report = () => {
             </div>
           </div>
 
+          {/* ── Admin/Super Admin: Branch Performance Comparison ── */}
+          {isAdminLevel && seeAllBranches && (
+            <div
+              style={{
+                background: "linear-gradient(135deg,#1e1b4b,#312e81)",
+                borderRadius: 14,
+                padding: "18px 22px",
+                marginBottom: 20,
+                boxShadow: "0 8px 24px rgba(49,46,129,0.25)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 14,
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fbbf24"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  <h2
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: "#fff",
+                      margin: 0,
+                    }}
+                  >
+                    Branch Performance Comparison
+                  </h2>
+                </div>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#fbbf24",
+                    background: "rgba(251,191,36,0.15)",
+                    border: "1px solid rgba(251,191,36,0.3)",
+                    padding: "3px 9px",
+                    borderRadius: 20,
+                  }}
+                >
+                  {isSuperAdmin
+                    ? "Super Admin — Full Access"
+                    : "Administrator View"}
+                </span>
+              </div>
+
+              {branchStatsLoading ? (
+                <p
+                  style={{
+                    color: "rgba(255,255,255,0.6)",
+                    fontSize: 12,
+                    margin: 0,
+                  }}
+                >
+                  Loading branch data…
+                </p>
+              ) : branchStats.length === 0 ? (
+                <p
+                  style={{
+                    color: "rgba(255,255,255,0.6)",
+                    fontSize: 12,
+                    margin: 0,
+                  }}
+                >
+                  No branch data available.
+                </p>
+              ) : (
+                <div style={{ overflowX: "auto" }}>
+                  <table
+                    style={{
+                      width: "100%",
+                      borderCollapse: "collapse",
+                      fontSize: 12,
+                    }}
+                  >
+                    <thead>
+                      <tr>
+                        {[
+                          "Branch",
+                          "Total Sales",
+                          "Voided Tx",
+                          "Appointments",
+                          "Patients",
+                        ].map((h) => (
+                          <th
+                            key={h}
+                            style={{
+                              textAlign: "left",
+                              padding: "8px 12px",
+                              fontSize: 10,
+                              fontWeight: 700,
+                              color: "rgba(255,255,255,0.55)",
+                              textTransform: "uppercase",
+                              letterSpacing: 0.5,
+                              borderBottom: "1px solid rgba(255,255,255,0.15)",
+                            }}
+                          >
+                            {h}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {branchStats.map((b, i) => (
+                        <tr
+                          key={b.id}
+                          style={{
+                            borderBottom: "1px solid rgba(255,255,255,0.08)",
+                          }}
+                        >
+                          <td
+                            style={{
+                              padding: "10px 12px",
+                              fontWeight: 700,
+                              color: "#fff",
+                            }}
+                          >
+                            {i === 0 && (
+                              <span
+                                style={{
+                                  fontSize: 9,
+                                  background: "#fbbf24",
+                                  color: "#1e1b4b",
+                                  borderRadius: 4,
+                                  padding: "1px 6px",
+                                  fontWeight: 800,
+                                  marginRight: 6,
+                                }}
+                              >
+                                TOP
+                              </span>
+                            )}
+                            {b.name}
+                          </td>
+                          <td
+                            style={{
+                              padding: "10px 12px",
+                              color: "#a5b4fc",
+                              fontWeight: 700,
+                            }}
+                          >
+                            ₱{b.sales.toLocaleString("en-PH")}
+                          </td>
+                          <td
+                            style={{
+                              padding: "10px 12px",
+                              color:
+                                b.voided > 0
+                                  ? "#fca5a5"
+                                  : "rgba(255,255,255,0.5)",
+                            }}
+                          >
+                            {b.voided}
+                          </td>
+                          <td
+                            style={{
+                              padding: "10px 12px",
+                              color: "rgba(255,255,255,0.8)",
+                            }}
+                          >
+                            {b.appointments}
+                          </td>
+                          <td
+                            style={{
+                              padding: "10px 12px",
+                              color: "rgba(255,255,255,0.8)",
+                            }}
+                          >
+                            {b.patients}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* ── Quick summary table ── */}
           {!loading && (
             <div
@@ -2099,6 +2343,39 @@ const Report = () => {
                 ✕
               </button>
             </div>
+            {isAdminLevel && (
+              <div
+                style={{
+                  margin: "14px 22px 0",
+                  background: "#eff6ff",
+                  border: "1px solid #bfdbfe",
+                  borderRadius: 8,
+                  padding: "9px 14px",
+                  fontSize: 12,
+                  color: "#1e40af",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <span>
+                  Full audit access — includes voided transactions across{" "}
+                  {seeAllBranches ? "all branches" : "this branch"}, as{" "}
+                  {isSuperAdmin ? "Super Admin" : "an Administrator"}.
+                </span>
+              </div>
+            )}
             <div style={{ padding: "16px 22px", overflowX: "auto" }}>
               <table
                 style={{

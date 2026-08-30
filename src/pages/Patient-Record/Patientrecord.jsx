@@ -5,6 +5,7 @@ import { supabase, sb } from "../../js/Utils/supabase";
 import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
 import { logActivity } from "../../js/Utils/logActivity";
 import { withBranchId } from "../../js/hooks/Usebranchfilter";
+import * as XLSX from "xlsx";
 import "../../styles/PatientRecord.css";
 
 const userIcon = "/icon/user.png";
@@ -3155,6 +3156,16 @@ const PatientRecord = () => {
   const [deletedPatients, setDeletedPatients] = useState([]);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportPeriodType, setReportPeriodType] = useState("month"); // "month" | "year"
+  const [reportMonth, setReportMonth] = useState(
+    new Date().toISOString().slice(0, 7), // "YYYY-MM"
+  );
+  const [reportYear, setReportYear] = useState(
+    String(new Date().getFullYear()),
+  );
+  const [reportFormat, setReportFormat] = useState("pdf"); // "pdf" | "excel"
+  const [generatingReport, setGeneratingReport] = useState(false);
   const toggleSort = (field) => {
     if (sortField === field) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -3632,6 +3643,131 @@ const PatientRecord = () => {
       </Layout>
     );
   }
+
+  const getReportRange = () => {
+    if (reportPeriodType === "month") {
+      const [y, m] = reportMonth.split("-").map(Number);
+      const start = new Date(y, m - 1, 1);
+      const end = new Date(y, m, 1);
+      return {
+        start,
+        end,
+        label: start.toLocaleDateString("en-US", {
+          month: "long",
+          year: "numeric",
+        }),
+      };
+    }
+    const y = Number(reportYear);
+    return {
+      start: new Date(y, 0, 1),
+      end: new Date(y + 1, 0, 1),
+      label: String(y),
+    };
+  };
+
+  const generateReport = () => {
+    const { start, end, label } = getReportRange();
+    const rows = patients.filter((p) => {
+      if (!p.created_at) return false;
+      const d = new Date(p.created_at);
+      return d >= start && d < end;
+    });
+
+    if (rows.length === 0) {
+      showAlert("No Records", `No patients registered in ${label}.`);
+      return;
+    }
+
+    setGeneratingReport(true);
+
+    const columns = [
+      "Name",
+      "Species",
+      "Breed",
+      "Gender",
+      "Owner",
+      "Contact",
+      "Status",
+      "Health",
+      "Room",
+      "Condition",
+      "Registered",
+    ];
+    const dataRows = rows.map((p) => [
+      p.name || "",
+      p.species || "",
+      p.breed || "",
+      p.gender || "",
+      p.owner || "",
+      p.contact || "",
+      p.status || "",
+      p.health || "",
+      p.room || "",
+      p.condition || "",
+      p.created_at ? new Date(p.created_at).toLocaleDateString("en-US") : "",
+    ]);
+
+    if (reportFormat === "excel") {
+      const ws = XLSX.utils.aoa_to_sheet([columns, ...dataRows]);
+      ws["!cols"] = columns.map(() => ({ wch: 18 }));
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Patients");
+      XLSX.writeFile(wb, `Patient_Report_${label.replace(/\s+/g, "_")}.xlsx`);
+      setGeneratingReport(false);
+      setShowReportModal(false);
+      showToast(`✓ Excel report generated (${rows.length} records)`);
+    } else {
+      const win = window.open("", "_blank", "width=1000,height=800");
+      if (!win) {
+        setGeneratingReport(false);
+        showAlert(
+          "Popup Blocked",
+          "Please allow popups to generate the PDF report.",
+        );
+        return;
+      }
+      const tableRows = dataRows
+        .map((r) => `<tr>${r.map((c) => `<td>${c || "—"}</td>`).join("")}</tr>`)
+        .join("");
+      win.document.write(`
+        <html>
+          <head>
+            <title>Patient Report - ${label}</title>
+            <style>
+              body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #1e293b; }
+              .header { text-align: center; border-bottom: 3px solid #1e3a8a; padding-bottom: 14px; margin-bottom: 20px; }
+              .header h1 { margin: 0; font-size: 18px; color: #0f172a; }
+              .header p { margin: 4px 0 0; font-size: 12px; color: #64748b; }
+              table { width: 100%; border-collapse: collapse; font-size: 11px; }
+              th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
+              th { background: #f1f5f9; font-weight: 700; text-transform: uppercase; font-size: 9.5px; color: #475569; }
+              tr:nth-child(even) { background: #f8fafc; }
+              .footer { margin-top: 20px; text-align: right; font-size: 10px; color: #94a3b8; font-style: italic; }
+              @media print { body { padding: 12px; } }
+            </style>
+          </head>
+          <body>
+            <div class="header">
+              <h1>Angeles Animal Care Hospital</h1>
+              <p>Patient Records Report — ${label} (${rows.length} record${rows.length !== 1 ? "s" : ""})</p>
+            </div>
+            <table>
+              <thead><tr>${columns.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
+              <tbody>${tableRows}</tbody>
+            </table>
+            <p class="footer">Generated on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
+          </body>
+        </html>
+      `);
+      win.document.close();
+      win.focus();
+      setTimeout(() => win.print(), 300);
+      setGeneratingReport(false);
+      setShowReportModal(false);
+      showToast(`✓ PDF report generated (${rows.length} records)`);
+    }
+  };
 
   const openAdd = () => {
     setForm({
@@ -5790,7 +5926,7 @@ const PatientRecord = () => {
             <p>Manage all patient medical records</p>
           </div>
         </div>
-        
+
         <div className="topbar-actions">
           {seeAllBranches && (
             <div style={{ position: "relative", width: 190 }}>
@@ -5871,6 +6007,39 @@ const PatientRecord = () => {
             </svg>
             Recently Deleted{" "}
             {deletedPatients.length > 0 ? `(${deletedPatients.length})` : ""}
+          </button>
+          <button
+            onClick={() => setShowReportModal(true)}
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 6,
+              background: "#eff6ff",
+              border: "1.5px solid #bfdbfe",
+              color: "#1d4ed8",
+              borderRadius: 8,
+              padding: "8px 14px",
+              fontSize: 12,
+              fontWeight: 700,
+              cursor: "pointer",
+              fontFamily: "inherit",
+            }}
+          >
+            <svg
+              width="13"
+              height="13"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+              <line x1="16" y1="13" x2="8" y2="13" />
+              <line x1="16" y1="17" x2="8" y2="17" />
+            </svg>
+            Generate Report
           </button>
           <div
             className="fab-wrap"
@@ -6165,7 +6334,14 @@ const PatientRecord = () => {
                 >
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                <h2 style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0 }}>
+                <h2
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: "#fff",
+                    margin: 0,
+                  }}
+                >
                   Admin Patient Insights
                 </h2>
               </div>
@@ -6180,7 +6356,9 @@ const PatientRecord = () => {
                   borderRadius: 20,
                 }}
               >
-                {isSuperAdmin ? "Super Admin — Full Access" : "Administrator View"}
+                {isSuperAdmin
+                  ? "Super Admin — Full Access"
+                  : "Administrator View"}
               </span>
             </div>
             <div
@@ -6204,15 +6382,17 @@ const PatientRecord = () => {
                   value:
                     Object.entries(
                       patients.reduce((acc, p) => {
-                        if (p.species) acc[p.species] = (acc[p.species] || 0) + 1;
+                        if (p.species)
+                          acc[p.species] = (acc[p.species] || 0) + 1;
                         return acc;
                       }, {}),
                     ).sort((a, b) => b[1] - a[1])[0]?.[0] || "—",
                 },
                 {
                   label: "Unassigned Room",
-                  value: patients.filter((p) => p.status === "Admitted" && !p.room)
-                    .length,
+                  value: patients.filter(
+                    (p) => p.status === "Admitted" && !p.room,
+                  ).length,
                 },
               ].map((s) => (
                 <div
@@ -6236,7 +6416,14 @@ const PatientRecord = () => {
                   >
                     {s.label}
                   </p>
-                  <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: "#fff",
+                    }}
+                  >
                     {s.value}
                   </p>
                 </div>
@@ -6307,9 +6494,27 @@ const PatientRecord = () => {
             }}
           >
             {[
-              { key: "Admitted", label: "Admitted", color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe" },
-              { key: "Outpatient", label: "Outpatient", color: "#0891b2", bg: "#ecfeff", border: "#a5f3fc" },
-              { key: "Critical", label: "Critical (any status)", color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
+              {
+                key: "Admitted",
+                label: "Admitted",
+                color: "#1e3a8a",
+                bg: "#eff6ff",
+                border: "#bfdbfe",
+              },
+              {
+                key: "Outpatient",
+                label: "Outpatient",
+                color: "#0891b2",
+                bg: "#ecfeff",
+                border: "#a5f3fc",
+              },
+              {
+                key: "Critical",
+                label: "Critical (any status)",
+                color: "#dc2626",
+                bg: "#fef2f2",
+                border: "#fca5a5",
+              },
             ].map((col) => {
               const colPatients =
                 col.key === "Critical"
@@ -6335,7 +6540,13 @@ const PatientRecord = () => {
                       justifyContent: "space-between",
                     }}
                   >
-                    <span style={{ fontSize: 13, fontWeight: 800, color: col.color }}>
+                    <span
+                      style={{
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: col.color,
+                      }}
+                    >
                       {col.label}
                     </span>
                     <span
@@ -6353,7 +6564,14 @@ const PatientRecord = () => {
                   </div>
                   <div style={{ maxHeight: 420, overflowY: "auto" }}>
                     {colPatients.length === 0 ? (
-                      <p style={{ padding: 16, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
+                      <p
+                        style={{
+                          padding: 16,
+                          fontSize: 12,
+                          color: "var(--muted)",
+                          textAlign: "center",
+                        }}
+                      >
                         None
                       </p>
                     ) : (
@@ -6367,10 +6585,23 @@ const PatientRecord = () => {
                             cursor: "pointer",
                           }}
                         >
-                          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: "var(--text)",
+                            }}
+                          >
                             {p.name}
                           </p>
-                          <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--muted)" }}>
+                          <p
+                            style={{
+                              margin: "2px 0 0",
+                              fontSize: 11,
+                              color: "var(--muted)",
+                            }}
+                          >
                             {p.species}
                             {p.owner ? ` · ${p.owner}` : ""}
                             {p.room ? ` · Room ${p.room}` : ""}
@@ -6384,482 +6615,439 @@ const PatientRecord = () => {
             })}
           </div>
         ) : (
-        <div className="pr-card">
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "14px 18px",
-              borderBottom: "1px solid var(--border)",
-              flexWrap: "wrap",
-              gap: 10,
-            }}
-          >
-            <h2 style={{ fontSize: 15, fontWeight: 700 }}>All Patients</h2>
-            {selectedIds.length > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  background: "#fef2f2",
-                  border: "1.5px solid #fca5a5",
-                  borderRadius: 8,
-                  padding: "6px 12px",
-                }}
-              >
-                <span
-                  style={{ fontSize: 12, fontWeight: 700, color: "#991b1b" }}
-                >
-                  {selectedIds.length} selected
-                </span>
-                <button
-                  onClick={bulkDeletePatients}
-                  style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 5,
-                    padding: "5px 12px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "#dc2626",
-                    color: "#fff",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  >
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
-                  Delete Selected
-                </button>
-                <button
-                  onClick={() => setSelectedIds([])}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#991b1b",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Clear
-                </button>
-              </div>
-            )}
+          <div className="pr-card">
             <div
-              className="fade-in"
               style={{
                 display: "flex",
-                gap: 6,
-                flexWrap: "wrap",
                 alignItems: "center",
+                justifyContent: "space-between",
+                padding: "14px 18px",
+                borderBottom: "1px solid var(--border)",
+                flexWrap: "wrap",
+                gap: 10,
               }}
             >
-              {[
-                { label: "All", value: "all" },
-                { label: "Admitted", value: "Admitted" },
-                { label: "Outpatient", value: "Outpatient" },
-                { label: "Critical", value: "Critical" },
-              ].map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setStatusFilter(f.value)}
+              <h2 style={{ fontSize: 15, fontWeight: 700 }}>All Patients</h2>
+              {selectedIds.length > 0 && (
+                <div
                   style={{
-                    padding: "5px 14px",
-                    borderRadius: 20,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    border: "1.5px solid",
-                    background:
-                      statusFilter === f.value ? "var(--royal)" : "transparent",
-                    color: statusFilter === f.value ? "#fff" : "var(--muted)",
-                    borderColor:
-                      statusFilter === f.value
-                        ? "var(--royal)"
-                        : "var(--border)",
-                    transition: "all 0.15s",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    background: "#fef2f2",
+                    border: "1.5px solid #fca5a5",
+                    borderRadius: 8,
+                    padding: "6px 12px",
                   }}
                 >
-                  {f.label}
-                </button>
-              ))}
-
-              <div
-                style={{
-                  width: 1,
-                  height: 20,
-                  background: "var(--border)",
-                  margin: "0 4px",
-                }}
-              />
-
-              {[
-                { label: "All Species", value: "all" },
-                { label: "Dog", value: "Dog" },
-                { label: "Cat", value: "Cat" },
-              ].map((f) => (
-                <button
-                  key={f.value}
-                  onClick={() => setSpeciesFilter(f.value)}
-                  style={{
-                    padding: "5px 14px",
-                    borderRadius: 20,
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    border: "1.5px solid",
-                    background:
-                      speciesFilter === f.value
-                        ? "var(--royal)"
-                        : "transparent",
-                    color: speciesFilter === f.value ? "#fff" : "var(--muted)",
-                    borderColor:
-                      speciesFilter === f.value
-                        ? "var(--royal)"
-                        : "var(--border)",
-                    transition: "all 0.15s",
-                  }}
-                >
-                  {f.label}
-                </button>
-              ))}
-
-              <div
-                style={{
-                  width: 1,
-                  height: 20,
-                  background: "var(--border)",
-                  margin: "0 4px",
-                }}
-              />
-
-              <div style={{ width: 150 }}>
-                <CustomSelect
-                  value={
-                    !sortField
-                      ? ""
-                      : sortField === "created_at" && sortDir === "desc"
-                        ? "newest"
-                        : sortField === "created_at" && sortDir === "asc"
-                          ? "oldest"
-                          : sortField === "name" && sortDir === "asc"
-                            ? "az"
-                            : ""
-                  }
-                  onChange={(val) => {
-                    if (val === "newest") {
-                      setSortField("created_at");
-                      setSortDir("desc");
-                    } else if (val === "oldest") {
-                      setSortField("created_at");
-                      setSortDir("asc");
-                    } else if (val === "az") {
-                      setSortField("name");
-                      setSortDir("asc");
-                    } else {
-                      setSortField(null);
-                    }
-                  }}
-                  placeholder="Sort by…"
-                  options={[
-                    { value: "newest", label: "Newest" },
-                    { value: "oldest", label: "Oldest" },
-                    { value: "az", label: "A-Z" },
-                  ]}
-                />
-              </div>
-
-              <span
-                style={{ color: "var(--muted)", fontSize: 12, marginLeft: 6 }}
-              >
-                {sortedFiltered.length} record
-                {sortedFiltered.length !== 1 ? "s" : ""}
-              </span>
-            </div>
-          </div>
-          <div style={{ overflowX: "auto" }}>
-            {loading ? (
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: 13,
-                  minWidth: 780,
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th className="pr-th">Patient</th>
-                    <th className="pr-th">Owner</th>
-                    <th className="pr-th">Condition</th>
-                    <th className="pr-th">Status</th>
-                    <th className="pr-th">Health</th>
-                    <th className="pr-th">Room</th>
-                    <th className="pr-th">Registered</th>
-                    <th style={{ ...S.th, textAlign: "right" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <TableRowSkeleton />
-                  <TableRowSkeleton />
-                  <TableRowSkeleton />
-                  <TableRowSkeleton />
-                  <TableRowSkeleton />
-                </tbody>
-              </table>
-            ) : (
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: 13,
-                  minWidth: 780,
-                }}
-              >
-                <thead>
-                  <tr>
-                    <th
-                      className="pr-th"
-                      style={{ width: 36, textAlign: "center" }}
+                  <span
+                    style={{ fontSize: 12, fontWeight: 700, color: "#991b1b" }}
+                  >
+                    {selectedIds.length} selected
+                  </span>
+                  <button
+                    onClick={bulkDeletePatients}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "5px 12px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: "#dc2626",
+                      color: "#fff",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
                     >
-                      <input
-                        type="checkbox"
-                        checked={
-                          paginated.length > 0 &&
-                          paginated.every((p) => selectedIds.includes(p.id))
-                        }
-                        onChange={toggleSelectAllOnPage}
-                        style={{ cursor: "pointer" }}
-                      />
-                    </th>
-                    {[
-                      "Patient",
-                      "Owner",
-                      "Condition",
-                      "Status",
-                      "Health",
-                      "Room",
-                      "Registered",
-                      "Actions",
-                    ].map((h) => (
-                      <th key={h} className="pr-th">
-                        {h}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginated.length === 0 ? (
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    Delete Selected
+                  </button>
+                  <button
+                    onClick={() => setSelectedIds([])}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#991b1b",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              )}
+              <div
+                className="fade-in"
+                style={{
+                  display: "flex",
+                  gap: 6,
+                  flexWrap: "wrap",
+                  alignItems: "center",
+                }}
+              >
+                {[
+                  { label: "All", value: "all" },
+                  { label: "Admitted", value: "Admitted" },
+                  { label: "Outpatient", value: "Outpatient" },
+                  { label: "Critical", value: "Critical" },
+                ].map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => setStatusFilter(f.value)}
+                    style={{
+                      padding: "5px 14px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      border: "1.5px solid",
+                      background:
+                        statusFilter === f.value
+                          ? "var(--royal)"
+                          : "transparent",
+                      color: statusFilter === f.value ? "#fff" : "var(--muted)",
+                      borderColor:
+                        statusFilter === f.value
+                          ? "var(--royal)"
+                          : "var(--border)",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+
+                <div
+                  style={{
+                    width: 1,
+                    height: 20,
+                    background: "var(--border)",
+                    margin: "0 4px",
+                  }}
+                />
+
+                {[
+                  { label: "All Species", value: "all" },
+                  { label: "Dog", value: "Dog" },
+                  { label: "Cat", value: "Cat" },
+                ].map((f) => (
+                  <button
+                    key={f.value}
+                    onClick={() => setSpeciesFilter(f.value)}
+                    style={{
+                      padding: "5px 14px",
+                      borderRadius: 20,
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      border: "1.5px solid",
+                      background:
+                        speciesFilter === f.value
+                          ? "var(--royal)"
+                          : "transparent",
+                      color:
+                        speciesFilter === f.value ? "#fff" : "var(--muted)",
+                      borderColor:
+                        speciesFilter === f.value
+                          ? "var(--royal)"
+                          : "var(--border)",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+
+                <div
+                  style={{
+                    width: 1,
+                    height: 20,
+                    background: "var(--border)",
+                    margin: "0 4px",
+                  }}
+                />
+
+                <div style={{ width: 150 }}>
+                  <CustomSelect
+                    value={
+                      !sortField
+                        ? ""
+                        : sortField === "created_at" && sortDir === "desc"
+                          ? "newest"
+                          : sortField === "created_at" && sortDir === "asc"
+                            ? "oldest"
+                            : sortField === "name" && sortDir === "asc"
+                              ? "az"
+                              : ""
+                    }
+                    onChange={(val) => {
+                      if (val === "newest") {
+                        setSortField("created_at");
+                        setSortDir("desc");
+                      } else if (val === "oldest") {
+                        setSortField("created_at");
+                        setSortDir("asc");
+                      } else if (val === "az") {
+                        setSortField("name");
+                        setSortDir("asc");
+                      } else {
+                        setSortField(null);
+                      }
+                    }}
+                    placeholder="Sort by…"
+                    options={[
+                      { value: "newest", label: "Newest" },
+                      { value: "oldest", label: "Oldest" },
+                      { value: "az", label: "A-Z" },
+                    ]}
+                  />
+                </div>
+
+                <span
+                  style={{ color: "var(--muted)", fontSize: 12, marginLeft: 6 }}
+                >
+                  {sortedFiltered.length} record
+                  {sortedFiltered.length !== 1 ? "s" : ""}
+                </span>
+              </div>
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              {loading ? (
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: 13,
+                    minWidth: 780,
+                  }}
+                >
+                  <thead>
                     <tr>
-                      <td
-                        colSpan={9}
-                        style={{
-                          textAlign: "center",
-                          padding: "48px 20px",
-                          color: "var(--muted)",
-                        }}
-                      >
-                        <div style={{ marginBottom: 8 }}>
-                          <svg
-                            width="36"
-                            height="36"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#cbd5e1"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                          >
-                            <circle cx="7" cy="10" r="2" />
-                            <circle cx="17" cy="10" r="2" />
-                            <circle cx="4" cy="6" r="1.5" />
-                            <circle cx="20" cy="6" r="1.5" />
-                            <path d="M12 14c-3.3 0-6 2-6 4.5h12c0-2.5-2.7-4.5-6-4.5z" />
-                          </svg>
-                        </div>
-                        <div style={{ fontSize: 13 }}>
-                          No patients match your search or filter.
-                        </div>
-                      </td>
+                      <th className="pr-th">Patient</th>
+                      <th className="pr-th">Owner</th>
+                      <th className="pr-th">Condition</th>
+                      <th className="pr-th">Status</th>
+                      <th className="pr-th">Health</th>
+                      <th className="pr-th">Room</th>
+                      <th className="pr-th">Registered</th>
+                      <th style={{ ...S.th, textAlign: "right" }}>Actions</th>
                     </tr>
-                  ) : (
-                    paginated.map((p, idx) => {
-                      const criticalDot = {
-                        width: 7,
-                        height: 7,
-                        borderRadius: "50%",
-                        flexShrink: 0,
-                        display: "inline-block",
-                      };
-                      const healthDotColor =
-                        {
-                          Good: "#16a34a",
-                          Fair: "#d97706",
-                          Critical: "#dc2626",
-                        }[p.health] || "#9ca3af";
-                      const statusDotColor =
-                        { Admitted: "#2563eb", Outpatient: "#9ca3af" }[
-                          p.status
-                        ] || "#9ca3af";
-                      const initials = (p.owner || "?")
-                        .split(" ")
-                        .map((w) => w[0])
-                        .join("")
-                        .slice(0, 2)
-                        .toUpperCase();
-                      return (
-                        <tr
-                          key={p.id}
-                          className="fade-in"
+                  </thead>
+                  <tbody>
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                    <TableRowSkeleton />
+                  </tbody>
+                </table>
+              ) : (
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: 13,
+                    minWidth: 780,
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      <th
+                        className="pr-th"
+                        style={{ width: 36, textAlign: "center" }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={
+                            paginated.length > 0 &&
+                            paginated.every((p) => selectedIds.includes(p.id))
+                          }
+                          onChange={toggleSelectAllOnPage}
+                          style={{ cursor: "pointer" }}
+                        />
+                      </th>
+                      {[
+                        "Patient",
+                        "Owner",
+                        "Condition",
+                        "Status",
+                        "Health",
+                        "Room",
+                        "Registered",
+                        "Actions",
+                      ].map((h) => (
+                        <th key={h} className="pr-th">
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginated.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={9}
                           style={{
-                            cursor: "pointer",
-                            background: "var(--card)",
-                            animationDelay: `${idx * 0.06}s`,
+                            textAlign: "center",
+                            padding: "48px 20px",
+                            color: "var(--muted)",
                           }}
-                          onClick={() => openView(p)}
                         >
-                          <td
-                            className="pr-td"
-                            style={{ textAlign: "center" }}
-                            onClick={(e) => e.stopPropagation()}
+                          <div style={{ marginBottom: 8 }}>
+                            <svg
+                              width="36"
+                              height="36"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="#cbd5e1"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            >
+                              <circle cx="7" cy="10" r="2" />
+                              <circle cx="17" cy="10" r="2" />
+                              <circle cx="4" cy="6" r="1.5" />
+                              <circle cx="20" cy="6" r="1.5" />
+                              <path d="M12 14c-3.3 0-6 2-6 4.5h12c0-2.5-2.7-4.5-6-4.5z" />
+                            </svg>
+                          </div>
+                          <div style={{ fontSize: 13 }}>
+                            No patients match your search or filter.
+                          </div>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginated.map((p, idx) => {
+                        const criticalDot = {
+                          width: 7,
+                          height: 7,
+                          borderRadius: "50%",
+                          flexShrink: 0,
+                          display: "inline-block",
+                        };
+                        const healthDotColor =
+                          {
+                            Good: "#16a34a",
+                            Fair: "#d97706",
+                            Critical: "#dc2626",
+                          }[p.health] || "#9ca3af";
+                        const statusDotColor =
+                          { Admitted: "#2563eb", Outpatient: "#9ca3af" }[
+                            p.status
+                          ] || "#9ca3af";
+                        const initials = (p.owner || "?")
+                          .split(" ")
+                          .map((w) => w[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase();
+                        return (
+                          <tr
+                            key={p.id}
+                            className="fade-in"
+                            style={{
+                              cursor: "pointer",
+                              background: "var(--card)",
+                              animationDelay: `${idx * 0.06}s`,
+                            }}
+                            onClick={() => openView(p)}
                           >
-                            <input
-                              type="checkbox"
-                              checked={selectedIds.includes(p.id)}
-                              onChange={() => toggleSelectRow(p.id)}
-                              style={{ cursor: "pointer" }}
-                            />
-                          </td>
-                          {/* Patient */}
-                          <td className="pr-td">
-                            {" "}
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 10,
-                              }}
+                            <td
+                              className="pr-td"
+                              style={{ textAlign: "center" }}
+                              onClick={(e) => e.stopPropagation()}
                             >
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.includes(p.id)}
+                                onChange={() => toggleSelectRow(p.id)}
+                                style={{ cursor: "pointer" }}
+                              />
+                            </td>
+                            {/* Patient */}
+                            <td className="pr-td">
+                              {" "}
                               <div
                                 style={{
-                                  width: 34,
-                                  height: 34,
-                                  borderRadius: 10,
-                                  flexShrink: 0,
-                                  background:
-                                    p.species === "Cat" ? "#f0fdf4" : "#eff6ff",
                                   display: "flex",
                                   alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: 17,
+                                  gap: 10,
                                 }}
                               >
-                                {p.species === "Cat" ? (
-                                  <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 16 16"
-                                    fill="#16a34a"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      clipRule="evenodd"
-                                      d="M1 7L4.80061 1.43926C5.56059 0.527292 6.68638 0 7.8735 0H8V4L12 5L15 10L14.1875 11.2188C13.4456 12.3316 12.1967 13 10.8593 13H9L7 16H5L1 7ZM10 9C10.5523 9 11 8.55229 11 8C11 7.44772 10.5523 7 10 7C9.44771 7 9 7.44772 9 8C9 8.55229 9.44771 9 10 9Z"
-                                    />
-                                    <path d="M10 0.465878V2.43845L12 2.93845V0H11.8735C11.2125 0 10.5704 0.163501 10 0.465878Z" />
-                                  </svg>
-                                ) : (
-                                  <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 16 16"
-                                    fill="#1d4ed8"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                  >
-                                    <path
-                                      fillRule="evenodd"
-                                      clipRule="evenodd"
-                                      d="M16 4V7C16 9.20914 14.2091 11 12 11H10V15H0V13L0.931622 10.8706C1.25226 10.9549 1.59036 11 1.94124 11C3.74931 11 5.32536 9.76947 5.76388 8.01538L3.82359 7.53031C3.60766 8.39406 2.83158 9.00001 1.94124 9.00001C1.87789 9.00001 1.81539 8.99702 1.75385 8.99119C1.02587 8.92223 0.432187 8.45551 0.160283 7.83121C0.0791432 7.64491 0.0266588 7.44457 0.00781272 7.23658C-0.0112323 7.02639 0.00407892 6.80838 0.0588889 6.58914C0.0588882 6.58914 0.0588896 6.58913 0.0588889 6.58914L0.698705 4.02986C1.14387 2.24919 2.7438 1 4.57928 1H10L12 4H16ZM9 6C9.55229 6 10 5.55228 10 5C10 4.44772 9.55229 4 9 4C8.44771 4 8 4.44772 8 5C8 5.55228 8.44771 6 9 6Z"
-                                    />
-                                  </svg>
-                                )}
-                              </div>
-                              <div>
                                 <div
                                   style={{
-                                    fontWeight: 600,
-                                    fontSize: 13,
-                                    color: "var(--text)",
+                                    width: 34,
+                                    height: 34,
+                                    borderRadius: 10,
+                                    flexShrink: 0,
+                                    background:
+                                      p.species === "Cat"
+                                        ? "#f0fdf4"
+                                        : "#eff6ff",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 17,
                                   }}
                                 >
-                                  {p.name}
+                                  {p.species === "Cat" ? (
+                                    <svg
+                                      width="16"
+                                      height="16"
+                                      viewBox="0 0 16 16"
+                                      fill="#16a34a"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        clipRule="evenodd"
+                                        d="M1 7L4.80061 1.43926C5.56059 0.527292 6.68638 0 7.8735 0H8V4L12 5L15 10L14.1875 11.2188C13.4456 12.3316 12.1967 13 10.8593 13H9L7 16H5L1 7ZM10 9C10.5523 9 11 8.55229 11 8C11 7.44772 10.5523 7 10 7C9.44771 7 9 7.44772 9 8C9 8.55229 9.44771 9 10 9Z"
+                                      />
+                                      <path d="M10 0.465878V2.43845L12 2.93845V0H11.8735C11.2125 0 10.5704 0.163501 10 0.465878Z" />
+                                    </svg>
+                                  ) : (
+                                    <svg
+                                      width="16"
+                                      height="16"
+                                      viewBox="0 0 16 16"
+                                      fill="#1d4ed8"
+                                      xmlns="http://www.w3.org/2000/svg"
+                                    >
+                                      <path
+                                        fillRule="evenodd"
+                                        clipRule="evenodd"
+                                        d="M16 4V7C16 9.20914 14.2091 11 12 11H10V15H0V13L0.931622 10.8706C1.25226 10.9549 1.59036 11 1.94124 11C3.74931 11 5.32536 9.76947 5.76388 8.01538L3.82359 7.53031C3.60766 8.39406 2.83158 9.00001 1.94124 9.00001C1.87789 9.00001 1.81539 8.99702 1.75385 8.99119C1.02587 8.92223 0.432187 8.45551 0.160283 7.83121C0.0791432 7.64491 0.0266588 7.44457 0.00781272 7.23658C-0.0112323 7.02639 0.00407892 6.80838 0.0588889 6.58914C0.0588882 6.58914 0.0588896 6.58913 0.0588889 6.58914L0.698705 4.02986C1.14387 2.24919 2.7438 1 4.57928 1H10L12 4H16ZM9 6C9.55229 6 10 5.55228 10 5C10 4.44772 9.55229 4 9 4C8.44771 4 8 4.44772 8 5C8 5.55228 8.44771 6 9 6Z"
+                                      />
+                                    </svg>
+                                  )}
                                 </div>
-                                <div
-                                  style={{
-                                    fontSize: 11,
-                                    color: "var(--muted)",
-                                    marginTop: 1,
-                                  }}
-                                >
-                                  {p.species}
-                                  {p.breed ? ` · ${p.breed}` : ""}
-                                  {p.gender ? ` · ${p.gender}` : ""}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-                          {/* Owner */}
-                          <td className="pr-td">
-                            <div
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 8,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  width: 28,
-                                  height: 28,
-                                  borderRadius: "50%",
-                                  flexShrink: 0,
-                                  background: "var(--bg)",
-                                  border: "1.5px solid var(--border)",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  fontSize: 11,
-                                  fontWeight: 700,
-                                  color: "var(--muted)",
-                                }}
-                              >
-                                {initials}
-                              </div>
-                              <div>
-                                <div
-                                  style={{ fontSize: 13, color: "var(--text)" }}
-                                >
-                                  {p.owner || "—"}
-                                </div>
-                                {p.contact && (
+                                <div>
+                                  <div
+                                    style={{
+                                      fontWeight: 600,
+                                      fontSize: 13,
+                                      color: "var(--text)",
+                                    }}
+                                  >
+                                    {p.name}
+                                  </div>
                                   <div
                                     style={{
                                       fontSize: 11,
@@ -6867,299 +7055,350 @@ const PatientRecord = () => {
                                       marginTop: 1,
                                     }}
                                   >
-                                    {p.contact}
+                                    {p.species}
+                                    {p.breed ? ` · ${p.breed}` : ""}
+                                    {p.gender ? ` · ${p.gender}` : ""}
                                   </div>
-                                )}
+                                </div>
                               </div>
-                            </div>
-                          </td>
-                          {/* Condition */}
-                          <td className="pr-td">
-                            {p.condition ? (
-                              <span
+                            </td>
+                            {/* Owner */}
+                            <td className="pr-td">
+                              <div
                                 style={{
-                                  fontSize: 12,
-                                  color: "var(--muted)",
-                                  display: "block",
-                                  maxWidth: 180,
-                                  overflow: "hidden",
-                                  textOverflow: "ellipsis",
-                                  whiteSpace: "nowrap",
-                                }}
-                                title={p.condition}
-                              >
-                                {p.condition}
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  color: "var(--muted)",
-                                  fontStyle: "italic",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 8,
                                 }}
                               >
-                                No diagnosis
-                              </span>
-                            )}
-                          </td>
-                          {/* Status */}
-                          <td className="pr-td">
-                            <span
-                              className={`badge ${STATUS_BADGE[p.status] || "badge-gray"}`}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                              }}
-                            >
+                                <div
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: "50%",
+                                    flexShrink: 0,
+                                    background: "var(--bg)",
+                                    border: "1.5px solid var(--border)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    color: "var(--muted)",
+                                  }}
+                                >
+                                  {initials}
+                                </div>
+                                <div>
+                                  <div
+                                    style={{
+                                      fontSize: 13,
+                                      color: "var(--text)",
+                                    }}
+                                  >
+                                    {p.owner || "—"}
+                                  </div>
+                                  {p.contact && (
+                                    <div
+                                      style={{
+                                        fontSize: 11,
+                                        color: "var(--muted)",
+                                        marginTop: 1,
+                                      }}
+                                    >
+                                      {p.contact}
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                            {/* Condition */}
+                            <td className="pr-td">
+                              {p.condition ? (
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    color: "var(--muted)",
+                                    display: "block",
+                                    maxWidth: 180,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title={p.condition}
+                                >
+                                  {p.condition}
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    color: "var(--muted)",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  No diagnosis
+                                </span>
+                              )}
+                            </td>
+                            {/* Status */}
+                            <td className="pr-td">
                               <span
-                                style={{
-                                  ...criticalDot,
-                                  background: statusDotColor,
-                                }}
-                              />
-                              {p.status}
-                            </span>
-                          </td>
-                          {/* Health */}
-                          <td className="pr-td">
-                            <span
-                              className={`badge ${HEALTH_BADGE[p.health] || "badge-gray"}`}
-                              style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                              }}
-                            >
-                              <span
-                                style={{
-                                  ...criticalDot,
-                                  background: healthDotColor,
-                                  ...(p.health === "Critical"
-                                    ? {
-                                        animation:
-                                          "sk-shimmer 1s ease-in-out infinite",
-                                      }
-                                    : {}),
-                                }}
-                              />
-                              {p.health}
-                            </span>
-                          </td>
-                          {/* Room */}
-                          <td className="pr-td">
-                            {p.room ? (
-                              <span
+                                className={`badge ${STATUS_BADGE[p.status] || "badge-gray"}`}
                                 style={{
                                   display: "inline-flex",
                                   alignItems: "center",
-                                  gap: 4,
-                                  background: "#eff6ff",
-                                  border: "1px solid #bfdbfe",
-                                  color: "#1e40af",
-                                  borderRadius: 6,
-                                  padding: "3px 9px",
-                                  fontSize: 12,
-                                  fontWeight: 600,
-                                }}
-                              >
-                                <svg
-                                  width="11"
-                                  height="11"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.5"
-                                  strokeLinecap="round"
-                                >
-                                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                                  <polyline points="9 22 9 12 15 12 15 22" />
-                                </svg>{" "}
-                                {p.room}
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  color: "var(--muted)",
-                                  fontStyle: "italic",
-                                }}
-                              >
-                                Unassigned
-                              </span>
-                            )}
-                          </td>
-                          {/* Registered date */}
-                          <td
-                            className="pr-td"
-                            style={{ whiteSpace: "nowrap" }}
-                          >
-                            {p.created_at ? (
-                              <span
-                                style={{ fontSize: 12, color: "var(--text)" }}
-                              >
-                                {new Date(p.created_at).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    year: "numeric",
-                                  },
-                                )}
-                              </span>
-                            ) : (
-                              <span
-                                style={{
-                                  fontSize: 12,
-                                  color: "var(--muted)",
-                                  fontStyle: "italic",
-                                }}
-                              >
-                                —
-                              </span>
-                            )}
-                          </td>
-                          {/* Actions */}
-                          <td
-                            className="pr-td"
-                            style={{ textAlign: "left", padding: "8px 14px" }}
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            <div
-                              style={{
-                                display: "flex",
-                                gap: 6,
-                                justifyContent: "flex-start",
-                                alignItems: "center",
-                              }}
-                            >
-                              {/* View */}
-                              <button
-                                title="View"
-                                className="btn btn-sm"
-                                style={{
-                                  ...S.btn,
-                                  height: 28,
-                                  padding: "0 10px",
                                   gap: 5,
+                                }}
+                              >
+                                <span
+                                  style={{
+                                    ...criticalDot,
+                                    background: statusDotColor,
+                                  }}
+                                />
+                                {p.status}
+                              </span>
+                            </td>
+                            {/* Health */}
+                            <td className="pr-td">
+                              <span
+                                className={`badge ${HEALTH_BADGE[p.health] || "badge-gray"}`}
+                                style={{
                                   display: "inline-flex",
                                   alignItems: "center",
-                                  justifyContent: "center",
-                                  background: "#eff6ff",
-                                  border: "1.5px solid #bfdbfe",
-                                  color: "#1d4ed8",
-                                  borderRadius: 20,
-                                  fontSize: 11,
-                                  fontWeight: 600,
+                                  gap: 5,
                                 }}
-                                onClick={() => openView(p)}
                               >
-                                <svg
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.5"
-                                  strokeLinecap="round"
+                                <span
+                                  style={{
+                                    ...criticalDot,
+                                    background: healthDotColor,
+                                    ...(p.health === "Critical"
+                                      ? {
+                                          animation:
+                                            "sk-shimmer 1s ease-in-out infinite",
+                                        }
+                                      : {}),
+                                  }}
+                                />
+                                {p.health}
+                              </span>
+                            </td>
+                            {/* Room */}
+                            <td className="pr-td">
+                              {p.room ? (
+                                <span
+                                  style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 4,
+                                    background: "#eff6ff",
+                                    border: "1px solid #bfdbfe",
+                                    color: "#1e40af",
+                                    borderRadius: 6,
+                                    padding: "3px 9px",
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                  }}
                                 >
-                                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                  <circle cx="12" cy="12" r="3" />
-                                </svg>
-                                View
-                              </button>
+                                  <svg
+                                    width="11"
+                                    height="11"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                  >
+                                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                                    <polyline points="9 22 9 12 15 12 15 22" />
+                                  </svg>{" "}
+                                  {p.room}
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    color: "var(--muted)",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  Unassigned
+                                </span>
+                              )}
+                            </td>
+                            {/* Registered date */}
+                            <td
+                              className="pr-td"
+                              style={{ whiteSpace: "nowrap" }}
+                            >
+                              {p.created_at ? (
+                                <span
+                                  style={{ fontSize: 12, color: "var(--text)" }}
+                                >
+                                  {new Date(p.created_at).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      year: "numeric",
+                                    },
+                                  )}
+                                </span>
+                              ) : (
+                                <span
+                                  style={{
+                                    fontSize: 12,
+                                    color: "var(--muted)",
+                                    fontStyle: "italic",
+                                  }}
+                                >
+                                  —
+                                </span>
+                              )}
+                            </td>
+                            {/* Actions */}
+                            <td
+                              className="pr-td"
+                              style={{ textAlign: "left", padding: "8px 14px" }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  gap: 6,
+                                  justifyContent: "flex-start",
+                                  alignItems: "center",
+                                }}
+                              >
+                                {/* View */}
+                                <button
+                                  title="View"
+                                  className="btn btn-sm"
+                                  style={{
+                                    ...S.btn,
+                                    height: 28,
+                                    padding: "0 10px",
+                                    gap: 5,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    background: "#eff6ff",
+                                    border: "1.5px solid #bfdbfe",
+                                    color: "#1d4ed8",
+                                    borderRadius: 20,
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                  }}
+                                  onClick={() => openView(p)}
+                                >
+                                  <svg
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                  >
+                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                    <circle cx="12" cy="12" r="3" />
+                                  </svg>
+                                  View
+                                </button>
 
-                              {/* Edit */}
-                              <button
-                                title="Edit"
-                                className="btn btn-sm"
-                                style={{
-                                  ...S.btn,
-                                  height: 28,
-                                  padding: "0 10px",
-                                  gap: 5,
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  background: "#f8fafc",
-                                  border: "1.5px solid #e2e8f0",
-                                  color: "#475569",
-                                  borderRadius: 20,
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                }}
-                                onClick={() => openEditPatient(p)}
-                              >
-                                <svg
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.5"
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
+                                {/* Edit */}
+                                <button
+                                  title="Edit"
+                                  className="btn btn-sm"
+                                  style={{
+                                    ...S.btn,
+                                    height: 28,
+                                    padding: "0 10px",
+                                    gap: 5,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    background: "#f8fafc",
+                                    border: "1.5px solid #e2e8f0",
+                                    color: "#475569",
+                                    borderRadius: 20,
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                  }}
+                                  onClick={() => openEditPatient(p)}
                                 >
-                                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                </svg>
-                                Edit
-                              </button>
+                                  <svg
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                  </svg>
+                                  Edit
+                                </button>
 
-                              {/* Delete */}
-                              <button
-                                title="Delete"
-                                className="btn btn-sm"
-                                style={{
-                                  ...S.btn,
-                                  height: 28,
-                                  padding: "0 10px",
-                                  gap: 5,
-                                  display: "inline-flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  background: "#fef2f2",
-                                  border: "1.5px solid #fca5a5",
-                                  color: "#dc2626",
-                                  borderRadius: 20,
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                }}
-                                onClick={() =>
-                                  showConfirm(
-                                    "Delete Patient",
-                                    `Delete ${p.name}? This cannot be undone.`,
-                                    () => doDelete(p.id),
-                                  )
-                                }
-                              >
-                                <svg
-                                  width="12"
-                                  height="12"
-                                  viewBox="0 0 24 24"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  strokeWidth="2.5"
-                                  strokeLinecap="round"
+                                {/* Delete */}
+                                <button
+                                  title="Delete"
+                                  className="btn btn-sm"
+                                  style={{
+                                    ...S.btn,
+                                    height: 28,
+                                    padding: "0 10px",
+                                    gap: 5,
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    background: "#fef2f2",
+                                    border: "1.5px solid #fca5a5",
+                                    color: "#dc2626",
+                                    borderRadius: 20,
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                  }}
+                                  onClick={() =>
+                                    showConfirm(
+                                      "Delete Patient",
+                                      `Delete ${p.name}? This cannot be undone.`,
+                                      () => doDelete(p.id),
+                                    )
+                                  }
                                 >
-                                  <polyline points="3 6 5 6 21 6" />
-                                  <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                                  <path d="M10 11v6M14 11v6" />
-                                  <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                                </svg>
-                                Delete
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
-            )}
+                                  <svg
+                                    width="12"
+                                    height="12"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                  >
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                    <path d="M10 11v6M14 11v6" />
+                                    <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                  </svg>
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
           </div>
-        </div>
         )}
 
         {/* Pagination */}
@@ -9992,6 +10231,270 @@ const PatientRecord = () => {
           credentials={createdCredentials}
           onClose={() => setCreatedCredentials(null)}
         />
+      )}
+      {/* ── GENERATE REPORT MODAL ── */}
+      {showReportModal && (
+        <div className="pr-overlay" style={{ zIndex: 1100 }}>
+          <div
+            style={{
+              background: "var(--card)",
+              borderRadius: 14,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.30)",
+              width: "100%",
+              maxWidth: 420,
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "18px 24px",
+                borderBottom: "1px solid var(--border)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 16,
+                    fontWeight: 800,
+                    color: "var(--text)",
+                  }}
+                >
+                  Generate Patient Report
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: 12,
+                    color: "var(--muted)",
+                  }}
+                >
+                  Export all patient records for a chosen period.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowReportModal(false)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  fontSize: 18,
+                  cursor: "pointer",
+                  color: "var(--muted)",
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: "20px 24px" }}>
+              {/* Period type toggle */}
+              <label
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Report Period
+              </label>
+              <div
+                style={{
+                  display: "flex",
+                  border: "1.5px solid var(--border)",
+                  borderRadius: 8,
+                  overflow: "hidden",
+                  marginBottom: 14,
+                }}
+              >
+                {[
+                  { key: "month", label: "By Month" },
+                  { key: "year", label: "By Year" },
+                ].map(({ key, label }) => (
+                  <button
+                    key={key}
+                    onClick={() => setReportPeriodType(key)}
+                    style={{
+                      flex: 1,
+                      padding: "8px 0",
+                      border: "none",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      background:
+                        reportPeriodType === key
+                          ? "var(--royal)"
+                          : "var(--card)",
+                      color: reportPeriodType === key ? "#fff" : "var(--muted)",
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {reportPeriodType === "month" ? (
+                <div style={{ marginBottom: 14 }}>
+                  <label
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--muted)",
+                      display: "block",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Select Month
+                  </label>
+                  <input
+                    type="month"
+                    value={reportMonth}
+                    onChange={(e) => setReportMonth(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      border: "1.5px solid var(--border)",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontFamily: "inherit",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                </div>
+              ) : (
+                <div style={{ marginBottom: 14 }}>
+                  <label
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--muted)",
+                      display: "block",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Select Year
+                  </label>
+                  <CustomSelect
+                    value={reportYear}
+                    onChange={setReportYear}
+                    placeholder="Select year"
+                    options={Array.from({ length: 8 }, (_, i) => {
+                      const y = new Date().getFullYear() - i;
+                      return { value: String(y), label: String(y) };
+                    })}
+                  />
+                </div>
+              )}
+
+              {/* Format toggle */}
+              <label
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Export Format
+              </label>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
+                }}
+              >
+                {[
+                  {
+                    key: "pdf",
+                    label: "PDF",
+                    desc: "Printable document",
+                    color: "#dc2626",
+                    bg: "#fef2f2",
+                    border: "#fca5a5",
+                  },
+                  {
+                    key: "excel",
+                    label: "Excel",
+                    desc: "Spreadsheet (.xlsx)",
+                    color: "#16a34a",
+                    bg: "#f0fdf4",
+                    border: "#bbf7d0",
+                  },
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    onClick={() => setReportFormat(f.key)}
+                    style={{
+                      padding: "14px 12px",
+                      borderRadius: 10,
+                      border: `2px solid ${reportFormat === f.key ? f.color : "var(--border)"}`,
+                      background: reportFormat === f.key ? f.bg : "var(--card)",
+                      cursor: "pointer",
+                      textAlign: "left",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color: reportFormat === f.key ? f.color : "var(--text)",
+                      }}
+                    >
+                      {f.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--muted)",
+                        marginTop: 2,
+                      }}
+                    >
+                      {f.desc}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                padding: "14px 24px",
+                borderTop: "1px solid var(--border)",
+              }}
+            >
+              <button
+                className="btn btn-ghost pr-btn-auto"
+                onClick={() => setShowReportModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary pr-btn-auto"
+                onClick={generateReport}
+                disabled={generatingReport}
+                style={{ opacity: generatingReport ? 0.6 : 1 }}
+              >
+                {generatingReport ? "Generating..." : "Generate Report"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
       {/* ── RECENTLY DELETED MODAL ── */}
       {showDeletedModal && (

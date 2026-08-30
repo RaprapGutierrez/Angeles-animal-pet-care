@@ -2038,10 +2038,12 @@ const RoomAvailability = () => {
   const {
     user,
     isAdmin,
+    isSuperAdmin,
     isEmployee,
     seeAllBranches,
     loading: userLoading,
   } = useCurrentUser();
+  const isAdminLevel = isAdmin || isSuperAdmin;
 
   const [branchFilter, setBranchFilter] = useState("");
   const [branches, setBranches] = useState([]);
@@ -2098,6 +2100,84 @@ const RoomAvailability = () => {
   const [confirm, setConfirm] = useState({ show: false });
   const [deletedRooms, setDeletedRooms] = useState([]);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
+
+  const [branchRoomStats, setBranchRoomStats] = useState([]);
+  const [branchRoomStatsLoading, setBranchRoomStatsLoading] = useState(false);
+
+  const fetchBranchRoomComparison = async () => {
+    if (!isAdminLevel || !seeAllBranches) return;
+    setBranchRoomStatsLoading(true);
+    const { data: allBranches } = await supabase
+      .from("branches")
+      .select("id, name")
+      .order("name");
+    const results = await Promise.all(
+      (allBranches || []).map(async (b) => {
+        const { data } = await supabase
+          .from("rooms")
+          .select("status")
+          .eq("branch_id", b.id)
+          .is("deleted_at", null);
+        const list = data || [];
+        const occupied = list.filter((r) => r.status === "Occupied").length;
+        const quarantine = list.filter((r) => r.status === "Quarantine").length;
+        return {
+          id: b.id,
+          name: b.name,
+          total: list.length,
+          occupied,
+          quarantine,
+          rate:
+            list.length > 0 ? Math.round((occupied / list.length) * 100) : 0,
+        };
+      }),
+    );
+    setBranchRoomStats(results.sort((a, b) => b.rate - a.rate));
+    setBranchRoomStatsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchBranchRoomComparison();
+  }, [isAdminLevel, seeAllBranches]);
+
+  const [branchRoomStats, setBranchRoomStats] = useState([]);
+  const [branchRoomStatsLoading, setBranchRoomStatsLoading] = useState(false);
+
+  const fetchBranchRoomComparison = async () => {
+    if (!isAdminLevel || !seeAllBranches) return;
+    setBranchRoomStatsLoading(true);
+    const { data: allBranches } = await supabase
+      .from("branches")
+      .select("id, name")
+      .order("name");
+    const results = await Promise.all(
+      (allBranches || []).map(async (b) => {
+        const { data } = await supabase
+          .from("rooms")
+          .select("status")
+          .eq("branch_id", b.id)
+          .is("deleted_at", null);
+        const list = data || [];
+        const occupied = list.filter((r) => r.status === "Occupied").length;
+        const quarantine = list.filter((r) => r.status === "Quarantine").length;
+        return {
+          id: b.id,
+          name: b.name,
+          total: list.length,
+          occupied,
+          quarantine,
+          rate:
+            list.length > 0 ? Math.round((occupied / list.length) * 100) : 0,
+        };
+      }),
+    );
+    setBranchRoomStats(results.sort((a, b) => b.rate - a.rate));
+    setBranchRoomStatsLoading(false);
+  };
+
+  useEffect(() => {
+    fetchBranchRoomComparison();
+  }, [isAdminLevel, seeAllBranches]);
 
   const [toasts, setToasts] = useState([]);
 
@@ -2860,6 +2940,192 @@ const RoomAvailability = () => {
                 </div>
               ))}
         </div>
+
+        {/* ── Admin/Super Admin: Branch Room Comparison ── */}
+        {isAdminLevel && seeAllBranches && (
+          <div
+            style={{
+              background: "linear-gradient(135deg,#1e1b4b,#312e81)",
+              borderRadius: 14,
+              padding: "18px 22px",
+              marginBottom: 20,
+              boxShadow: "0 8px 24px rgba(49,46,129,0.25)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 14,
+                flexWrap: "wrap",
+                gap: 8,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#fbbf24"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <h2
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: "#fff",
+                    margin: 0,
+                  }}
+                >
+                  Room Occupancy by Branch
+                </h2>
+              </div>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#fbbf24",
+                  background: "rgba(251,191,36,0.15)",
+                  border: "1px solid rgba(251,191,36,0.3)",
+                  padding: "3px 9px",
+                  borderRadius: 20,
+                }}
+              >
+                {isSuperAdmin
+                  ? "Super Admin — Full Access"
+                  : "Administrator View"}
+              </span>
+            </div>
+
+            {branchRoomStatsLoading ? (
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.6)",
+                  fontSize: 12,
+                  margin: 0,
+                }}
+              >
+                Loading branch data…
+              </p>
+            ) : branchRoomStats.length === 0 ? (
+              <p
+                style={{
+                  color: "rgba(255,255,255,0.6)",
+                  fontSize: 12,
+                  margin: 0,
+                }}
+              >
+                No branch data available.
+              </p>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: 12,
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      {[
+                        "Branch",
+                        "Total Rooms",
+                        "Occupied",
+                        "Quarantine",
+                        "Utilization",
+                      ].map((h) => (
+                        <th
+                          key={h}
+                          style={{
+                            textAlign: "left",
+                            padding: "8px 12px",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: "rgba(255,255,255,0.55)",
+                            textTransform: "uppercase",
+                            letterSpacing: 0.5,
+                            borderBottom: "1px solid rgba(255,255,255,0.15)",
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {branchRoomStats.map((b) => (
+                      <tr
+                        key={b.id}
+                        style={{
+                          borderBottom: "1px solid rgba(255,255,255,0.08)",
+                        }}
+                      >
+                        <td
+                          style={{
+                            padding: "10px 12px",
+                            fontWeight: 700,
+                            color: "#fff",
+                          }}
+                        >
+                          {b.name}
+                        </td>
+                        <td
+                          style={{
+                            padding: "10px 12px",
+                            color: "rgba(255,255,255,0.8)",
+                          }}
+                        >
+                          {b.total}
+                        </td>
+                        <td
+                          style={{
+                            padding: "10px 12px",
+                            color: "#a5b4fc",
+                            fontWeight: 700,
+                          }}
+                        >
+                          {b.occupied}
+                        </td>
+                        <td
+                          style={{
+                            padding: "10px 12px",
+                            color:
+                              b.quarantine > 0
+                                ? "#fca5a5"
+                                : "rgba(255,255,255,0.5)",
+                          }}
+                        >
+                          {b.quarantine}
+                        </td>
+                        <td style={{ padding: "10px 12px" }}>
+                          <span
+                            style={{
+                              fontWeight: 700,
+                              color:
+                                b.rate >= 80
+                                  ? "#fca5a5"
+                                  : b.rate >= 50
+                                    ? "#fbbf24"
+                                    : "#86efac",
+                            }}
+                          >
+                            {b.rate}%
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Filter tabs */}
         <div
