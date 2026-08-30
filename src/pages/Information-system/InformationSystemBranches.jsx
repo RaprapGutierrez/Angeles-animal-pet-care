@@ -991,15 +991,13 @@ function BranchModal({ branch, onClose }) {
                 <h2
                   style={{
                     fontSize: 18,
-                    color: "#fff",
+                    color: "#05328A",
                     lineHeight: 1.3,
                     fontFamily: "'Poetsen One', sans-serif",
-                    WebkitTextStroke: "5px #05328A",
-                    paintOrder: "stroke fill",
                   }}
                 >
                   {branch.name}
-                </h2>
+                </h2>{" "}
               </div>
             </div>
             <button
@@ -1202,10 +1200,11 @@ const BRANCH_IMAGES = {
 function BranchCard({ branch, index, onViewDetail }) {
   const isHospital = branch.type === "Hospital";
   const rc = REGION_COLORS[branch.region] || REGION_COLORS["Central Luzon"];
+  const [flipped, setFlipped] = useState(false);
 
   return (
     <div
-      className="flip-card anim-fade-up"
+      className={cn("flip-card anim-fade-up", flipped && "flipped")}
       style={{
         height: 380,
         borderRadius: 18,
@@ -1219,7 +1218,16 @@ function BranchCard({ branch, index, onViewDetail }) {
       onMouseLeave={(e) => {
         e.currentTarget.style.filter = "none";
       }}
+      onClick={(e) => {
+        // Only tap-to-flip on devices without real hover (touch);
+        // desktop already flips on hover, so a click there should
+        // just open details instead of toggling.
+        if (window.matchMedia("(hover: none)").matches) {
+          setFlipped((f) => !f);
+        }
+      }}
     >
+      {" "}
       <div className="flip-inner" style={{ height: "100%" }}>
         {/* ── FRONT ── */}
         <article
@@ -1291,8 +1299,8 @@ function BranchCard({ branch, index, onViewDetail }) {
               <span
                 style={{
                   fontSize: 22,
-                  color: "#fff",
-                  fontWeight: 400,
+                  color: T.border,
+                  fontWeight: 700,
                   fontFamily: "'Poetsen One', sans-serif",
                 }}
               >
@@ -1303,17 +1311,14 @@ function BranchCard({ branch, index, onViewDetail }) {
             <h3
               style={{
                 fontSize: 19,
-                color: "#fff",
+                color: "#05328A",
                 marginBottom: 8,
                 lineHeight: 1.25,
                 fontFamily: "'Poetsen One', sans-serif",
-                WebkitTextStroke: "5px #05328A",
-                paintOrder: "stroke fill",
               }}
             >
               {branch.shortName}
             </h3>
-
             <div
               style={{
                 display: "inline-flex",
@@ -1458,7 +1463,10 @@ function BranchCard({ branch, index, onViewDetail }) {
             </div>
             <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
               <button
-                onClick={() => onViewDetail(branch)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewDetail(branch);
+                }}
                 className="pill"
                 style={{
                   display: "inline-flex",
@@ -1474,13 +1482,18 @@ function BranchCard({ branch, index, onViewDetail }) {
                   border: "none",
                 }}
               >
-                <ArrowRight className="" style={{ width: 13, height: 13 }} />{" "}
+                {" "}
+                <ArrowRight
+                  className=""
+                  style={{ width: 13, height: 13 }}
+                />{" "}
                 Details
               </button>
               <a
                 href={`https://www.google.com/maps/search/?api=1&query=${branch.lat},${branch.lng}`}
                 target="_blank"
                 rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
                 style={{
                   display: "inline-flex",
                   alignItems: "center",
@@ -2059,12 +2072,10 @@ function Hero({ onBrowse }) {
             >
               Browse Branches
             </button>
-           <button
+            <button
               onClick={() => {
                 const sessionUser = getSessionUser();
-                window.location.href = sessionUser
-                  ? "/appointments"
-                  : "/login";
+                window.location.href = sessionUser ? "/appointments" : "/login";
               }}
               className="pill"
               style={{
@@ -2088,7 +2099,8 @@ function Hero({ onBrowse }) {
               }}
             >
               Book Appointment
-            </button>          </div>
+            </button>{" "}
+          </div>
         </div>
 
         {/* Stats */}
@@ -2248,7 +2260,7 @@ function EmergencyBanner() {
             onClick={() => (window.location.href = "/emergency-guest")}
             style={{
               background: "#fff",
-              color: "#fff",
+              color: T.red,
               padding: "10px 22px",
               borderRadius: 999,
               fontWeight: 700,
@@ -2256,8 +2268,6 @@ function EmergencyBanner() {
               border: "none",
               transition: "transform .2s",
               fontFamily: "'Poetsen One', sans-serif",
-              WebkitTextStroke: "5px #DC2626",
-              paintOrder: "stroke fill",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = "translateY(-1px)";
@@ -4501,7 +4511,7 @@ export default function InformationSystem() {
                 style={{
                   width: "100%",
                   paddingLeft: 38,
-                  paddingRight: 14,
+                  paddingRight: q ? 38 : 14,
                   paddingTop: 10,
                   paddingBottom: 10,
                   borderRadius: 12,
@@ -4513,6 +4523,31 @@ export default function InformationSystem() {
                   color: T.fg,
                 }}
               />
+              {q && (
+                <button
+                  onClick={() => setQ("")}
+                  aria-label="Clear search"
+                  style={{
+                    position: "absolute",
+                    right: 10,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 22,
+                    height: 22,
+                    borderRadius: "50%",
+                    border: "none",
+                    background: T.border,
+                    color: T.mutedFg,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  <X className="" style={{ width: 11, height: 11 }} />
+                </button>
+              )}
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", gap: 16 }}>
               <Pills
@@ -4555,9 +4590,28 @@ export default function InformationSystem() {
                   margin: "0 auto 14px",
                 }}
               />
-              <p style={{ color: T.mutedFg, fontSize: 15 }}>
+              <p style={{ color: T.mutedFg, fontSize: 15, marginBottom: 16 }}>
                 No branches match your filters. Try adjusting your search.
               </p>
+              <button
+                onClick={() => {
+                  setQ("");
+                  setRegion("All");
+                  setType("All");
+                }}
+                className="pill"
+                style={{
+                  padding: "9px 20px",
+                  borderRadius: 10,
+                  border: `1px solid ${T.border}`,
+                  background: T.muted,
+                  color: T.primary,
+                  fontSize: 13,
+                  fontWeight: 700,
+                }}
+              >
+                Clear all filters
+              </button>
             </div>
           ) : (
             <div

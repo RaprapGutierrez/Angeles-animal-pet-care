@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "../js/Utils/supabase";
 import { getNavLinks, getBranchId } from "../js/Utils/branchTables";
 import { usePresence } from "../js/hooks/usePresence";
+import { useModuleAccess } from "../js/hooks/useModuleAccess";
 import "../styles/Layout.css";
 
 // Converts a raw role string (from JWT/localStorage) into a canonical role name used across the app.
@@ -80,6 +81,26 @@ const BRANCH_DISPLAY_NAMES = {
   4: "Angeles",
   5: "San Fernando",
   6: "Magalang",
+};
+
+// Fallback palette for branches not in BRANCH_COLORS (i.e. any branch added
+// after this map was last hand-updated) — hashes the branch ID into a fixed
+// set of colors instead of every new branch defaulting to Angeles' purple.
+const FALLBACK_BRANCH_PALETTE = [
+  "#7C3AED",
+  "#0EA5E9",
+  "#10B981",
+  "#F59E0B",
+  "#EF4444",
+  "#EC4899",
+  "#14B8A6",
+  "#8B5CF6",
+];
+const getBranchColor = (branchId) => {
+  if (BRANCH_COLORS[branchId]) return BRANCH_COLORS[branchId];
+  if (branchId == null) return FALLBACK_BRANCH_PALETTE[0];
+  const idx = Number(branchId) % FALLBACK_BRANCH_PALETTE.length;
+  return FALLBACK_BRANCH_PALETTE[idx];
 };
 
 const normalizeBranchKey = (b) =>
@@ -1144,9 +1165,8 @@ const SidebarItem = ({
 // Small badge in the sidebar showing the current branch name/color; collapses
 // to a colored dot when the sidebar is not expanded.
 const BranchPill = ({ branchId, branchName, isExpanded }) => {
-  const color = BRANCH_COLORS[branchId] || "#7C3AED";
-  const displayName =
-    BRANCH_DISPLAY_NAMES[branchId] || branchName || "Main Branch";
+  const color = getBranchColor(branchId);
+  const displayName = BRANCH_DISPLAY_NAMES[branchId] || branchName || "Branch";
 
   if (!isExpanded) {
     return (
@@ -1739,7 +1759,7 @@ const NotifDropdown = ({
 
 // === FUNCTION: AvatarDropdown (component) ===
 const AvatarDropdown = ({ user, onLogout, onClose, avatarUrl }) => {
-  const color = BRANCH_COLORS[user.branchId] || "#7C3AED";
+  const color = getBranchColor(user.branchId);
   const displayBranch = BRANCH_DISPLAY_NAMES[user.branchId] || user.branch;
   const profilePath =
     user.role?.toLowerCase() === "customer" ? "/customer/profile" : "/profile";
@@ -2273,6 +2293,7 @@ export const Layout = ({ children }) => {
   const [layoutFirstName, setLayoutFirstName] = useState(null);
   const [dbBranchId, setDbBranchId] = useState(null);
   const [dbRole, setDbRole] = useState(null);
+  const [liveBranchName, setLiveBranchName] = useState(null);
 
   // === FUNCTION: Layout > useEffect (load + subscribe to profile avatar/name/branch/role changes) ===
   useEffect(() => {
@@ -2320,6 +2341,26 @@ export const Layout = ({ children }) => {
     };
   }, [rawUser.id]);
 
+  // Fetches the live branch name from Supabase for any branch not covered
+  // by BRANCH_DISPLAY_NAMES (i.e. a branch added after that map was last
+  // hand-updated) — without this, a new branch's sidebar shows "Main
+  // Branch" instead of its real name.
+  useEffect(() => {
+    if (dbBranchId == null || BRANCH_DISPLAY_NAMES[dbBranchId]) return;
+    let active = true;
+    supabase
+      .from("branches")
+      .select("name")
+      .eq("id", dbBranchId)
+      .single()
+      .then(({ data }) => {
+        if (active && data?.name) setLiveBranchName(data.name);
+      });
+    return () => {
+      active = false;
+    };
+  }, [dbBranchId]);
+
   // readUserInfo() only guesses the branch from the JWT/email pattern — it has
   // no idea about branch changes made later in Admin Security. Once the live
   // profile row loads, its branch_id overrides that guess, so everything below
@@ -2328,7 +2369,7 @@ export const Layout = ({ children }) => {
     ...rawUser,
     branchId: dbBranchId ?? rawUser.branchId,
     branch: dbBranchId
-      ? BRANCH_DISPLAY_NAMES[dbBranchId] || rawUser.branch
+      ? BRANCH_DISPLAY_NAMES[dbBranchId] || liveBranchName || rawUser.branch
       : rawUser.branch,
     role: dbRole ? normalizeRole(dbRole) : rawUser.role,
   };
@@ -2339,14 +2380,21 @@ export const Layout = ({ children }) => {
   const isAdmin = user.role === "Admin" || user.role === "super_admin";
   const isManager = user.role === "Manager";
 
-  // ── KEY FIX: pass branchId (number) to getNavLinks ──
-  const navLinks = getNavLinks(user.role, user.branchId);
+  // Sidebar nav now comes from branches.modules via useModuleAccess(), which
+  // falls back to its own DEFAULT_MODULE_KEYS when a branch hasn't been
+  // configured in Branches.jsx yet. Customers aren't part of the module
+  // system (MODULE_ROUTES/DEFAULT_MODULE_KEYS have no "Customer" entry), so
+  // they keep using the original getNavLinks() from branchTables.js.
+  const { navLinks: staffNavLinks } = useModuleAccess(user.role, user.branchId);
+  const navLinks = isCustomer
+    ? getNavLinks(user.role, user.branchId)
+    : staffNavLinks;
 
-  const accentColor = BRANCH_COLORS[user.branchId] || "#7C3AED";
+  const accentColor = getBranchColor(user.branchId);
   const portalLabel = isCustomer
     ? "Customer Portal"
-    : BRANCH_DISPLAY_NAMES[user.branchId]
-      ? `${BRANCH_DISPLAY_NAMES[user.branchId]} · Management System`
+    : user.branch
+      ? `${user.branch} · Management System`
       : "Management System";
   const avatarLetter = user.name?.charAt(0)?.toUpperCase() || "U";
   const totalUnread = easCount + msgCount + stockCount;

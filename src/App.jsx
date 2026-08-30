@@ -1,6 +1,9 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
+import { supabase } from "./js/Utils/supabase";
+import { useModuleAccess } from "./js/hooks/useModuleAccess";
+import { ROUTE_TO_MODULE } from "./js/Utils/moduleAccess";
 
 // Auth Pages.
 import Login from "./pages/Login-Register/Login";
@@ -39,6 +42,22 @@ import CustomerBranches from "./pages/Customer/CustomerBranches";
 import GuestAIChat from "./pages/AI/GuestAIChat";
 
 // ── Auth guard helper ──────────────────────────────────────────────────────
+// Converts a raw role string (from the JWT) into a canonical role name.
+// Kept identical to Layout.jsx's normalizeRole so both files agree on the
+// same five roles and never drift into typo'd variants.
+const normalizeRole = (raw) => {
+  if (!raw) return "Employee";
+  const map = {
+    super_admin: "super_admin",
+    superadmin: "super_admin",
+    admin: "Admin",
+    manager: "Manager",
+    employee: "Employee",
+    customer: "Customer",
+  };
+  return map[String(raw).toLowerCase()] || raw;
+};
+
 const getRole = () => {
   try {
     const token = localStorage.getItem("hospital_jwt");
@@ -49,23 +68,174 @@ const getRole = () => {
       localStorage.removeItem("user_role");
       return null;
     }
-    return localStorage.getItem("user_role") || null;
+    // IMPORTANT: role must come from the signed JWT only, never from
+    // localStorage — that value is editable via DevTools and would let
+    // anyone grant themselves admin/super_admin client-side. This mirrors
+    // Layout.jsx's readUserInfo(), which already does this correctly.
+    const meta = payload.user_metadata || {};
+    const appMeta = payload.app_metadata || {};
+    const rawRole = appMeta.role || meta.role || "Employee";
+    return normalizeRole(rawRole);
   } catch {
     return null;
   }
 };
-
 const PrivateRoute = ({ children, allowedRoles }) => {
-  const role = getRole();
-  if (!role) return <Navigate to="/login" replace />;
-  const fallback =
-    role.toLowerCase() === "customer" ? "/customer/dashboard" : "/dashboard";
+  const jwtRole = getRole();
+  const [liveRole, setLiveRole] = useState(jwtRole);
+  const [liveBranchId, setLiveBranchId] = useState(null);
+  const [checked, setChecked] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    let active = true;
+    if (!jwtRole) {
+      setChecked(true);
+      return;
+    }
+    const token = localStorage.getItem("hospital_jwt");
+    let userId = null;
+    try {
+      userId = JSON.parse(atob(token.split(".")[1])).sub;
+    } catch {
+      // fall through — no id means we can't look up the live role,
+      // so trust the JWT role rather than blocking access entirely
+    }
+    if (!userId) {
+      setChecked(true);
+      return;
+    }
+    supabase
+      .from("profiles")
+      .select("role, branch_id")
+      .eq("id", userId)
+      .single()
+      .then(({ data }) => {
+        if (!active) return;
+        if (data?.role) setLiveRole(normalizeRole(data.role));
+        if (data?.branch_id != null) setLiveBranchId(data.branch_id);
+        setChecked(true);
+      })
+      .catch(() => {
+        if (active) setChecked(true); // network/DB hiccup — fall back to JWT role rather than lock the user out
+      });
+    return () => {
+      active = false;
+    };
+  }, [jwtRole]);
+
+  const role = liveRole || jwtRole || "Employee";
+  const isCustomer = role.toLowerCase() === "customer";
+  // Customers aren't part of the module system (see Layout.jsx's same
+  // reasoning) — only look up module access for staff roles.
+  const { hasModule, loading: modulesLoading } = useModuleAccess(
+    !isCustomer && checked ? role : null,
+    !isCustomer && checked ? liveBranchId : null,
+  );
+
+  if (!jwtRole) return <Navigate to="/login" replace />;
+  // Brief pause while the live role is confirmed — avoids a flash of the
+  // wrong page's content if the JWT role and DB role have diverged.
+  if (!checked) return null;
+
+  const fallback = isCustomer ? "/customer/dashboard" : "/dashboard";
   if (
     allowedRoles &&
     !allowedRoles.some((r) => r.toLowerCase() === role.toLowerCase())
   ) {
     return <Navigate to={fallback} replace />;
   }
+
+  // Module-level gate: closes the gap where unchecking a module in
+  // Branches.jsx only hid the nav link but left the route itself open to
+  // direct URL access. Only applies to staff roles and only to routes that
+  // are actually in the module system (ROUTE_TO_MODULE) — anything not
+  // mapped (e.g. /profile) is unaffected.
+  const moduleKey = ROUTE_TO_MODULE[location.pathname];
+  if (!isCustomer && moduleKey) {
+    if (modulesLoading) return null;
+    if (!hasModule(moduleKey)) return <Navigate to={fallback} replace />;
+  }
+
+  return children;
+};
+const PrivateRoute = ({ children, allowedRoles }) => {
+  const jwtRole = getRole();
+  const [liveRole, setLiveRole] = useState(jwtRole);
+  const [liveBranchId, setLiveBranchId] = useState(null);
+  const [checked, setChecked] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    let active = true;
+    if (!jwtRole) {
+      setChecked(true);
+      return;
+    }
+    const token = localStorage.getItem("hospital_jwt");
+    let userId = null;
+    try {
+      userId = JSON.parse(atob(token.split(".")[1])).sub;
+    } catch {
+      // fall through — no id means we can't look up the live role,
+      // so trust the JWT role rather than blocking access entirely
+    }
+    if (!userId) {
+      setChecked(true);
+      return;
+    }
+    supabase
+      .from("profiles")
+      .select("role, branch_id")
+      .eq("id", userId)
+      .single()
+      .then(({ data }) => {
+        if (!active) return;
+        if (data?.role) setLiveRole(normalizeRole(data.role));
+        if (data?.branch_id != null) setLiveBranchId(data.branch_id);
+        setChecked(true);
+      })
+      .catch(() => {
+        if (active) setChecked(true); // network/DB hiccup — fall back to JWT role rather than lock the user out
+      });
+    return () => {
+      active = false;
+    };
+  }, [jwtRole]);
+
+  const role = liveRole || jwtRole || "Employee";
+  const isCustomer = role.toLowerCase() === "customer";
+  // Customers aren't part of the module system (see Layout.jsx's same
+  // reasoning) — only look up module access for staff roles.
+  const { hasModule, loading: modulesLoading } = useModuleAccess(
+    !isCustomer && checked ? role : null,
+    !isCustomer && checked ? liveBranchId : null,
+  );
+
+  if (!jwtRole) return <Navigate to="/login" replace />;
+  // Brief pause while the live role is confirmed — avoids a flash of the
+  // wrong page's content if the JWT role and DB role have diverged.
+  if (!checked) return null;
+
+  const fallback = isCustomer ? "/customer/dashboard" : "/dashboard";
+  if (
+    allowedRoles &&
+    !allowedRoles.some((r) => r.toLowerCase() === role.toLowerCase())
+  ) {
+    return <Navigate to={fallback} replace />;
+  }
+
+  // Module-level gate: closes the gap where unchecking a module in
+  // Branches.jsx only hid the nav link but left the route itself open to
+  // direct URL access. Only applies to staff roles and only to routes that
+  // are actually in the module system (ROUTE_TO_MODULE) — anything not
+  // mapped (e.g. /profile) is unaffected.
+  const moduleKey = ROUTE_TO_MODULE[location.pathname];
+  if (!isCustomer && moduleKey) {
+    if (modulesLoading) return null;
+    if (!hasModule(moduleKey)) return <Navigate to={fallback} replace />;
+  }
+
   return children;
 };
 
@@ -147,7 +317,9 @@ const App = () => {
         <Route
           path="/dashboard"
           element={
-            <PrivateRoute>
+            <PrivateRoute
+              allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+            >
               <Dashboard />
             </PrivateRoute>
           }
@@ -155,7 +327,9 @@ const App = () => {
         <Route
           path="/patient-records"
           element={
-            <PrivateRoute>
+            <PrivateRoute
+              allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+            >
               <PatientRecord />
             </PrivateRoute>
           }
@@ -163,7 +337,9 @@ const App = () => {
         <Route
           path="/appointments"
           element={
-            <PrivateRoute>
+            <PrivateRoute
+              allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+            >
               <Appointment />
             </PrivateRoute>
           }
@@ -171,7 +347,9 @@ const App = () => {
         <Route
           path="/room-availability"
           element={
-            <PrivateRoute>
+            <PrivateRoute
+              allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+            >
               <RoomAvailability />
             </PrivateRoute>
           }
@@ -179,7 +357,9 @@ const App = () => {
         <Route
           path="/inventory"
           element={
-            <PrivateRoute>
+            <PrivateRoute
+              allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+            >
               <Inventory />
             </PrivateRoute>
           }
@@ -187,7 +367,9 @@ const App = () => {
         <Route
           path="/point-of-sale"
           element={
-            <PrivateRoute>
+            <PrivateRoute
+              allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+            >
               <PointOfSale />
             </PrivateRoute>
           }
@@ -195,7 +377,9 @@ const App = () => {
         <Route
           path="/walk-in"
           element={
-            <PrivateRoute>
+            <PrivateRoute
+              allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+            >
               <Walkin />
             </PrivateRoute>
           }
@@ -203,7 +387,7 @@ const App = () => {
         <Route
           path="/reports"
           element={
-            <PrivateRoute>
+            <PrivateRoute allowedRoles={["super_admin", "Admin", "Manager"]}>
               <Report />
             </PrivateRoute>
           }
@@ -211,7 +395,9 @@ const App = () => {
         <Route
           path="/messages"
           element={
-            <PrivateRoute>
+            <PrivateRoute
+              allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+            >
               <Messages />
             </PrivateRoute>
           }
@@ -219,7 +405,9 @@ const App = () => {
         <Route
           path="/emergency"
           element={
-            <PrivateRoute>
+            <PrivateRoute
+              allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+            >
               <Emergency />
             </PrivateRoute>
           }
@@ -227,7 +415,7 @@ const App = () => {
         <Route
           path="/branches"
           element={
-            <PrivateRoute>
+            <PrivateRoute allowedRoles={["super_admin", "Admin"]}>
               <Branches />
             </PrivateRoute>
           }
@@ -235,7 +423,9 @@ const App = () => {
         <Route
           path="/predictive-analytics"
           element={
-            <PrivateRoute>
+            <PrivateRoute
+              allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+            >
               <PredictiveAnalytics />
             </PrivateRoute>
           }
@@ -245,9 +435,7 @@ const App = () => {
         <Route
           path="/admin-security"
           element={
-            <PrivateRoute
-              allowedRoles={["super_admin", "admin", "Admin", "Super Admin"]}
-            >
+            <PrivateRoute allowedRoles={["super_admin", "Admin"]}>
               <AdminSecurity />
             </PrivateRoute>
           }
