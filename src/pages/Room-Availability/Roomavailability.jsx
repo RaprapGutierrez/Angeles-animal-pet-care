@@ -2140,45 +2140,6 @@ const RoomAvailability = () => {
     fetchBranchRoomComparison();
   }, [isAdminLevel, seeAllBranches]);
 
-  const [branchRoomStats, setBranchRoomStats] = useState([]);
-  const [branchRoomStatsLoading, setBranchRoomStatsLoading] = useState(false);
-
-  const fetchBranchRoomComparison = async () => {
-    if (!isAdminLevel || !seeAllBranches) return;
-    setBranchRoomStatsLoading(true);
-    const { data: allBranches } = await supabase
-      .from("branches")
-      .select("id, name")
-      .order("name");
-    const results = await Promise.all(
-      (allBranches || []).map(async (b) => {
-        const { data } = await supabase
-          .from("rooms")
-          .select("status")
-          .eq("branch_id", b.id)
-          .is("deleted_at", null);
-        const list = data || [];
-        const occupied = list.filter((r) => r.status === "Occupied").length;
-        const quarantine = list.filter((r) => r.status === "Quarantine").length;
-        return {
-          id: b.id,
-          name: b.name,
-          total: list.length,
-          occupied,
-          quarantine,
-          rate:
-            list.length > 0 ? Math.round((occupied / list.length) * 100) : 0,
-        };
-      }),
-    );
-    setBranchRoomStats(results.sort((a, b) => b.rate - a.rate));
-    setBranchRoomStatsLoading(false);
-  };
-
-  useEffect(() => {
-    fetchBranchRoomComparison();
-  }, [isAdminLevel, seeAllBranches]);
-
   const [toasts, setToasts] = useState([]);
 
   const showToast = (message, type = "success") => {
