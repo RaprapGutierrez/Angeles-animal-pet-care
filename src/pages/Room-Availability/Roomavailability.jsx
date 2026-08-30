@@ -2993,7 +2993,7 @@ const RoomAvailability = () => {
                   }}
                 >
                   <thead>
-                    <tr>
+                    <tr style={{ background: "rgba(255,255,255,0.06)" }}>
                       {[
                         "Branch",
                         "Total Rooms",
@@ -3008,10 +3008,11 @@ const RoomAvailability = () => {
                             padding: "8px 12px",
                             fontSize: 10,
                             fontWeight: 700,
-                            color: "rgba(255,255,255,0.55)",
+                            color: "rgba(255,255,255,0.65)",
                             textTransform: "uppercase",
                             letterSpacing: 0.5,
                             borderBottom: "1px solid rgba(255,255,255,0.15)",
+                            background: "transparent",
                           }}
                         >
                           {h}
@@ -3025,13 +3026,23 @@ const RoomAvailability = () => {
                         key={b.id}
                         style={{
                           borderBottom: "1px solid rgba(255,255,255,0.08)",
+                          background: "transparent",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background =
+                            "rgba(255,255,255,0.06)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
                         }}
                       >
+                        {" "}
                         <td
                           style={{
                             padding: "10px 12px",
                             fontWeight: 700,
                             color: "#fff",
+                            background: "transparent",
                           }}
                         >
                           {b.name}
@@ -3040,6 +3051,7 @@ const RoomAvailability = () => {
                           style={{
                             padding: "10px 12px",
                             color: "rgba(255,255,255,0.8)",
+                            background: "transparent",
                           }}
                         >
                           {b.total}
@@ -3049,6 +3061,7 @@ const RoomAvailability = () => {
                             padding: "10px 12px",
                             color: "#a5b4fc",
                             fontWeight: 700,
+                            background: "transparent",
                           }}
                         >
                           {b.occupied}
@@ -3060,11 +3073,17 @@ const RoomAvailability = () => {
                               b.quarantine > 0
                                 ? "#fca5a5"
                                 : "rgba(255,255,255,0.5)",
+                            background: "transparent",
                           }}
                         >
                           {b.quarantine}
                         </td>
-                        <td style={{ padding: "10px 12px" }}>
+                        <td
+                          style={{
+                            padding: "10px 12px",
+                            background: "transparent",
+                          }}
+                        >
                           <span
                             style={{
                               fontWeight: 700,

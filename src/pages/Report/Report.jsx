@@ -2022,7 +2022,7 @@ const Report = () => {
                     }}
                   >
                     <thead>
-                      <tr>
+                      <tr style={{ background: "rgba(255,255,255,0.06)" }}>
                         {[
                           "Branch",
                           "Total Sales",
@@ -2037,10 +2037,11 @@ const Report = () => {
                               padding: "8px 12px",
                               fontSize: 10,
                               fontWeight: 700,
-                              color: "rgba(255,255,255,0.55)",
+                              color: "rgba(255,255,255,0.65)",
                               textTransform: "uppercase",
                               letterSpacing: 0.5,
                               borderBottom: "1px solid rgba(255,255,255,0.15)",
+                              background: "transparent",
                             }}
                           >
                             {h}
@@ -2054,6 +2055,14 @@ const Report = () => {
                           key={b.id}
                           style={{
                             borderBottom: "1px solid rgba(255,255,255,0.08)",
+                            background: "transparent",
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background =
+                              "rgba(255,255,255,0.06)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = "transparent";
                           }}
                         >
                           <td
@@ -2061,6 +2070,7 @@ const Report = () => {
                               padding: "10px 12px",
                               fontWeight: 700,
                               color: "#fff",
+                              background: "transparent",
                             }}
                           >
                             {i === 0 && (
@@ -2085,6 +2095,7 @@ const Report = () => {
                               padding: "10px 12px",
                               color: "#a5b4fc",
                               fontWeight: 700,
+                              background: "transparent",
                             }}
                           >
                             ₱{b.sales.toLocaleString("en-PH")}
@@ -2096,6 +2107,7 @@ const Report = () => {
                                 b.voided > 0
                                   ? "#fca5a5"
                                   : "rgba(255,255,255,0.5)",
+                              background: "transparent",
                             }}
                           >
                             {b.voided}
@@ -2104,6 +2116,7 @@ const Report = () => {
                             style={{
                               padding: "10px 12px",
                               color: "rgba(255,255,255,0.8)",
+                              background: "transparent",
                             }}
                           >
                             {b.appointments}
@@ -2112,6 +2125,7 @@ const Report = () => {
                             style={{
                               padding: "10px 12px",
                               color: "rgba(255,255,255,0.8)",
+                              background: "transparent",
                             }}
                           >
                             {b.patients}
@@ -2119,7 +2133,7 @@ const Report = () => {
                         </tr>
                       ))}
                     </tbody>
-                  </table>
+                  </table>{" "}
                 </div>
               )}
             </div>

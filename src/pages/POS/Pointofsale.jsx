@@ -1194,10 +1194,164 @@ const PointOfSale = () => {
           </button>{" "}
         </div>
 
+        {/* ── Admin/Super Admin Insights Panel ── */}
+        {(isAdmin || isSuperAdmin) && (
+          <div style={{ ...S.cont, paddingBottom: 0 }}>
+            <div
+              style={{
+                background: "linear-gradient(135deg,#1e1b4b,#312e81)",
+                borderRadius: 14,
+                padding: "18px 22px",
+                marginBottom: 20,
+                boxShadow: "0 8px 24px rgba(49,46,129,0.25)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 14,
+                  flexWrap: "wrap",
+                  gap: 8,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fbbf24"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  <h2
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 800,
+                      color: "#fff",
+                      margin: 0,
+                    }}
+                  >
+                    Admin Sales Insights
+                  </h2>
+                </div>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#fbbf24",
+                    background: "rgba(251,191,36,0.15)",
+                    border: "1px solid rgba(251,191,36,0.3)",
+                    padding: "3px 9px",
+                    borderRadius: 20,
+                  }}
+                >
+                  {isSuperAdmin
+                    ? "Super Admin — Full Access"
+                    : "Administrator View"}
+                </span>
+              </div>
+              {(() => {
+                const now = new Date();
+                const todayStr = now.toDateString();
+                const activeTx = transactions.filter(
+                  (t) => t.status !== "Voided",
+                );
+                const todayTx = activeTx.filter(
+                  (t) =>
+                    t.created_at &&
+                    new Date(t.created_at).toDateString() === todayStr,
+                );
+                const todaySales = todayTx.reduce(
+                  (s, t) => s + Number(t.total || 0),
+                  0,
+                );
+                const totalSales = activeTx.reduce(
+                  (s, t) => s + Number(t.total || 0),
+                  0,
+                );
+                const voidedCount = transactions.filter(
+                  (t) => t.status === "Voided",
+                ).length;
+                const walkinCount = activeTx.filter((t) => t.is_walkin).length;
+
+                const stats = [
+                  {
+                    label: "Today's Sales",
+                    value: `₱${todaySales.toFixed(2)}`,
+                  },
+                  { label: "Today's Transactions", value: todayTx.length },
+                  {
+                    label: "All-Time Sales",
+                    value: `₱${totalSales.toFixed(2)}`,
+                  },
+                  { label: "Voided Transactions", value: voidedCount },
+                  { label: "Walk-in Sales", value: walkinCount },
+                  {
+                    label: "Low Stock Items",
+                    value: products.filter((p) => p.qty <= (p.threshold ?? 10))
+                      .length,
+                  },
+                ];
+
+                return (
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))",
+                      gap: 12,
+                    }}
+                  >
+                    {stats.map((s) => (
+                      <div
+                        key={s.label}
+                        style={{
+                          background: "rgba(255,255,255,0.06)",
+                          border: "1px solid rgba(255,255,255,0.12)",
+                          borderRadius: 10,
+                          padding: "12px 14px",
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin: "0 0 4px",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: "rgba(255,255,255,0.55)",
+                            textTransform: "uppercase",
+                            letterSpacing: 0.5,
+                          }}
+                        >
+                          {s.label}
+                        </p>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 18,
+                            fontWeight: 800,
+                            color: "#fff",
+                          }}
+                        >
+                          {s.value}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
+
         {/* ── Content grid (Products + Cart) ── */}
         <div
           style={{
             ...S.cont,
+            paddingTop: isAdmin || isSuperAdmin ? 0 : S.cont.paddingTop,
             display: "grid",
             gridTemplateColumns: isMobile ? "1fr" : "1fr 390px",
             gap: 20,
@@ -2794,6 +2948,39 @@ const PointOfSale = () => {
               </button>
             </div>
             <div className="modal-body">
+              {(isAdmin || isSuperAdmin) && (
+                <div
+                  style={{
+                    background: "#eff6ff",
+                    border: "1px solid #bfdbfe",
+                    borderRadius: 8,
+                    padding: "9px 14px",
+                    marginBottom: 14,
+                    fontSize: 12,
+                    color: "#1e40af",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                  >
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  <span>
+                    You're viewing full transaction history including voided
+                    sales, as{" "}
+                    {isSuperAdmin ? "Super Admin" : "an Administrator"}.
+                  </span>
+                </div>
+              )}
               <div style={{ overflowX: "auto" }}>
                 <table
                   style={{

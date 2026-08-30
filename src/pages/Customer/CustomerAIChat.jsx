@@ -1443,9 +1443,9 @@ Owner's question: ${userText}`;
                 style={{
                   padding: "5px 12px",
                   borderRadius: 20,
-                  border: "1.5px solid #c7d4f0",
-                  background: "#e8edf8",
-                  color: "#1e3a8a",
+                  border: "1.5px solid rgba(37,99,235,0.35)",
+                  background: "rgba(37,99,235,0.10)",
+                  color: "var(--royal, #2563eb)",
                   fontSize: 11,
                   fontWeight: 600,
                   cursor: "pointer",
@@ -2522,8 +2522,8 @@ Rules:
 
               <div
                 style={{
-                  background: "#fffbeb",
-                  border: "1px solid #fde68a",
+                  background: "rgba(217,119,6,0.12)",
+                  border: "1px solid rgba(217,119,6,0.35)",
                   borderRadius: 10,
                   padding: "12px 14px",
                   display: "flex",
@@ -2531,13 +2531,13 @@ Rules:
                   alignItems: "flex-start",
                 }}
               >
-                <span style={{ color: "#92400e", flexShrink: 0, marginTop: 1 }}>
+                <span style={{ color: "#d97706", flexShrink: 0, marginTop: 1 }}>
                   <Icons.AlertTriangle />
                 </span>
                 <p
                   style={{
                     fontSize: 11,
-                    color: "#92400e",
+                    color: "#d97706",
                     margin: 0,
                     lineHeight: 1.6,
                   }}
@@ -2640,7 +2640,13 @@ Rules:
               <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
                 Analyzing symptoms...
               </h3>
-              <p style={{ fontSize: 13, color: "#64748b", marginBottom: 20 }}>
+              <p
+                style={{
+                  fontSize: 13,
+                  color: "var(--muted)",
+                  marginBottom: 20,
+                }}
+              >
                 Gemini is reviewing the symptoms for{" "}
                 <strong>{form.petName}</strong>
               </p>
@@ -2666,8 +2672,8 @@ Rules:
                       fontSize: 11,
                       padding: "3px 10px",
                       borderRadius: 99,
-                      background: "#f1f5f9",
-                      color: "#64748b",
+                      background: "var(--bg)",
+                      color: "var(--muted)",
                       animation: `pulse 1.5s ${i * 0.3}s infinite`,
                     }}
                   >
@@ -2862,8 +2868,8 @@ Rules:
                 </div>
                 <div
                   style={{
-                    background: "#e8edf8",
-                    border: "1px solid #c7d4f0",
+                    background: "rgba(37,99,235,0.12)",
+                    border: "1px solid rgba(37,99,235,0.35)",
                     borderRadius: 12,
                     padding: "14px 16px",
                   }}
@@ -2872,7 +2878,7 @@ Rules:
                     style={{
                       fontSize: 11,
                       fontWeight: 800,
-                      color: "#1e3a8a",
+                      color: "var(--royal, #2563eb)",
                       textTransform: "uppercase",
                       letterSpacing: 0.8,
                       margin: "0 0 10px",
@@ -2884,20 +2890,20 @@ Rules:
                     style={{
                       fontSize: 14,
                       fontWeight: 800,
-                      color: "#1e3a8a",
+                      color: "var(--royal, #2563eb)",
                       marginBottom: 6,
                       display: "flex",
                       alignItems: "center",
                       gap: 6,
                     }}
                   >
-                    <StethoscopeIcon size={16} color="#1e3a8a" />{" "}
+                    <StethoscopeIcon size={16} color="var(--royal, #2563eb)" />{" "}
                     {assessment.recommendedService}
                   </div>
                   <p
                     style={{
                       fontSize: 11,
-                      color: "#3b5998",
+                      color: "var(--royal, #2563eb)",
                       margin: 0,
                       lineHeight: 1.5,
                     }}
@@ -2911,8 +2917,8 @@ Rules:
               {assessment.warningSigns?.length > 0 && (
                 <div
                   style={{
-                    background: "#fff7ed",
-                    border: "1px solid #fdba74",
+                    background: "rgba(234,88,12,0.12)",
+                    border: "1px solid rgba(234,88,12,0.35)",
                     borderRadius: 12,
                     padding: "14px 16px",
                   }}
@@ -2955,7 +2961,7 @@ Rules:
                       <span
                         style={{
                           fontSize: 12,
-                          color: "#92400e",
+                          color: "var(--text)",
                           lineHeight: 1.5,
                         }}
                       >
@@ -2971,8 +2977,8 @@ Rules:
                 assessment.homeCareTips?.length > 0 && (
                   <div
                     style={{
-                      background: "#f0fdf4",
-                      border: "1px solid #86efac",
+                      background: "rgba(22,163,74,0.12)",
+                      border: "1px solid rgba(22,163,74,0.35)",
                       borderRadius: 12,
                       padding: "14px 16px",
                     }}
@@ -3008,7 +3014,7 @@ Rules:
                         <span
                           style={{
                             fontSize: 12,
-                            color: "#166534",
+                            color: "var(--text)",
                             lineHeight: 1.5,
                           }}
                         >
@@ -3023,8 +3029,8 @@ Rules:
               {!showChat && (
                 <div
                   style={{
-                    background: "linear-gradient(135deg,#f0f4ff,#e8edf8)",
-                    border: "1.5px solid #c7d4f0",
+                    background: "rgba(37,99,235,0.10)",
+                    border: "1.5px solid rgba(37,99,235,0.3)",
                     borderRadius: 14,
                     padding: "16px 20px",
                     display: "flex",
@@ -3032,7 +3038,9 @@ Rules:
                     gap: 14,
                   }}
                 >
-                  <span style={{ color: "#1e3a8a", flexShrink: 0 }}>
+                  <span
+                    style={{ color: "var(--royal, #2563eb)", flexShrink: 0 }}
+                  >
                     <Icons.MessageCircle />
                   </span>
                   <div style={{ flex: 1 }}>
@@ -3040,13 +3048,15 @@ Rules:
                       style={{
                         fontSize: 13,
                         fontWeight: 700,
-                        color: "#1e3a8a",
+                        color: "var(--royal, #2563eb)",
                         margin: "0 0 3px",
                       }}
                     >
                       Have questions about this assessment?
                     </p>
-                    <p style={{ fontSize: 12, color: "#64748b", margin: 0 }}>
+                    <p
+                      style={{ fontSize: 12, color: "var(--muted)", margin: 0 }}
+                    >
                       Ask Gemini AI anything about {form.petName}'s condition
                       before booking.
                     </p>
@@ -3163,13 +3173,13 @@ Rules:
                   style={{
                     padding: "12px 20px",
                     borderRadius: 12,
-                    border: "1.5px solid #e2e8f0",
-                    background: "#f8fafc",
+                    border: "1.5px solid var(--border)",
+                    background: "var(--bg)",
                     fontFamily: "inherit",
                     fontSize: 13,
                     fontWeight: 700,
                     cursor: "pointer",
-                    color: "#64748b",
+                    color: "var(--muted)",
                   }}
                 >
                   Start Over
@@ -3340,12 +3350,12 @@ Rules:
 
                 <div
                   style={{
-                    background: "#fffbeb",
-                    border: "1px solid #fde68a",
+                    background: "rgba(217,119,6,0.12)",
+                    border: "1px solid rgba(217,119,6,0.35)",
                     borderRadius: 8,
                     padding: "10px 14px",
                     fontSize: 12,
-                    color: "#92400e",
+                    color: "#d97706",
                     marginBottom: 14,
                     display: "flex",
                     gap: 8,
@@ -3394,13 +3404,13 @@ Rules:
                     style={{
                       padding: "12px 20px",
                       borderRadius: 12,
-                      border: "1.5px solid #e2e8f0",
-                      background: "#f8fafc",
+                      border: "1.5px solid var(--border)",
+                      background: "var(--bg)",
                       fontFamily: "inherit",
                       fontSize: 13,
                       fontWeight: 700,
                       cursor: "pointer",
-                      color: "#64748b",
+                      color: "var(--muted)",
                     }}
                   >
                     ← Back
@@ -3538,13 +3548,13 @@ Rules:
                   style={{
                     padding: "12px 20px",
                     borderRadius: 12,
-                    border: "1.5px solid #e2e8f0",
-                    background: "#f8fafc",
+                    border: "1.5px solid var(--border)",
+                    background: "var(--bg)",
                     fontFamily: "inherit",
                     fontSize: 13,
                     fontWeight: 700,
                     cursor: "pointer",
-                    color: "#1e3a8a",
+                    color: "var(--royal, #2563eb)",
                   }}
                 >
                   View Appointments
@@ -3577,7 +3587,7 @@ Rules:
                   fontSize: 13,
                   fontWeight: 700,
                   marginBottom: 12,
-                  color: "#94a3b8",
+                  color: "var(--muted)",
                 }}
               >
                 This Session — Previous Assessments
@@ -3594,21 +3604,29 @@ Rules:
                         alignItems: "center",
                         gap: 12,
                         padding: "10px 14px",
-                        background: "#f8fafc",
+                        background: "var(--bg)",
                         borderRadius: 8,
-                        border: "1px solid #e2e8f0",
+                        border: "1px solid var(--border)",
                       }}
                     >
+                      {" "}
                       <PetsIcon size={18} color="#1e3a8a" />
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600 }}>
+                        <p
+                          style={{
+                            margin: 0,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            color: "var(--text)",
+                          }}
+                        >
                           {h.pet} — {h.service}
                         </p>
                         <p
                           style={{
                             margin: 0,
                             fontSize: 11,
-                            color: "#94a3b8",
+                            color: "var(--muted)",
                             overflow: "hidden",
                             textOverflow: "ellipsis",
                             whiteSpace: "nowrap",

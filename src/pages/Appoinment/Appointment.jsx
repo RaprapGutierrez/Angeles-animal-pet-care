@@ -3336,37 +3336,69 @@ const Appointment = () => {
               background: "var(--card)",
               borderRadius: 14,
               width: "100%",
-              maxWidth: 440,
-              boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
+              maxWidth: 420,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.30)",
               overflow: "hidden",
             }}
           >
             <div
               style={{
-                background: "linear-gradient(135deg,#78350f,#d97706)",
-                padding: "16px 20px",
+                padding: "18px 24px",
+                borderBottom: "1px solid var(--border)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
               }}
             >
-              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#fff" }}>
-                Export Appointments
-              </h3>
-              <p style={{ margin: "4px 0 0", fontSize: 12, color: "rgba(255,255,255,0.85)" }}>
-                Admin-only report generation
-              </p>
-            </div>
-            <div style={{ padding: "18px 20px" }}>
-              <div
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 16,
+                    fontWeight: 800,
+                    color: "var(--text)",
+                  }}
+                >
+                  Export Appointments
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: 12,
+                    color: "var(--muted)",
+                  }}
+                >
+                  Export all appointments for a chosen period.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowExportModal(false)}
                 style={{
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: "#94a3b8",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.8px",
-                  marginBottom: 6,
+                  background: "none",
+                  border: "none",
+                  fontSize: 18,
+                  cursor: "pointer",
+                  color: "var(--muted)",
                 }}
               >
-                Period
-              </div>
+                ✕
+              </button>
+            </div>
+
+            <div style={{ padding: "20px 24px" }}>
+              <label
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "var(--muted)",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                  display: "block",
+                  marginBottom: 8,
+                }}
+              >
+                Report Period
+              </label>
               <div
                 style={{
                   display: "flex",
@@ -3377,8 +3409,8 @@ const Appointment = () => {
                 }}
               >
                 {[
-                  { key: "month", label: "Monthly" },
-                  { key: "year", label: "Yearly" },
+                  { key: "month", label: "By Month" },
+                  { key: "year", label: "By Year" },
                 ].map(({ key, label }) => (
                   <button
                     key={key}
@@ -3392,7 +3424,8 @@ const Appointment = () => {
                       fontWeight: 700,
                       cursor: "pointer",
                       fontFamily: "inherit",
-                      background: exportPeriod === key ? "#d97706" : "#fff",
+                      background:
+                        exportPeriod === key ? "var(--royal)" : "var(--card)",
                       color: exportPeriod === key ? "#fff" : "var(--muted)",
                     }}
                   >
@@ -3401,115 +3434,138 @@ const Appointment = () => {
                 ))}
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: exportPeriod === "month" ? "1fr 1fr" : "1fr",
-                  gap: 12,
-                  marginBottom: 14,
-                }}
-              >
-                {exportPeriod === "month" && (
-                  <div>
-                    <div
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: "#94a3b8",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.8px",
-                        marginBottom: 6,
-                      }}
-                    >
-                      Month
-                    </div>
-                    <CustomSelect
-                      value={exportMonth}
-                      onChange={setExportMonth}
-                      accent="#d97706"
-                      options={MONTH_NAMES.map((m, i) => ({
-                        value: String(i + 1).padStart(2, "0"),
-                        label: m,
-                      }))}
-                    />
-                  </div>
-                )}
-                <div>
-                  <div
+              {exportPeriod === "month" ? (
+                <div style={{ marginBottom: 14 }}>
+                  <label
                     style={{
-                      fontSize: 10,
+                      fontSize: 11,
                       fontWeight: 700,
-                      color: "#94a3b8",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.8px",
+                      color: "var(--muted)",
+                      display: "block",
                       marginBottom: 6,
                     }}
                   >
-                    Year
-                  </div>
+                    Select Month
+                  </label>
+                  <CustomSelect
+                    value={exportMonth}
+                    onChange={setExportMonth}
+                    accent="var(--royal)"
+                    options={MONTH_NAMES.map((m, i) => ({
+                      value: String(i + 1).padStart(2, "0"),
+                      label: m,
+                    }))}
+                  />
+                </div>
+              ) : (
+                <div style={{ marginBottom: 14 }}>
+                  <label
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--muted)",
+                      display: "block",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Select Year
+                  </label>
                   <CustomSelect
                     value={exportYear}
                     onChange={setExportYear}
-                    accent="#d97706"
+                    placeholder="Select year"
+                    accent="var(--royal)"
                     options={Array.from({ length: 6 }, (_, i) => {
                       const y = new Date().getFullYear() - i;
                       return { value: String(y), label: String(y) };
                     })}
                   />
                 </div>
-              </div>
+              )}
 
-              <div
+              <label
                 style={{
-                  fontSize: 10,
+                  fontSize: 11,
                   fontWeight: 700,
-                  color: "#94a3b8",
+                  color: "var(--muted)",
                   textTransform: "uppercase",
-                  letterSpacing: "0.8px",
-                  marginBottom: 6,
+                  letterSpacing: 0.5,
+                  display: "block",
+                  marginBottom: 8,
                 }}
               >
-                Format
-              </div>
+                Export Format
+              </label>
               <div
                 style={{
-                  display: "flex",
-                  border: "1.5px solid var(--border)",
-                  borderRadius: 8,
-                  overflow: "hidden",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 10,
                 }}
               >
                 {[
-                  { key: "excel", label: "Excel (.xlsx)" },
-                  { key: "pdf", label: "PDF" },
-                ].map(({ key, label }) => (
+                  {
+                    key: "pdf",
+                    label: "PDF",
+                    desc: "Printable document",
+                    color: "#dc2626",
+                    bg: "#fef2f2",
+                    border: "#fca5a5",
+                  },
+                  {
+                    key: "excel",
+                    label: "Excel",
+                    desc: "Spreadsheet (.xlsx)",
+                    color: "#16a34a",
+                    bg: "#f0fdf4",
+                    border: "#bbf7d0",
+                  },
+                ].map((f) => (
                   <button
-                    key={key}
+                    key={f.key}
                     type="button"
-                    onClick={() => setExportFormat(key)}
+                    onClick={() => setExportFormat(f.key)}
                     style={{
-                      flex: 1,
-                      padding: "8px 0",
-                      border: "none",
-                      fontSize: 12,
-                      fontWeight: 700,
+                      padding: "14px 12px",
+                      borderRadius: 10,
+                      border: `2px solid ${exportFormat === f.key ? f.color : "var(--border)"}`,
+                      background:
+                        exportFormat === f.key ? f.bg : "var(--card)",
                       cursor: "pointer",
+                      textAlign: "left",
                       fontFamily: "inherit",
-                      background: exportFormat === key ? "#1e3a8a" : "#fff",
-                      color: exportFormat === key ? "#fff" : "var(--muted)",
                     }}
                   >
-                    {label}
+                    <div
+                      style={{
+                        fontSize: 14,
+                        fontWeight: 800,
+                        color:
+                          exportFormat === f.key ? f.color : "var(--text)",
+                      }}
+                    >
+                      {f.label}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: 11,
+                        color: "var(--muted)",
+                        marginTop: 2,
+                      }}
+                    >
+                      {f.desc}
+                    </div>
                   </button>
                 ))}
               </div>
             </div>
+
             <div
               style={{
                 display: "flex",
                 justifyContent: "flex-end",
-                gap: 10,
-                padding: "14px 20px",
+                gap: 8,
+                padding: "14px 24px",
                 borderTop: "1px solid var(--border)",
               }}
             >
@@ -3521,17 +3577,12 @@ const Appointment = () => {
                 Cancel
               </button>
               <button
-                className="btn"
-                style={{
-                  ...S.btn,
-                  background: "#d97706",
-                  color: "#fff",
-                  border: "none",
-                }}
+                className="btn btn-primary"
+                style={{ width: "auto", opacity: exporting ? 0.6 : 1 }}
                 disabled={exporting}
                 onClick={runExport}
               >
-                {exporting ? "Exporting…" : "Download"}
+                {exporting ? "Exporting..." : "Download"}
               </button>
             </div>
           </div>

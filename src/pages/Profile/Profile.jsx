@@ -1710,7 +1710,6 @@ const Profile = () => {
               <div
                 style={{ display: "flex", flexDirection: "column", gap: 18 }}
               >
-                <InfoField label="User ID" value={profile.id} />
                 <InfoField
                   label="Member Since"
                   value={profile.created_at ? fmtDate(profile.created_at) : "—"}
@@ -1763,33 +1762,6 @@ const Profile = () => {
                     style={{ resize: "vertical" }}
                   />
                 </div>
-                <div
-                  style={{ display: "flex", flexDirection: "column", gap: 5 }}
-                >
-                  <label
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: T.muted,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    User ID
-                  </label>
-                  <input
-                    className="edit-inp"
-                    type="text"
-                    value={profile.id}
-                    disabled
-                    style={{
-                      opacity: 0.5,
-                      cursor: "not-allowed",
-                      fontFamily: "monospace",
-                      fontSize: 11,
-                    }}
-                  />
-                </div>
               </div>
             )}
           </Card>
@@ -1827,9 +1799,7 @@ const Profile = () => {
                   background: tab === t.key ? T.royal : "transparent",
                   color: tab === t.key ? "#fff" : T.muted,
                   boxShadow:
-                    tab === t.key
-                      ? "0 2px 8px rgba(37,99,235,.35)"
-                      : "none",
+                    tab === t.key ? "0 2px 8px rgba(37,99,235,.35)" : "none",
                 }}
               >
                 {t.label}
