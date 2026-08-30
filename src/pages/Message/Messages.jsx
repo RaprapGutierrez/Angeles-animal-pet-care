@@ -1285,10 +1285,18 @@ const Messages = () => {
   }, [currentUser?.id, fetchClients, fetchMessages]);
 
   // ── Subscribe to active conversation ─────────────────────────────────────
+  const prevSelectedIdRef = useRef(null);
   useEffect(() => {
     if (pollRef.current) clearInterval(pollRef.current);
     if (!selected || !currentUser) return;
-    fetchMessages(selected);
+    // Only force-scroll-to-bottom when the conversation partner actually
+    // changed. If this effect re-fires because `selected`/`currentUser`
+    // got a new object reference (e.g. from a background poll) with the
+    // same partner, treat it like a background refresh instead — respecting
+    // the reader's current scroll position rather than yanking them down.
+    const isNewConversation = prevSelectedIdRef.current !== selected.id;
+    prevSelectedIdRef.current = selected.id;
+    fetchMessages(selected, !isNewConversation);
 
     // Always mark both tables — ensures super_admin → manager messages get marked read.
     // Await + check errors so a silent RLS failure doesn't leave is_read=false in the DB,
@@ -1374,7 +1382,7 @@ const Messages = () => {
       if (fetchClientsTimer.current) clearTimeout(fetchClientsTimer.current);
       supabase.removeChannel(channel);
     };
-  }, [selected, currentUser, fetchMessages, fetchClients]);
+  }, [selected?.id, currentUser?.id, fetchMessages, fetchClients]);
 
   // ── Unread badges ─────────────────────────────────────────────────────────
   useEffect(() => {
