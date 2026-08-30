@@ -3,6 +3,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
 import Layout from "../../components/layout";
 import { supabase } from "../../js/Utils/supabase";
+import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
 import "../../styles/Branches.css";
 
 if (
@@ -1396,6 +1397,7 @@ const ConfirmDialog = ({
 };
 
 const Branches = () => {
+  const { isAdmin, isSuperAdmin, isEmployee } = useCurrentUser();
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -1747,6 +1749,39 @@ const Branches = () => {
                 Manage all hospital branches
               </p>
             </div>
+            {isAdmin || isSuperAdmin ? (
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: "linear-gradient(135deg,#fef3c7,#fde68a)",
+                  color: "#78350f",
+                  border: "1.5px solid #f59e0b",
+                  marginLeft: 10,
+                }}
+              >
+                {isSuperAdmin
+                  ? "Super Admin — Full Access"
+                  : "Administrator View"}
+              </span>
+            ) : isEmployee ? (
+              <span
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  padding: "4px 10px",
+                  borderRadius: 6,
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "1px solid #e2e8f0",
+                  marginLeft: 10,
+                }}
+              >
+                Staff View
+              </span>
+            ) : null}
           </div>
           <div
             style={{
@@ -1962,6 +1997,106 @@ const Branches = () => {
                   </div>
                 ))}
           </div>
+
+          {(isAdmin || isSuperAdmin) && (
+            <div
+              style={{
+                background: "linear-gradient(135deg,#1e1b4b,#312e81)",
+                borderRadius: 14,
+                padding: "18px 22px",
+                marginBottom: 24,
+                boxShadow: "0 8px 24px rgba(49,46,129,0.25)",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  marginBottom: 14,
+                }}
+              >
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#fbbf24"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                  </svg>
+                  <h2 style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0 }}>
+                    Branch Performance Overview
+                  </h2>
+                </div>
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 700,
+                    color: "#fbbf24",
+                    background: "rgba(251,191,36,0.15)",
+                    border: "1px solid rgba(251,191,36,0.3)",
+                    padding: "3px 9px",
+                    borderRadius: 20,
+                  }}
+                >
+                  Not visible to Employee/Manager
+                </span>
+              </div>
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                  <thead>
+                    <tr>
+                      {["Branch", "Status", "Services", "Modules Enabled"].map((h) => (
+                        <th
+                          key={h}
+                          style={{
+                            textAlign: "left",
+                            fontSize: 10,
+                            fontWeight: 700,
+                            color: "rgba(255,255,255,0.5)",
+                            textTransform: "uppercase",
+                            letterSpacing: 0.5,
+                            padding: "6px 10px",
+                            borderBottom: "1px solid rgba(255,255,255,0.12)",
+                          }}
+                        >
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {branches.map((b) => {
+                      const totalModules = Object.values(b.modules || {}).reduce(
+                        (sum, arr) => sum + (arr?.length || 0),
+                        0,
+                      );
+                      return (
+                        <tr key={b.id}>
+                          <td style={{ padding: "8px 10px", fontSize: 12, fontWeight: 700, color: "#fff" }}>
+                            {b.name}
+                          </td>
+                          <td style={{ padding: "8px 10px", fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
+                            {b.status}
+                          </td>
+                          <td style={{ padding: "8px 10px", fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
+                            {(b.services || []).length}
+                          </td>
+                          <td style={{ padding: "8px 10px", fontSize: 12, color: "rgba(255,255,255,0.75)" }}>
+                            {totalModules}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
 
           {/* Map */}
           <div

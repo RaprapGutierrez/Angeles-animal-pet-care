@@ -2742,6 +2742,11 @@ const Inventory = () => {
   const { applyFilter, seeAllBranches, branchId } = useBranchFilter();
 
   const perms = useMemo(() => getPermissions(user?.role), [user]);
+  const isAdminRole = ["admin", "super_admin"].includes(
+    (user?.role || "").toLowerCase(),
+  );
+  const isSuperAdminRole = (user?.role || "").toLowerCase() === "super_admin";
+  const [adminView, setAdminView] = useState("table"); // "table" | "board" — board is admin-only
 
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -3341,6 +3346,188 @@ const Inventory = () => {
       )}
 
       <div className="content inv-page-content" style={{ paddingTop: 96 }}>
+        {isAdminRole && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 18,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#94a3b8",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+              }}
+            >
+              Admin View:
+            </span>
+            <div
+              style={{
+                display: "flex",
+                border: "1.5px solid #c7d2fe",
+                borderRadius: 8,
+                overflow: "hidden",
+              }}
+            >
+              {[
+                { key: "table", label: "Table" },
+                { key: "board", label: "Category Board" },
+              ].map((v) => (
+                <button
+                  key={v.key}
+                  onClick={() => setAdminView(v.key)}
+                  style={{
+                    padding: "6px 16px",
+                    border: "none",
+                    background: adminView === v.key ? "#312e81" : "#f5f3ff",
+                    color: adminView === v.key ? "#fff" : "#4338ca",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {isAdminRole && (
+          <div
+            style={{
+              background: "linear-gradient(135deg,#1e1b4b,#312e81)",
+              borderRadius: 14,
+              padding: "18px 22px",
+              marginBottom: 24,
+              boxShadow: "0 8px 24px rgba(49,46,129,0.25)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#fbbf24"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <h2
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: "#fff",
+                    margin: 0,
+                  }}
+                >
+                  Admin Inventory Insights
+                </h2>
+              </div>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#fbbf24",
+                  background: "rgba(251,191,36,0.15)",
+                  border: "1px solid rgba(251,191,36,0.3)",
+                  padding: "3px 9px",
+                  borderRadius: 20,
+                }}
+              >
+                {isSuperAdminRole
+                  ? "Super Admin — Full Access"
+                  : "Administrator View"}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))",
+                gap: 12,
+              }}
+            >
+              {[
+                {
+                  label: "Total Inventory Value",
+                  value: `₱${items.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 0), 0).toLocaleString()}`,
+                },
+                {
+                  label: "Avg. Item Price",
+                  value: items.length
+                    ? `₱${(items.reduce((sum, i) => sum + (Number(i.price) || 0), 0) / items.length).toFixed(2)}`
+                    : "₱0",
+                },
+                {
+                  label: "Items Expired",
+                  value: items.filter(
+                    (i) => i.expiry && new Date(i.expiry) < new Date(),
+                  ).length,
+                },
+                {
+                  label: "Top Supplier",
+                  value:
+                    Object.entries(
+                      items.reduce((acc, i) => {
+                        if (i.supplier)
+                          acc[i.supplier] = (acc[i.supplier] || 0) + 1;
+                        return acc;
+                      }, {}),
+                    ).sort((a, b) => b[1] - a[1])[0]?.[0] || "—",
+                },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: "0 0 4px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "rgba(255,255,255,0.55)",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    {s.label}
+                  </p>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: "#fff",
+                    }}
+                  >
+                    {s.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Low stock alert */}
         {lowStock.length > 0 && (
           <div
@@ -3660,721 +3847,883 @@ const Inventory = () => {
           </div>
         </div>
 
-        {/* Table */}
-        <div className="inv-card">
+        {/* ── ADMIN-ONLY: Category Board View ── */}
+        {isAdminRole && adminView === "board" ? (
           <div
             style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "16px 22px",
-              borderBottom: "1px solid var(--border)",
-              flexWrap: "wrap",
-              gap: 10,
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
+              gap: 16,
             }}
           >
-            <h2 style={{ fontSize: 15, fontWeight: 700 }}>All Items</h2>
-            {selectedIds.length > 0 ? (
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                  background: "#fef2f2",
-                  border: "1.5px solid #fca5a5",
-                  borderRadius: 8,
-                  padding: "6px 12px",
-                }}
-              >
-                <span
-                  style={{ fontSize: 12, fontWeight: 700, color: "#991b1b" }}
-                >
-                  {selectedIds.length} selected
-                </span>
-                <button
-                  onClick={() => setBulkConfirm(true)}
+            {CATEGORIES.map((cat) => {
+              const catItems = filtered.filter(
+                (i) => (i.category || "Other") === cat,
+              );
+              if (catItems.length === 0) return null;
+              const cs = CAT_COLOR[cat] || CAT_COLOR.Other;
+              const totalValue = catItems.reduce(
+                (sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 0),
+                0,
+              );
+              return (
+                <div
+                  key={cat}
                   style={{
-                    display: "inline-flex",
-                    alignItems: "center",
-                    gap: 5,
-                    padding: "5px 12px",
-                    borderRadius: 6,
-                    border: "none",
-                    background: "#dc2626",
-                    color: "#fff",
-                    fontSize: 12,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
+                    background: "var(--card)",
+                    border: `1.5px solid ${cs.border}`,
+                    borderRadius: 14,
+                    overflow: "hidden",
                   }}
                 >
-                  <svg
-                    width="12"
-                    height="12"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  >
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
-                  Delete Selected
-                </button>
-                <button
-                  onClick={() => setSelectedIds([])}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#991b1b",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                  }}
-                >
-                  Clear
-                </button>
-              </div>
-            ) : (
-              <span style={{ color: "var(--muted)", fontSize: 13 }}>
-                {filtered.length} items
-              </span>
-            )}
-          </div>
-          <div style={{ overflowX: "auto" }}>
-            {loading ? (
-              <div style={{ padding: "16px 22px" }}>
-                {[1, 2, 3, 4, 5].map((i) => (
                   <div
-                    key={i}
                     style={{
+                      background: cs.bg,
+                      padding: "12px 16px",
+                      borderBottom: `1.5px solid ${cs.border}`,
                       display: "flex",
-                      gap: 12,
                       alignItems: "center",
-                      padding: "13px 0",
-                      borderBottom: "1px solid #f1f5f9",
+                      justifyContent: "space-between",
                     }}
                   >
-                    <Skel w="25%" h={14} />
-                    <Skel w="12%" h={22} />
-                    <Skel w="8%" h={14} />
-                    <Skel w="8%" h={14} />
-                    <Skel w="10%" h={14} />
-                    <Skel w="12%" h={14} />
-                    <Skel w="12%" h={14} />
+                    <div
+                      style={{ display: "flex", alignItems: "center", gap: 8 }}
+                    >
+                      <span style={{ color: cs.text }}>
+                        {React.cloneElement(CAT_ICON[cat] || CAT_ICON.Other, {
+                          width: 16,
+                          height: 16,
+                        })}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: cs.text,
+                        }}
+                      >
+                        {cat}
+                      </span>
+                    </div>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: cs.text,
+                        background: "rgba(255,255,255,0.6)",
+                        borderRadius: 20,
+                        padding: "2px 9px",
+                      }}
+                    >
+                      {catItems.length}
+                    </span>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <table
-                style={{
-                  width: "100%",
-                  borderCollapse: "collapse",
-                  fontSize: 13,
-                }}
-              >
-                <thead>
-                  <tr>
-                    {perms.canDelete && (
-                      <th
-                        className="inv-th"
-                        style={{ width: 36, textAlign: "center" }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={
-                            paginated.length > 0 &&
-                            paginated.every((i) => selectedIds.includes(i.id))
-                          }
-                          onChange={toggleSelectAllOnPage}
-                          style={{ cursor: "pointer" }}
-                        />
-                      </th>
-                    )}
-                    {[
-                      { label: "Item", key: "name" },
-                      { label: "Category", key: "category" },
-                      { label: "Stock", key: "qty" },
-                      { label: "Price", key: "price" },
-                      { label: "Expiry", key: "expiry" },
-                      { label: "Supplier", key: "supplier" },
-                      ...(perms.canEdit || perms.canDelete
-                        ? [{ label: "Actions", key: null }]
-                        : []),
-                    ].map(({ label, key }) => (
-                      <th
-                        key={label}
-                        className="inv-th"
-                        onClick={() => key && handleSort(key)}
-                        style={{
-                          cursor: key ? "pointer" : "default",
-                          userSelect: "none",
-                        }}
-                      >
-                        <span
-                          style={{
-                            display: "inline-flex",
-                            alignItems: "center",
-                            gap: 4,
-                          }}
-                        >
-                          {label}
-                          {key && (
-                            <svg
-                              width="10"
-                              height="10"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="3"
-                              strokeLinecap="round"
-                              style={{
-                                opacity: sortConfig.key === key ? 1 : 0.3,
-                                transform:
-                                  sortConfig.key === key &&
-                                  sortConfig.direction === "desc"
-                                    ? "rotate(180deg)"
-                                    : "none",
-                                transition: "transform 0.15s",
-                              }}
-                            >
-                              <polyline points="18 15 12 9 6 15" />
-                            </svg>
-                          )}
-                        </span>
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.length === 0 ? (
-                    <tr>
-                      <td
-                        colSpan={7 + (perms.canDelete ? 1 : 0)}
-                        style={{
-                          textAlign: "center",
-                          padding: 40,
-                          color: "var(--muted)",
-                        }}
-                      >
-                        <div style={{ marginBottom: 8 }}>
-                          <svg
-                            width="36"
-                            height="36"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="#cbd5e1"
-                            strokeWidth="1.5"
-                            strokeLinecap="round"
-                          >
-                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                            <line x1="12" y1="22.08" x2="12" y2="12" />
-                          </svg>
-                        </div>
-                        <div style={{ fontSize: 13 }}>No items found</div>
-                      </td>
-                    </tr>
-                  ) : (
-                    paginated.map((item, idx) => {
-                      const isService = NO_STOCK_CATEGORIES.includes(
-                        item.category,
-                      );
+                  <div
+                    style={{
+                      padding: "10px 14px",
+                      borderBottom: `1px dashed ${cs.border}`,
+                    }}
+                  >
+                    <span style={{ fontSize: 11, color: "var(--muted)" }}>
+                      Category value:{" "}
+                    </span>
+                    <strong style={{ fontSize: 13, color: cs.text }}>
+                      ₱{totalValue.toLocaleString()}
+                    </strong>
+                  </div>
+                  <div style={{ maxHeight: 320, overflowY: "auto" }}>
+                    {catItems.map((i) => {
                       const isLow =
-                        !isService && item.qty <= (item.threshold ?? 10);
-                      const exp = expiryInfo(item.expiry);
-                      const cat = item.category || "Other";
-                      const cs = CAT_COLOR[cat] || CAT_COLOR.Other;
+                        !NO_STOCK_CATEGORIES.includes(i.category) &&
+                        i.qty <= (i.threshold ?? 10);
                       return (
-                        <tr
-                          key={item.id}
-                          className="inv-row-hover fade-in"
+                        <div
+                          key={i.id}
+                          onClick={() => openView(i)}
                           style={{
-                            background: isLow ? "#fff5f5" : "var(--card)",
-                            transition: "background 0.15s",
-                            animationDelay: `${idx * 0.06}s`,
+                            padding: "10px 14px",
+                            borderBottom: "1px solid var(--border)",
+                            cursor: "pointer",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center",
+                            gap: 8,
                           }}
-                          onClick={() => openView(item)}
                         >
-                          {perms.canDelete && (
-                            <td
-                              className="inv-td"
-                              style={{ textAlign: "center" }}
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <input
-                                type="checkbox"
-                                checked={selectedIds.includes(item.id)}
-                                onChange={() => toggleSelectRow(item.id)}
-                                style={{ cursor: "pointer" }}
-                              />
-                            </td>
-                          )}
-                          {/* Item name */}
-                          <td className="inv-td">
-                            <div
+                          <div style={{ minWidth: 0 }}>
+                            <p
                               style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 10,
+                                margin: 0,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                color: "var(--text)",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
                               }}
                             >
-                              <div
-                                style={{
-                                  width: 34,
-                                  height: 34,
-                                  borderRadius: 10,
-                                  flexShrink: 0,
-                                  background: cs.bg,
-                                  border: `1px solid ${cs.border}`,
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  overflow: "hidden",
-                                }}
-                              >
-                                {item.image_url ? (
-                                  <img
-                                    src={item.image_url}
-                                    alt=""
-                                    style={{
-                                      width: "100%",
-                                      height: "100%",
-                                      objectFit: "cover",
-                                    }}
-                                  />
-                                ) : (
-                                  <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke={cs.text}
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                  >
-                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
-                                    <line x1="12" y1="22.08" x2="12" y2="12" />
-                                  </svg>
-                                )}
-                              </div>{" "}
-                              <div>
-                                <div
-                                  style={{
-                                    fontWeight: 600,
-                                    fontSize: 13,
-                                    color: "var(--text)",
-                                  }}
-                                >
-                                  {item.name}
-                                </div>
-                                <div
-                                  style={{
-                                    fontSize: 11,
-                                    color: "var(--muted)",
-                                    marginTop: 1,
-                                  }}
-                                >
-                                  {item.unit}
-                                </div>
-                              </div>
-                            </div>
-                          </td>
-
-                          {/* Category badge */}
-                          <td className="inv-td">
+                              {i.name}
+                            </p>
+                            <p
+                              style={{
+                                margin: 0,
+                                fontSize: 11,
+                                color: "var(--muted)",
+                              }}
+                            >
+                              ₱{Number(i.price || 0).toFixed(2)}
+                            </p>
+                          </div>
+                          {!NO_STOCK_CATEGORIES.includes(i.category) && (
                             <span
                               style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 5,
-                                background: cs.bg,
-                                border: `1px solid ${cs.border}`,
-                                color: cs.text,
-                                borderRadius: 20,
-                                padding: "3px 10px",
                                 fontSize: 11,
                                 fontWeight: 700,
+                                color: isLow ? "#dc2626" : "#16a34a",
+                                flexShrink: 0,
                               }}
                             >
-                              <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                              >
-                                <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
-                              </svg>
-                              {item.category}
+                              {i.qty} {i.unit}
                             </span>
-                          </td>
-
-                          {/* Stock */}
-                          <td className="inv-td">
-                            {isService ? (
-                              <span
-                                style={{
-                                  fontSize: 11,
-                                  background: "#eef2ff",
-                                  color: "#4338ca",
-                                  padding: "3px 10px",
-                                  borderRadius: 99,
-                                  fontWeight: 700,
-                                }}
-                              >
-                                Service — No stock tracking
-                              </span>
-                            ) : (
-                              <div
-                                style={{
-                                  display: "flex",
-                                  flexDirection: "column",
-                                  gap: 3,
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 6,
-                                  }}
-                                >
-                                  <strong
-                                    style={{
-                                      color: isLow ? "#dc2626" : "var(--text)",
-                                      fontSize: 14,
-                                    }}
-                                  >
-                                    {item.qty}
-                                  </strong>
-                                  <span
-                                    style={{
-                                      fontSize: 11,
-                                      color: "var(--muted)",
-                                    }}
-                                  >
-                                    {item.unit}
-                                  </span>
-                                  {isLow && (
-                                    <span
-                                      style={{
-                                        fontSize: 10,
-                                        background: "#fee2e2",
-                                        color: "#dc2626",
-                                        padding: "2px 6px",
-                                        borderRadius: 99,
-                                        fontWeight: 700,
-                                      }}
-                                    >
-                                      Low
-                                    </span>
-                                  )}
-                                </div>
-                                <div
-                                  style={{
-                                    width: 80,
-                                    height: 4,
-                                    borderRadius: 99,
-                                    background: isLow ? "#fee2e2" : "#dcfce7",
-                                    overflow: "hidden",
-                                  }}
-                                >
-                                  <div
-                                    style={{
-                                      height: "100%",
-                                      borderRadius: 99,
-                                      background: isLow ? "#ef4444" : "#22c55e",
-                                      width: `${Math.min(100, (item.qty / Math.max((item.threshold ?? 10) * 2, 1)) * 100)}%`,
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            )}
-                          </td>
-
-                          {/* Price */}
-                          <td className="inv-td">
-                            <span style={{ fontWeight: 600 }}>
-                              ₱{Number(item.price || 0).toFixed(2)}
-                            </span>
-                          </td>
-
-                          {/* Expiry */}
-                          <td className="inv-td">
-                            {item.expiry ? (
-                              (() => {
-                                const color = exp?.expired
-                                  ? "#dc2626"
-                                  : exp?.soon
-                                    ? "#d97706"
-                                    : "var(--text)";
-                                return (
-                                  <div>
-                                    <span
-                                      style={{
-                                        color,
-                                        fontWeight: exp?.soon ? 700 : 400,
-                                      }}
-                                    >
-                                      {item.expiry}
-                                    </span>
-                                    {exp?.soon && !exp.expired && (
-                                      <div
-                                        style={{
-                                          fontSize: 10,
-                                          color: "#d97706",
-                                          fontWeight: 700,
-                                        }}
-                                      >
-                                        {exp.days}d left
-                                      </div>
-                                    )}
-                                    {exp?.expired && (
-                                      <div
-                                        style={{
-                                          fontSize: 10,
-                                          color: "#dc2626",
-                                          fontWeight: 700,
-                                        }}
-                                      >
-                                        EXPIRED
-                                      </div>
-                                    )}
-                                  </div>
-                                );
-                              })()
-                            ) : (
-                              <span
-                                style={{ color: "var(--muted)", fontSize: 12 }}
-                              >
-                                —
-                              </span>
-                            )}
-                          </td>
-
-                          {/* Supplier */}
-                          <td className="inv-td">
-                            <span
-                              style={{ fontSize: 12, color: "var(--muted)" }}
-                            >
-                              {item.supplier || "—"}
-                            </span>
-                          </td>
-
-                          {/* Actions */}
-                          {(perms.canEdit || perms.canDelete) && (
-                            <td
-                              className="inv-td"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  gap: 5,
-                                  justifyContent: "flex-end",
-                                  alignItems: "center",
-                                  flexWrap: "nowrap",
-                                }}
-                              >
-                                <button
-                                  onClick={() => openView(item)}
-                                  style={{
-                                    background: "#eff6ff",
-                                    border: "1.5px solid #bfdbfe",
-                                    borderRadius: 20,
-                                    height: 28,
-                                    padding: "0 10px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 5,
-                                    cursor: "pointer",
-                                    color: "#1d4ed8",
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    fontFamily: "inherit",
-                                  }}
-                                >
-                                  <svg
-                                    width="12"
-                                    height="12"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                  >
-                                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                                    <circle cx="12" cy="12" r="3" />
-                                  </svg>
-                                  View
-                                </button>
-                                {perms.canEdit && (
-                                  <button
-                                    onClick={(e) => openEdit(item, e)}
-                                    style={{
-                                      background: "#f8fafc",
-                                      border: "1.5px solid #e2e8f0",
-                                      borderRadius: 20,
-                                      height: 28,
-                                      padding: "0 10px",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 5,
-                                      cursor: "pointer",
-                                      color: "#475569",
-                                      fontSize: 11,
-                                      fontWeight: 600,
-                                      fontFamily: "inherit",
-                                    }}
-                                  >
-                                    <svg
-                                      width="12"
-                                      height="12"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2.5"
-                                      strokeLinecap="round"
-                                    >
-                                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                                      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                                    </svg>
-                                    Edit
-                                  </button>
-                                )}
-                                {perms.canDelete && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setDeleteId(item.id);
-                                    }}
-                                    style={{
-                                      background: "#fef2f2",
-                                      border: "1.5px solid #fca5a5",
-                                      borderRadius: 20,
-                                      height: 28,
-                                      padding: "0 10px",
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 5,
-                                      cursor: "pointer",
-                                      color: "#dc2626",
-                                      fontSize: 11,
-                                      fontWeight: 600,
-                                      fontFamily: "inherit",
-                                    }}
-                                  >
-                                    <svg
-                                      width="12"
-                                      height="12"
-                                      viewBox="0 0 24 24"
-                                      fill="none"
-                                      stroke="currentColor"
-                                      strokeWidth="2.5"
-                                      strokeLinecap="round"
-                                    >
-                                      <polyline points="3 6 5 6 21 6" />
-                                      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                                      <path d="M10 11v6M14 11v6" />
-                                      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                                    </svg>
-                                    Delete
-                                  </button>
-                                )}{" "}
-                              </div>
-                            </td>
                           )}
-                        </tr>
+                        </div>
                       );
-                    })
-                  )}
-                </tbody>
-              </table>
-            )}
+                    })}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-          {totalPages > 1 && (
+        ) : (
+          <div className="inv-card">
             <div
               style={{
                 display: "flex",
                 alignItems: "center",
-                justifyContent: "center",
-                gap: 4,
-                padding: "14px 18px",
-                borderTop: "1px solid var(--border)",
-                background: "var(--card)",
+                justifyContent: "space-between",
+                padding: "16px 22px",
+                borderBottom: "1px solid var(--border)",
+                flexWrap: "wrap",
+                gap: 10,
               }}
             >
-              <button
-                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                disabled={safePage === 1}
-                style={{
-                  padding: "6px 14px",
-                  borderRadius: 20,
-                  border: "1.5px solid var(--border)",
-                  background: "transparent",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: safePage === 1 ? "var(--muted)" : "var(--text)",
-                  cursor: safePage === 1 ? "default" : "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                prev
-              </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
-                <button
-                  key={pg}
-                  onClick={() => setCurrentPage(pg)}
+              <h2 style={{ fontSize: 15, fontWeight: 700 }}>All Items</h2>
+              {selectedIds.length > 0 ? (
+                <div
                   style={{
-                    width: 34,
-                    height: 34,
-                    borderRadius: 20,
-                    border: "1.5px solid",
-                    fontSize: 13,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    fontFamily: "inherit",
-                    transition: "all 0.15s",
-                    flexShrink: 0,
-                    background:
-                      safePage === pg ? "var(--royal)" : "transparent",
-                    color: safePage === pg ? "#fff" : "var(--text)",
-                    borderColor:
-                      safePage === pg ? "var(--royal)" : "var(--border)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10,
+                    background: "#fef2f2",
+                    border: "1.5px solid #fca5a5",
+                    borderRadius: 8,
+                    padding: "6px 12px",
                   }}
                 >
-                  {pg}
-                </button>
-              ))}
-              <button
-                onClick={() =>
-                  setCurrentPage((p) => Math.min(totalPages, p + 1))
-                }
-                disabled={safePage === totalPages}
+                  <span
+                    style={{ fontSize: 12, fontWeight: 700, color: "#991b1b" }}
+                  >
+                    {selectedIds.length} selected
+                  </span>
+                  <button
+                    onClick={() => setBulkConfirm(true)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      padding: "5px 12px",
+                      borderRadius: 6,
+                      border: "none",
+                      background: "#dc2626",
+                      color: "#fff",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <svg
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                    Delete Selected
+                  </button>
+                  <button
+                    onClick={() => setSelectedIds([])}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      color: "#991b1b",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : (
+                <span style={{ color: "var(--muted)", fontSize: 13 }}>
+                  {filtered.length} items
+                </span>
+              )}
+            </div>
+            <div style={{ overflowX: "auto" }}>
+              {loading ? (
+                <div style={{ padding: "16px 22px" }}>
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                      key={i}
+                      style={{
+                        display: "flex",
+                        gap: 12,
+                        alignItems: "center",
+                        padding: "13px 0",
+                        borderBottom: "1px solid #f1f5f9",
+                      }}
+                    >
+                      <Skel w="25%" h={14} />
+                      <Skel w="12%" h={22} />
+                      <Skel w="8%" h={14} />
+                      <Skel w="8%" h={14} />
+                      <Skel w="10%" h={14} />
+                      <Skel w="12%" h={14} />
+                      <Skel w="12%" h={14} />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <table
+                  style={{
+                    width: "100%",
+                    borderCollapse: "collapse",
+                    fontSize: 13,
+                  }}
+                >
+                  <thead>
+                    <tr>
+                      {perms.canDelete && (
+                        <th
+                          className="inv-th"
+                          style={{ width: 36, textAlign: "center" }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={
+                              paginated.length > 0 &&
+                              paginated.every((i) => selectedIds.includes(i.id))
+                            }
+                            onChange={toggleSelectAllOnPage}
+                            style={{ cursor: "pointer" }}
+                          />
+                        </th>
+                      )}
+                      {[
+                        { label: "Item", key: "name" },
+                        { label: "Category", key: "category" },
+                        { label: "Stock", key: "qty" },
+                        { label: "Price", key: "price" },
+                        { label: "Expiry", key: "expiry" },
+                        { label: "Supplier", key: "supplier" },
+                        ...(perms.canEdit || perms.canDelete
+                          ? [{ label: "Actions", key: null }]
+                          : []),
+                      ].map(({ label, key }) => (
+                        <th
+                          key={label}
+                          className="inv-th"
+                          onClick={() => key && handleSort(key)}
+                          style={{
+                            cursor: key ? "pointer" : "default",
+                            userSelect: "none",
+                          }}
+                        >
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: 4,
+                            }}
+                          >
+                            {label}
+                            {key && (
+                              <svg
+                                width="10"
+                                height="10"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                style={{
+                                  opacity: sortConfig.key === key ? 1 : 0.3,
+                                  transform:
+                                    sortConfig.key === key &&
+                                    sortConfig.direction === "desc"
+                                      ? "rotate(180deg)"
+                                      : "none",
+                                  transition: "transform 0.15s",
+                                }}
+                              >
+                                <polyline points="18 15 12 9 6 15" />
+                              </svg>
+                            )}
+                          </span>
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.length === 0 ? (
+                      <tr>
+                        <td
+                          colSpan={7 + (perms.canDelete ? 1 : 0)}
+                          style={{
+                            textAlign: "center",
+                            padding: 40,
+                            color: "var(--muted)",
+                          }}
+                        >
+                          <div style={{ marginBottom: 8 }}>
+                            <svg
+                              width="36"
+                              height="36"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="#cbd5e1"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                            >
+                              <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                              <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                              <line x1="12" y1="22.08" x2="12" y2="12" />
+                            </svg>
+                          </div>
+                          <div style={{ fontSize: 13 }}>No items found</div>
+                        </td>
+                      </tr>
+                    ) : (
+                      paginated.map((item, idx) => {
+                        const isService = NO_STOCK_CATEGORIES.includes(
+                          item.category,
+                        );
+                        const isLow =
+                          !isService && item.qty <= (item.threshold ?? 10);
+                        const exp = expiryInfo(item.expiry);
+                        const cat = item.category || "Other";
+                        const cs = CAT_COLOR[cat] || CAT_COLOR.Other;
+                        return (
+                          <tr
+                            key={item.id}
+                            className="inv-row-hover fade-in"
+                            style={{
+                              background: isLow ? "#fff5f5" : "var(--card)",
+                              transition: "background 0.15s",
+                              animationDelay: `${idx * 0.06}s`,
+                            }}
+                            onClick={() => openView(item)}
+                          >
+                            {perms.canDelete && (
+                              <td
+                                className="inv-td"
+                                style={{ textAlign: "center" }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={selectedIds.includes(item.id)}
+                                  onChange={() => toggleSelectRow(item.id)}
+                                  style={{ cursor: "pointer" }}
+                                />
+                              </td>
+                            )}
+                            {/* Item name */}
+                            <td className="inv-td">
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 10,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: 34,
+                                    height: 34,
+                                    borderRadius: 10,
+                                    flexShrink: 0,
+                                    background: cs.bg,
+                                    border: `1px solid ${cs.border}`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    overflow: "hidden",
+                                  }}
+                                >
+                                  {item.image_url ? (
+                                    <img
+                                      src={item.image_url}
+                                      alt=""
+                                      style={{
+                                        width: "100%",
+                                        height: "100%",
+                                        objectFit: "cover",
+                                      }}
+                                    />
+                                  ) : (
+                                    <svg
+                                      width="16"
+                                      height="16"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke={cs.text}
+                                      strokeWidth="2"
+                                      strokeLinecap="round"
+                                    >
+                                      <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                      <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                                      <line
+                                        x1="12"
+                                        y1="22.08"
+                                        x2="12"
+                                        y2="12"
+                                      />
+                                    </svg>
+                                  )}
+                                </div>{" "}
+                                <div>
+                                  <div
+                                    style={{
+                                      fontWeight: 600,
+                                      fontSize: 13,
+                                      color: "var(--text)",
+                                    }}
+                                  >
+                                    {item.name}
+                                  </div>
+                                  <div
+                                    style={{
+                                      fontSize: 11,
+                                      color: "var(--muted)",
+                                      marginTop: 1,
+                                    }}
+                                  >
+                                    {item.unit}
+                                  </div>
+                                </div>
+                              </div>
+                            </td>
+
+                            {/* Category badge */}
+                            <td className="inv-td">
+                              <span
+                                style={{
+                                  display: "inline-flex",
+                                  alignItems: "center",
+                                  gap: 5,
+                                  background: cs.bg,
+                                  border: `1px solid ${cs.border}`,
+                                  color: cs.text,
+                                  borderRadius: 20,
+                                  padding: "3px 10px",
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                }}
+                              >
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                >
+                                  <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                </svg>
+                                {item.category}
+                              </span>
+                            </td>
+
+                            {/* Stock */}
+                            <td className="inv-td">
+                              {isService ? (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    background: "#eef2ff",
+                                    color: "#4338ca",
+                                    padding: "3px 10px",
+                                    borderRadius: 99,
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  Service — No stock tracking
+                                </span>
+                              ) : (
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    gap: 3,
+                                  }}
+                                >
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 6,
+                                    }}
+                                  >
+                                    <strong
+                                      style={{
+                                        color: isLow
+                                          ? "#dc2626"
+                                          : "var(--text)",
+                                        fontSize: 14,
+                                      }}
+                                    >
+                                      {item.qty}
+                                    </strong>
+                                    <span
+                                      style={{
+                                        fontSize: 11,
+                                        color: "var(--muted)",
+                                      }}
+                                    >
+                                      {item.unit}
+                                    </span>
+                                    {isLow && (
+                                      <span
+                                        style={{
+                                          fontSize: 10,
+                                          background: "#fee2e2",
+                                          color: "#dc2626",
+                                          padding: "2px 6px",
+                                          borderRadius: 99,
+                                          fontWeight: 700,
+                                        }}
+                                      >
+                                        Low
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div
+                                    style={{
+                                      width: 80,
+                                      height: 4,
+                                      borderRadius: 99,
+                                      background: isLow ? "#fee2e2" : "#dcfce7",
+                                      overflow: "hidden",
+                                    }}
+                                  >
+                                    <div
+                                      style={{
+                                        height: "100%",
+                                        borderRadius: 99,
+                                        background: isLow
+                                          ? "#ef4444"
+                                          : "#22c55e",
+                                        width: `${Math.min(100, (item.qty / Math.max((item.threshold ?? 10) * 2, 1)) * 100)}%`,
+                                      }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+                            </td>
+
+                            {/* Price */}
+                            <td className="inv-td">
+                              <span style={{ fontWeight: 600 }}>
+                                ₱{Number(item.price || 0).toFixed(2)}
+                              </span>
+                            </td>
+
+                            {/* Expiry */}
+                            <td className="inv-td">
+                              {item.expiry ? (
+                                (() => {
+                                  const color = exp?.expired
+                                    ? "#dc2626"
+                                    : exp?.soon
+                                      ? "#d97706"
+                                      : "var(--text)";
+                                  return (
+                                    <div>
+                                      <span
+                                        style={{
+                                          color,
+                                          fontWeight: exp?.soon ? 700 : 400,
+                                        }}
+                                      >
+                                        {item.expiry}
+                                      </span>
+                                      {exp?.soon && !exp.expired && (
+                                        <div
+                                          style={{
+                                            fontSize: 10,
+                                            color: "#d97706",
+                                            fontWeight: 700,
+                                          }}
+                                        >
+                                          {exp.days}d left
+                                        </div>
+                                      )}
+                                      {exp?.expired && (
+                                        <div
+                                          style={{
+                                            fontSize: 10,
+                                            color: "#dc2626",
+                                            fontWeight: 700,
+                                          }}
+                                        >
+                                          EXPIRED
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })()
+                              ) : (
+                                <span
+                                  style={{
+                                    color: "var(--muted)",
+                                    fontSize: 12,
+                                  }}
+                                >
+                                  —
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Supplier */}
+                            <td className="inv-td">
+                              <span
+                                style={{ fontSize: 12, color: "var(--muted)" }}
+                              >
+                                {item.supplier || "—"}
+                              </span>
+                            </td>
+
+                            {/* Actions */}
+                            {(perms.canEdit || perms.canDelete) && (
+                              <td
+                                className="inv-td"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <div
+                                  style={{
+                                    display: "flex",
+                                    gap: 5,
+                                    justifyContent: "flex-end",
+                                    alignItems: "center",
+                                    flexWrap: "nowrap",
+                                  }}
+                                >
+                                  <button
+                                    onClick={() => openView(item)}
+                                    style={{
+                                      background: "#eff6ff",
+                                      border: "1.5px solid #bfdbfe",
+                                      borderRadius: 20,
+                                      height: 28,
+                                      padding: "0 10px",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      gap: 5,
+                                      cursor: "pointer",
+                                      color: "#1d4ed8",
+                                      fontSize: 11,
+                                      fontWeight: 600,
+                                      fontFamily: "inherit",
+                                    }}
+                                  >
+                                    <svg
+                                      width="12"
+                                      height="12"
+                                      viewBox="0 0 24 24"
+                                      fill="none"
+                                      stroke="currentColor"
+                                      strokeWidth="2.5"
+                                      strokeLinecap="round"
+                                    >
+                                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                                      <circle cx="12" cy="12" r="3" />
+                                    </svg>
+                                    View
+                                  </button>
+                                  {perms.canEdit && (
+                                    <button
+                                      onClick={(e) => openEdit(item, e)}
+                                      style={{
+                                        background: "#f8fafc",
+                                        border: "1.5px solid #e2e8f0",
+                                        borderRadius: 20,
+                                        height: 28,
+                                        padding: "0 10px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        cursor: "pointer",
+                                        color: "#475569",
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        fontFamily: "inherit",
+                                      }}
+                                    >
+                                      <svg
+                                        width="12"
+                                        height="12"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.5"
+                                        strokeLinecap="round"
+                                      >
+                                        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                                        <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                                      </svg>
+                                      Edit
+                                    </button>
+                                  )}
+                                  {perms.canDelete && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        setDeleteId(item.id);
+                                      }}
+                                      style={{
+                                        background: "#fef2f2",
+                                        border: "1.5px solid #fca5a5",
+                                        borderRadius: 20,
+                                        height: 28,
+                                        padding: "0 10px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        cursor: "pointer",
+                                        color: "#dc2626",
+                                        fontSize: 11,
+                                        fontWeight: 600,
+                                        fontFamily: "inherit",
+                                      }}
+                                    >
+                                      <svg
+                                        width="12"
+                                        height="12"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2.5"
+                                        strokeLinecap="round"
+                                      >
+                                        <polyline points="3 6 5 6 21 6" />
+                                        <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                                        <path d="M10 11v6M14 11v6" />
+                                        <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                                      </svg>
+                                      Delete
+                                    </button>
+                                  )}{" "}
+                                </div>
+                              </td>
+                            )}
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              )}
+            </div>
+            {totalPages > 1 && (
+              <div
                 style={{
-                  padding: "6px 14px",
-                  borderRadius: 20,
-                  border: "1.5px solid var(--border)",
-                  background: "transparent",
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color:
-                    safePage === totalPages ? "var(--muted)" : "var(--text)",
-                  cursor: safePage === totalPages ? "default" : "pointer",
-                  fontFamily: "inherit",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: 4,
+                  padding: "14px 18px",
+                  borderTop: "1px solid var(--border)",
+                  background: "var(--card)",
                 }}
               >
-                next
-              </button>
-            </div>
-          )}
-        </div>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage === 1}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 20,
+                    border: "1.5px solid var(--border)",
+                    background: "transparent",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: safePage === 1 ? "var(--muted)" : "var(--text)",
+                    cursor: safePage === 1 ? "default" : "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  prev
+                </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+                  (pg) => (
+                    <button
+                      key={pg}
+                      onClick={() => setCurrentPage(pg)}
+                      style={{
+                        width: 34,
+                        height: 34,
+                        borderRadius: 20,
+                        border: "1.5px solid",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        transition: "all 0.15s",
+                        flexShrink: 0,
+                        background:
+                          safePage === pg ? "var(--royal)" : "transparent",
+                        color: safePage === pg ? "#fff" : "var(--text)",
+                        borderColor:
+                          safePage === pg ? "var(--royal)" : "var(--border)",
+                      }}
+                    >
+                      {pg}
+                    </button>
+                  ),
+                )}
+                <button
+                  onClick={() =>
+                    setCurrentPage((p) => Math.min(totalPages, p + 1))
+                  }
+                  disabled={safePage === totalPages}
+                  style={{
+                    padding: "6px 14px",
+                    borderRadius: 20,
+                    border: "1.5px solid var(--border)",
+                    background: "transparent",
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color:
+                      safePage === totalPages ? "var(--muted)" : "var(--text)",
+                    cursor: safePage === totalPages ? "default" : "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  next
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* ── View Modal ── */}

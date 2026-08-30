@@ -323,9 +323,9 @@ const TreatFields = ({ form, setForm }) => (
       <input
         type="text"
         inputMode="numeric"
-        value={form.heart_rate}
+        value={form.temp}
         onChange={(e) =>
-          setForm({ ...form, heart_rate: e.target.value.replace(/\D/g, "") })
+          setForm({ ...form, temp: e.target.value.replace(/\D/g, "") })
         }
         placeholder="e.g. 120"
       />
@@ -2924,11 +2924,13 @@ const PatientRecord = () => {
   const {
     user,
     isAdmin,
+    isSuperAdmin,
     seeAllBranches,
     loading: userLoading,
   } = useCurrentUser();
   const [branchFilter, setBranchFilter] = useState("");
   const [branches, setBranches] = useState([]);
+  const [adminView, setAdminView] = useState("table"); // "table" | "ward" — ward is admin-only
   const [speciesFilter, setSpeciesFilter] = useState("all");
 
   const [createdCredentials, setCreatedCredentials] = useState(null);
@@ -6133,6 +6135,255 @@ const PatientRecord = () => {
               ))}
         </div>
 
+        {(isAdmin || isSuperAdmin) && (
+          <div
+            style={{
+              background: "linear-gradient(135deg,#1e1b4b,#312e81)",
+              borderRadius: 14,
+              padding: "18px 22px",
+              marginBottom: 24,
+              boxShadow: "0 8px 24px rgba(49,46,129,0.25)",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 14,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#fbbf24"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                </svg>
+                <h2 style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0 }}>
+                  Admin Patient Insights
+                </h2>
+              </div>
+              <span
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#fbbf24",
+                  background: "rgba(251,191,36,0.15)",
+                  border: "1px solid rgba(251,191,36,0.3)",
+                  padding: "3px 9px",
+                  borderRadius: 20,
+                }}
+              >
+                {isSuperAdmin ? "Super Admin — Full Access" : "Administrator View"}
+              </span>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit,minmax(160px,1fr))",
+                gap: 12,
+              }}
+            >
+              {[
+                {
+                  label: "Critical Cases",
+                  value: patients.filter((p) => p.health === "Critical").length,
+                },
+                {
+                  label: "Admitted Now",
+                  value: patients.filter((p) => p.status === "Admitted").length,
+                },
+                {
+                  label: "Most Common Species",
+                  value:
+                    Object.entries(
+                      patients.reduce((acc, p) => {
+                        if (p.species) acc[p.species] = (acc[p.species] || 0) + 1;
+                        return acc;
+                      }, {}),
+                    ).sort((a, b) => b[1] - a[1])[0]?.[0] || "—",
+                },
+                {
+                  label: "Unassigned Room",
+                  value: patients.filter((p) => p.status === "Admitted" && !p.room)
+                    .length,
+                },
+              ].map((s) => (
+                <div
+                  key={s.label}
+                  style={{
+                    background: "rgba(255,255,255,0.06)",
+                    border: "1px solid rgba(255,255,255,0.12)",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                  }}
+                >
+                  <p
+                    style={{
+                      margin: "0 0 4px",
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "rgba(255,255,255,0.55)",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    {s.label}
+                  </p>
+                  <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff" }}>
+                    {s.value}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(isAdmin || isSuperAdmin) && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginBottom: 18,
+            }}
+          >
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#94a3b8",
+                textTransform: "uppercase",
+                letterSpacing: 0.5,
+              }}
+            >
+              Admin View:
+            </span>
+            <div
+              style={{
+                display: "flex",
+                border: "1.5px solid #c7d2fe",
+                borderRadius: 8,
+                overflow: "hidden",
+              }}
+            >
+              {[
+                { key: "table", label: "Table" },
+                { key: "ward", label: "Ward Board" },
+              ].map((v) => (
+                <button
+                  key={v.key}
+                  onClick={() => setAdminView(v.key)}
+                  style={{
+                    padding: "6px 16px",
+                    border: "none",
+                    background: adminView === v.key ? "#312e81" : "#f5f3ff",
+                    color: adminView === v.key ? "#fff" : "#4338ca",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                  }}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {(isAdmin || isSuperAdmin) && adminView === "ward" ? (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 16,
+            }}
+          >
+            {[
+              { key: "Admitted", label: "Admitted", color: "#1e3a8a", bg: "#eff6ff", border: "#bfdbfe" },
+              { key: "Outpatient", label: "Outpatient", color: "#0891b2", bg: "#ecfeff", border: "#a5f3fc" },
+              { key: "Critical", label: "Critical (any status)", color: "#dc2626", bg: "#fef2f2", border: "#fca5a5" },
+            ].map((col) => {
+              const colPatients =
+                col.key === "Critical"
+                  ? patients.filter((p) => p.health === "Critical")
+                  : patients.filter((p) => p.status === col.key);
+              return (
+                <div
+                  key={col.key}
+                  style={{
+                    background: "var(--card)",
+                    border: `1.5px solid ${col.border}`,
+                    borderRadius: 14,
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      background: col.bg,
+                      padding: "12px 16px",
+                      borderBottom: `1.5px solid ${col.border}`,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <span style={{ fontSize: 13, fontWeight: 800, color: col.color }}>
+                      {col.label}
+                    </span>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: col.color,
+                        background: "rgba(255,255,255,0.6)",
+                        borderRadius: 20,
+                        padding: "2px 9px",
+                      }}
+                    >
+                      {colPatients.length}
+                    </span>
+                  </div>
+                  <div style={{ maxHeight: 420, overflowY: "auto" }}>
+                    {colPatients.length === 0 ? (
+                      <p style={{ padding: 16, fontSize: 12, color: "var(--muted)", textAlign: "center" }}>
+                        None
+                      </p>
+                    ) : (
+                      colPatients.map((p) => (
+                        <div
+                          key={p.id}
+                          onClick={() => openView(p)}
+                          style={{
+                            padding: "10px 14px",
+                            borderBottom: "1px solid var(--border)",
+                            cursor: "pointer",
+                          }}
+                        >
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: "var(--text)" }}>
+                            {p.name}
+                          </p>
+                          <p style={{ margin: "2px 0 0", fontSize: 11, color: "var(--muted)" }}>
+                            {p.species}
+                            {p.owner ? ` · ${p.owner}` : ""}
+                            {p.room ? ` · Room ${p.room}` : ""}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
         <div className="pr-card">
           <div
             style={{
@@ -6909,6 +7160,8 @@ const PatientRecord = () => {
             )}
           </div>
         </div>
+        )}
+
         {/* Pagination */}
         {totalPages > 1 && (
           <div

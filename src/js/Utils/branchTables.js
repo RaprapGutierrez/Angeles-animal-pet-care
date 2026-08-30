@@ -10,6 +10,11 @@ const BRANCH_ID_MAP = {
   sanfernando: 5,
   sf: 5,
   magalang: 6,
+  olongapo: 7,
+  cabanatuan: 8,
+  baguio: 9,
+  sucat: 10,
+  cebu: 11,
 };
 
 const normalizeBranch = (branch) =>
@@ -36,6 +41,11 @@ export const parseBranchFromEmail = (email) => {
     main: "Main",
     tarlac: "Tarlac",
     magalang: "Magalang",
+    olongapo: "Olongapo",
+    cabanatuan: "Cabanatuan",
+    baguio: "Baguio",
+    sucat: "Sucat",
+    cebu: "Cebu",
   };
   return map[candidate] || null;
 };
