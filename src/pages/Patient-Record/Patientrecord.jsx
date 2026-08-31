@@ -174,6 +174,15 @@ const T_PRESCRIPTIONS = "prescriptions";
 const T_APPOINTMENTS = "appointments";
 const T_PATIENT_FILES = "patient_files";
 const ROWS_PER_PAGE = 10;
+const useDebouncedValue = (value, delay = 350) => {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+};
+
 const sanitizeContact = (v) => v.replace(/\D/g, "").slice(0, 11);
 const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, "");
 
@@ -2939,6 +2948,7 @@ const PatientRecord = () => {
   const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 350);
   const [statusFilter, setStatusFilter] = useState("all");
   const [activeModal, setActiveModal] = useState(null);
   const [activeTab, setActiveTab] = useState("info");
@@ -3151,6 +3161,7 @@ const PatientRecord = () => {
   const [editPatientOriginal, setEditPatientOriginal] = useState(null);
   const [editPatientSaving, setEditPatientSaving] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPatientCount, setTotalPatientCount] = useState(0);
   const [sortField, setSortField] = useState(null);
   const [sortDir, setSortDir] = useState("asc");
   const [deletedPatients, setDeletedPatients] = useState([]);
@@ -3251,14 +3262,32 @@ const PatientRecord = () => {
     setLoading(true);
     let q = supabase
       .from(T_PATIENTS)
-      .select("*")
-      .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+      .select("*", { count: "exact" })
+      .is("deleted_at", null);
     if (!seeAllBranches && user?.branchId) q = q.eq("branch_id", user.branchId);
     if (seeAllBranches && branchFilter) q = q.eq("branch_id", branchFilter);
-    const { data, error } = await q;
+    if (statusFilter === "Critical") q = q.eq("health", "Critical");
+    else if (statusFilter !== "all") q = q.eq("status", statusFilter);
+    if (speciesFilter !== "all") q = q.eq("species", speciesFilter);
+    if (search.trim()) {
+      const s = search.trim();
+      q = q.or(
+        `name.ilike.%${s}%,owner.ilike.%${s}%,species.ilike.%${s}%,breed.ilike.%${s}%,condition.ilike.%${s}%`,
+      );
+    }
+    const sortColumn =
+      sortField === "created_at" || sortField === "name"
+        ? sortField
+        : "created_at";
+    const sortAscending = sortField ? sortDir === "asc" : false;
+    q = q.order(sortColumn, { ascending: sortAscending });
+    const from = (currentPage - 1) * ROWS_PER_PAGE;
+    const to = from + ROWS_PER_PAGE - 1;
+    q = q.range(from, to);
+    const { data, error, count } = await q;
     if (!error) {
       setPatients(data || []);
+      setTotalPatientCount(count || 0);
       // Keep any currently-open record in sync with the latest DB state so
       // edits/vitals/etc. saved elsewhere never appear to "disappear" from an open view/edit modal.
       setSelectedPatient((prev) =>
@@ -3340,6 +3369,7 @@ const PatientRecord = () => {
     fetchPatients();
     fetchRooms();
     fetchDeletedPatients();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     const patientChannel = supabase
       .channel("patients-realtime")
       .on(
@@ -3363,7 +3393,16 @@ const PatientRecord = () => {
       supabase.removeChannel(patientChannel);
       supabase.removeChannel(roomChannel);
     };
-  }, [user, branchFilter]);
+  }, [
+    user,
+    branchFilter,
+    currentPage,
+    statusFilter,
+    speciesFilter,
+    search,
+    sortField,
+    sortDir,
+  ]);
 
   const fetchMedical = async (patientId) => {
     const [vax, treat, rx] = await Promise.all([
@@ -3467,58 +3506,15 @@ const PatientRecord = () => {
     setLoadingHistory(false);
   };
 
-  const filtered = patients.filter((p) => {
-    const matchSearch =
-      !search ||
-      `${p.name} ${p.owner} ${p.species} ${p.breed} ${p.condition}`
-        .toLowerCase()
-        .includes(search.toLowerCase());
-    const matchFilter =
-      statusFilter === "all" ||
-      p.status === statusFilter ||
-      (statusFilter === "Critical" && p.health === "Critical");
-    const matchSpecies = speciesFilter === "all" || p.species === speciesFilter;
-    return matchSearch && matchFilter && matchSpecies;
-  });
-  const HEALTH_RANK = { Critical: 0, Fair: 1, Good: 2 };
-  const STATUS_RANK = { Admitted: 0, Outpatient: 1 };
-  let sortedFiltered = filtered;
-  if (sortField) {
-    sortedFiltered = [...filtered].sort((a, b) => {
-      let av, bv;
-      if (sortField === "created_at") {
-        av = new Date(a.created_at || 0).getTime();
-        bv = new Date(b.created_at || 0).getTime();
-      } else if (sortField === "health") {
-        av = HEALTH_RANK[a.health] ?? 99;
-        bv = HEALTH_RANK[b.health] ?? 99;
-      } else if (sortField === "status") {
-        av = STATUS_RANK[a.status] ?? 99;
-        bv = STATUS_RANK[b.status] ?? 99;
-      } else if (sortField === "room") {
-        av = a.room || "";
-        bv = b.room || "";
-      } else {
-        av = (a[sortField] || "").toString().toLowerCase();
-        bv = (b[sortField] || "").toString().toLowerCase();
-      }
-      if (av < bv) return sortDir === "asc" ? -1 : 1;
-      if (av > bv) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-  }
-  const totalPages = Math.max(
-    1,
-    Math.ceil(sortedFiltered.length / ROWS_PER_PAGE),
-  );
-  const safePage = Math.min(currentPage, totalPages);
-  const paginated = sortedFiltered.slice(
-    (safePage - 1) * ROWS_PER_PAGE,
-    safePage * ROWS_PER_PAGE,
-  );
+  // Patients are now filtered, sorted, and paginated server-side in fetchPatients().
+  const sortedFiltered = patients;
+  const totalPages = Math.max(1, Math.ceil(totalPatientCount / ROWS_PER_PAGE));
+  const safePage = currentPage;
+  const paginated = patients;
   useEffect(() => {
     setCurrentPage(1);
     setSelectedIds([]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, statusFilter, speciesFilter, sortField, sortDir]);
 
   useEffect(() => {

@@ -550,6 +550,12 @@ const Login = () => {
   const [otpSending, setOtpSending] = useState(false);
   const [otpVerifying, setOtpVerifying] = useState(false);
   const [pendingLogin, setPendingLogin] = useState(null); // { user, session, role, fullName, branchName }
+  const [backupCodeMode, setBackupCodeMode] = useState(false);
+  const [backupCodeValue, setBackupCodeValue] = useState("");
+  const [backupCodeError, setBackupCodeError] = useState("");
+  const [backupCodeVerifying, setBackupCodeVerifying] = useState(false);
+  const [showBackupCodesModal, setShowBackupCodesModal] = useState(false);
+  const [newBackupCodes, setNewBackupCodes] = useState([]);
   const navigate = useNavigate();
 
   const showModal = useCallback(
@@ -653,6 +659,13 @@ const Login = () => {
           );
           return;
         }
+        // Silently ensure backup codes exist (first-time only, no UI blocking)
+        supabase.functions
+          .invoke("generate-backup-codes", { body: { user_id: user.id } })
+          .then(({ data }) => {
+            if (data?.codes) setNewBackupCodes(data.codes);
+          })
+          .catch(() => {});
         setOtpStep(true);
       } else {
         await completeLogin(user, session, role, fullName, branchName);
@@ -749,6 +762,31 @@ const Login = () => {
     setForgotStep("sent");
   };
 
+  const verifyBackupCode = async () => {
+    if (!pendingLogin) return;
+    const cleaned = backupCodeValue.trim().toUpperCase();
+    if (!cleaned) {
+      setBackupCodeError("Enter a backup code.");
+      return;
+    }
+    setBackupCodeVerifying(true);
+    setBackupCodeError("");
+    const { data, error } = await supabase.functions.invoke(
+      "verify-backup-code",
+      { body: { user_id: pendingLogin.user.id, code: cleaned } },
+    );
+    setBackupCodeVerifying(false);
+    if (error || !data?.valid) {
+      setBackupCodeError("Invalid or already-used backup code.");
+      return;
+    }
+    const { user, session, role, fullName, branchName } = pendingLogin;
+    setOtpStep(false);
+    setBackupCodeMode(false);
+    setPendingLogin(null);
+    await completeLogin(user, session, role, fullName, branchName);
+  };
+
   const verifyLoginOtp = async () => {
     if (!pendingLogin) return;
     const digitsOnly = otpValue.join("");
@@ -842,13 +880,129 @@ const Login = () => {
   return (
     <>
       <AlertModal modal={modal} onClose={closeModal} />
-      {welcome && (
+      {welcome && !showBackupCodesModal && (
         <WelcomePopup
           name={welcome.name}
           role={welcome.role}
           branch={welcome.branch}
-          onDone={() => navigate(welcome.redirectTo)}
+          onDone={() => {
+            if (newBackupCodes.length > 0) {
+              setShowBackupCodesModal(true);
+            } else {
+              navigate(welcome.redirectTo);
+            }
+          }}
         />
+      )}
+
+      {showBackupCodesModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 16,
+              width: "100%",
+              maxWidth: 420,
+              padding: 28,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+            }}
+          >
+            <h5
+              style={{
+                margin: "0 0 6px",
+                fontWeight: 700,
+                fontSize: 16,
+                color: "#0f172a",
+              }}
+            >
+              Save Your Backup Codes
+            </h5>
+            <p
+              style={{
+                fontSize: 12.5,
+                color: "#64748b",
+                margin: "0 0 16px",
+                lineHeight: 1.5,
+              }}
+            >
+              Use one of these if you ever can't receive your login code. Each
+              code works once. Save them somewhere safe — they won't be shown
+              again.
+            </p>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 8,
+                background: "#f8fafc",
+                border: "1px solid #e2e8f0",
+                borderRadius: 10,
+                padding: 16,
+                marginBottom: 16,
+                fontFamily: "monospace",
+                fontSize: 14,
+                fontWeight: 700,
+                color: "#0f172a",
+              }}
+            >
+              {newBackupCodes.map((c, i) => (
+                <div key={i} style={{ textAlign: "center" }}>
+                  {c}
+                </div>
+              ))}
+            </div>
+            <button
+              onClick={() => {
+                navigator.clipboard?.writeText(newBackupCodes.join("\n"));
+              }}
+              style={{
+                width: "100%",
+                background: "#f1f5f9",
+                color: "#334155",
+                border: "none",
+                borderRadius: 8,
+                padding: "10px 0",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+                marginBottom: 10,
+              }}
+            >
+              Copy Codes
+            </button>
+            <button
+              onClick={() => {
+                setShowBackupCodesModal(false);
+                setNewBackupCodes([]);
+                navigate(welcome.redirectTo);
+              }}
+              style={{
+                width: "100%",
+                background: "#2563eb",
+                color: "#fff",
+                border: "none",
+                borderRadius: 8,
+                padding: "10px 0",
+                fontSize: 13,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              I've Saved My Codes
+            </button>
+          </div>
+        </div>
       )}
 
       {otpStep && (
@@ -969,26 +1123,109 @@ const Login = () => {
                   {otpError}
                 </p>
               )}
+              {backupCodeMode && (
+                <div style={{ marginTop: 16 }}>
+                  <input
+                    type="text"
+                    placeholder="XXXX-XXXX"
+                    value={backupCodeValue}
+                    onChange={(e) => {
+                      setBackupCodeValue(e.target.value);
+                      setBackupCodeError("");
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && verifyBackupCode()}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      padding: "10px 14px",
+                      fontSize: 14,
+                      textAlign: "center",
+                      letterSpacing: 2,
+                      border: `1.5px solid ${backupCodeError ? "#dc3545" : "#e2e8f0"}`,
+                      borderRadius: 10,
+                      outline: "none",
+                      fontFamily: "inherit",
+                      textTransform: "uppercase",
+                    }}
+                  />
+                  {backupCodeError && (
+                    <p
+                      style={{
+                        color: "#dc3545",
+                        fontSize: 12,
+                        margin: "6px 0 0",
+                        textAlign: "center",
+                      }}
+                    >
+                      {backupCodeError}
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
             <div style={{ padding: "16px 24px 24px" }}>
-              <button
-                onClick={verifyLoginOtp}
-                disabled={otpVerifying || otpValue.some((d) => !d)}
-                style={{
-                  width: "100%",
-                  background: "#2563eb",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 10,
-                  padding: "13px 0",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  opacity: otpValue.some((d) => !d) ? 0.6 : 1,
-                }}
-              >
-                {otpVerifying ? "Verifying…" : "Verify Code"}
-              </button>
+              {backupCodeMode ? (
+                <button
+                  onClick={verifyBackupCode}
+                  disabled={backupCodeVerifying || !backupCodeValue.trim()}
+                  style={{
+                    width: "100%",
+                    background: "#2563eb",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "13px 0",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    opacity: !backupCodeValue.trim() ? 0.6 : 1,
+                  }}
+                >
+                  {backupCodeVerifying ? "Verifying…" : "Use Backup Code"}
+                </button>
+              ) : (
+                <button
+                  onClick={verifyLoginOtp}
+                  disabled={otpVerifying || otpValue.some((d) => !d)}
+                  style={{
+                    width: "100%",
+                    background: "#2563eb",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "13px 0",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    opacity: otpValue.some((d) => !d) ? 0.6 : 1,
+                  }}
+                >
+                  {otpVerifying ? "Verifying…" : "Verify Code"}
+                </button>
+              )}
+              <div style={{ textAlign: "center", marginTop: 10 }}>
+                <button
+                  onClick={() => {
+                    setBackupCodeMode((prev) => !prev);
+                    setBackupCodeError("");
+                    setBackupCodeValue("");
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#64748b",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: 0,
+                    textDecoration: "underline",
+                  }}
+                >
+                  {backupCodeMode
+                    ? "Use verification code instead"
+                    : "Trouble receiving your code? Use a backup code"}
+                </button>
+              </div>
               <div
                 style={{
                   display: "flex",
@@ -1001,6 +1238,7 @@ const Login = () => {
                   onClick={() => {
                     setOtpStep(false);
                     setPendingLogin(null);
+                    setBackupCodeMode(false);
                   }}
                   style={{
                     background: "none",
