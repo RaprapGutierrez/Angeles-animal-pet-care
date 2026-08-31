@@ -544,6 +544,12 @@ const Login = () => {
   const [forgotIsCustomer, setForgotIsCustomer] = useState(false);
   // Track focus for input highlight
   const [focusedField, setFocusedField] = useState(null);
+  const [otpStep, setOtpStep] = useState(false);
+  const [otpValue, setOtpValue] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [otpSending, setOtpSending] = useState(false);
+  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [pendingLogin, setPendingLogin] = useState(null); // { user, session, role, fullName, branchName }
   const navigate = useNavigate();
 
   const showModal = useCallback(
@@ -627,27 +633,30 @@ const Login = () => {
         branchName = branchRow?.name ?? null;
       }
 
-      // ── 2FA temporarily disabled ──────────────────────────────────────────
-      // setPendingSession({ user, session, profile, role, fullName, branchName });
-      // setOtpValue("");
-      // setTwoFAError("");
+      const isGmail = email.trim().toLowerCase().endsWith("@gmail.com");
 
-      // if (profile?.phone) {
-      //   setPhoneValue(profile.phone);
-      //   setSendingCode(true);
-      //   const { error: sendErr } = await sendTwoFACode(user.id, profile.phone);
-      //   setSendingCode(false);
-      //   if (sendErr) {
-      //     showModal("danger", "Error", "Could not send verification code. Please try again.");
-      //     return;
-      //   }
-      //   setTwoFAStep("verify");
-      // } else {
-      //   setPhoneValue("");
-      //   setTwoFAStep("phone");
-      // }
-
-      await completeLogin(user, session, role, fullName, branchName);
+      if (isGmail) {
+        setOtpValue("");
+        setOtpError("");
+        setPendingLogin({ user, session, role, fullName, branchName });
+        setOtpSending(true);
+        const { error: sendErr } = await supabase.functions.invoke(
+          "send-login-otp",
+          { body: { user_id: user.id, email: email.trim() } },
+        );
+        setOtpSending(false);
+        if (sendErr) {
+          showModal(
+            "danger",
+            "Error",
+            "Could not send verification code. Please try again.",
+          );
+          return;
+        }
+        setOtpStep(true);
+      } else {
+        await completeLogin(user, session, role, fullName, branchName);
+      }
     } catch (err) {
       console.error("Login error:", err);
       showModal(
@@ -740,6 +749,30 @@ const Login = () => {
     setForgotStep("sent");
   };
 
+  const verifyLoginOtp = async () => {
+    if (!pendingLogin) return;
+    const digitsOnly = otpValue.replace(/\D/g, "");
+    if (digitsOnly.length !== 6) {
+      setOtpError("Enter the 6-digit code.");
+      return;
+    }
+    setOtpVerifying(true);
+    setOtpError("");
+    const { data, error } = await supabase.functions.invoke(
+      "verify-login-otp",
+      { body: { user_id: pendingLogin.user.id, code: digitsOnly } },
+    );
+    setOtpVerifying(false);
+    if (error || data?.error) {
+      setOtpError(data?.error || "Invalid or expired code.");
+      return;
+    }
+    const { user, session, role, fullName, branchName } = pendingLogin;
+    setOtpStep(false);
+    setPendingLogin(null);
+    await completeLogin(user, session, role, fullName, branchName);
+  };
+
   const completeLogin = async (user, session, role, fullName, branchName) => {
     await logActivity(
       { id: user.id, fullName: fullName, email: email, role: role },
@@ -816,6 +849,139 @@ const Login = () => {
           branch={welcome.branch}
           onDone={() => navigate(welcome.redirectTo)}
         />
+      )}
+
+      {otpStep && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 16,
+              overflow: "hidden",
+              width: "100%",
+              maxWidth: 380,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div
+              style={{
+                background: "#05328A",
+                padding: "16px 20px",
+              }}
+            >
+              <h5
+                style={{
+                  margin: 0,
+                  fontWeight: 700,
+                  color: "#fff",
+                  fontSize: 15,
+                }}
+              >
+                Verify It's You
+              </h5>
+            </div>
+            <div style={{ padding: 24 }}>
+              <p
+                style={{
+                  margin: "0 0 14px",
+                  fontSize: 13,
+                  color: "#475569",
+                  textAlign: "center",
+                }}
+              >
+                Enter the 6-digit code we sent to {email}.
+              </p>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                placeholder="000000"
+                value={otpValue}
+                onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ""))}
+                onKeyDown={(e) => e.key === "Enter" && verifyLoginOtp()}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  padding: "10px 14px",
+                  fontSize: 20,
+                  letterSpacing: "0.3em",
+                  textAlign: "center",
+                  border: `1.5px solid ${otpError ? "#dc3545" : "#e2e8f0"}`,
+                  borderRadius: 10,
+                  outline: "none",
+                  fontFamily: "inherit",
+                }}
+              />
+              {otpError && (
+                <p
+                  style={{
+                    color: "#dc3545",
+                    fontSize: 12,
+                    margin: "10px 0 0",
+                    textAlign: "center",
+                  }}
+                >
+                  {otpError}
+                </p>
+              )}
+            </div>
+            <div
+              style={{
+                padding: "0 24px 24px",
+                display: "flex",
+                gap: 10,
+                justifyContent: "center",
+              }}
+            >
+              <button
+                onClick={() => {
+                  setOtpStep(false);
+                  setPendingLogin(null);
+                }}
+                style={{
+                  background: "#f1f5f9",
+                  color: "#475569",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "10px 18px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={verifyLoginOtp}
+                disabled={otpVerifying}
+                style={{
+                  background: "#05328A",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 8,
+                  padding: "10px 18px",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {otpVerifying ? "Verifying…" : "Verify"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {showForgot && (
