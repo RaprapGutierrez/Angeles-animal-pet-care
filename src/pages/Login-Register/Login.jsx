@@ -545,7 +545,7 @@ const Login = () => {
   // Track focus for input highlight
   const [focusedField, setFocusedField] = useState(null);
   const [otpStep, setOtpStep] = useState(false);
-  const [otpValue, setOtpValue] = useState("");
+  const [otpValue, setOtpValue] = useState(["", "", "", "", "", ""]);
   const [otpError, setOtpError] = useState("");
   const [otpSending, setOtpSending] = useState(false);
   const [otpVerifying, setOtpVerifying] = useState(false);
@@ -636,7 +636,7 @@ const Login = () => {
       const isGmail = email.trim().toLowerCase().endsWith("@gmail.com");
 
       if (isGmail) {
-        setOtpValue("");
+        setOtpValue(["", "", "", "", "", ""]);
         setOtpError("");
         setPendingLogin({ user, session, role, fullName, branchName });
         setOtpSending(true);
@@ -751,7 +751,7 @@ const Login = () => {
 
   const verifyLoginOtp = async () => {
     if (!pendingLogin) return;
-    const digitsOnly = otpValue.replace(/\D/g, "");
+    const digitsOnly = otpValue.join("");
     if (digitsOnly.length !== 6) {
       setOtpError("Enter the 6-digit code.");
       return;
@@ -888,48 +888,81 @@ const Login = () => {
                   fontSize: 15,
                 }}
               >
-                Verify It's You
+                Account Verification
               </h5>
             </div>
-            <div style={{ padding: 24 }}>
+            <div style={{ padding: "28px 24px 8px", textAlign: "center" }}>
               <p
                 style={{
-                  margin: "0 0 14px",
-                  fontSize: 13,
-                  color: "#475569",
-                  textAlign: "center",
+                  margin: "0 0 20px",
+                  fontSize: 12,
+                  color: "#94a3b8",
+                  fontWeight: 600,
                 }}
               >
-                Enter the 6-digit code we sent to {email}.
+                Enter Verify Code Below
               </p>
-              <input
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                maxLength={6}
-                placeholder="000000"
-                value={otpValue}
-                onChange={(e) => setOtpValue(e.target.value.replace(/\D/g, ""))}
-                onKeyDown={(e) => e.key === "Enter" && verifyLoginOtp()}
+              <div
                 style={{
-                  width: "100%",
-                  boxSizing: "border-box",
-                  padding: "10px 14px",
-                  fontSize: 20,
-                  letterSpacing: "0.3em",
-                  textAlign: "center",
-                  border: `1.5px solid ${otpError ? "#dc3545" : "#e2e8f0"}`,
-                  borderRadius: 10,
-                  outline: "none",
-                  fontFamily: "inherit",
+                  display: "flex",
+                  justifyContent: "center",
+                  gap: 8,
+                  marginBottom: 8,
                 }}
-              />
+              >
+                {otpValue.map((digit, i) => (
+                  <input
+                    key={i}
+                    id={`login-otp-digit-${i}`}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/[^0-9]/g, "");
+                      setOtpValue((prev) => {
+                        const next = [...prev];
+                        next[i] = val;
+                        return next;
+                      });
+                      setOtpError("");
+                      if (val && i < 5) {
+                        const nextInput = document.getElementById(
+                          `login-otp-digit-${i + 1}`,
+                        );
+                        if (nextInput) nextInput.focus();
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Backspace" && !digit && i > 0) {
+                        const prevInput = document.getElementById(
+                          `login-otp-digit-${i - 1}`,
+                        );
+                        if (prevInput) prevInput.focus();
+                      }
+                      if (e.key === "Enter") verifyLoginOtp();
+                    }}
+                    style={{
+                      width: 42,
+                      height: 50,
+                      textAlign: "center",
+                      fontSize: 20,
+                      fontWeight: 700,
+                      border: `1.5px solid ${otpError ? "#dc3545" : digit ? "#2563eb" : "#e2e8f0"}`,
+                      borderRadius: 10,
+                      outline: "none",
+                      fontFamily: "inherit",
+                      color: "#0f172a",
+                    }}
+                  />
+                ))}
+              </div>
               {otpError && (
                 <p
                   style={{
                     color: "#dc3545",
                     fontSize: 12,
-                    margin: "10px 0 0",
+                    margin: "6px 0 0",
                     textAlign: "center",
                   }}
                 >
@@ -937,48 +970,76 @@ const Login = () => {
                 </p>
               )}
             </div>
-            <div
-              style={{
-                padding: "0 24px 24px",
-                display: "flex",
-                gap: 10,
-                justifyContent: "center",
-              }}
-            >
-              <button
-                onClick={() => {
-                  setOtpStep(false);
-                  setPendingLogin(null);
-                }}
-                style={{
-                  background: "#f1f5f9",
-                  color: "#475569",
-                  border: "none",
-                  borderRadius: 8,
-                  padding: "10px 18px",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
-                Cancel
-              </button>
+            <div style={{ padding: "16px 24px 24px" }}>
               <button
                 onClick={verifyLoginOtp}
-                disabled={otpVerifying}
+                disabled={otpVerifying || otpValue.some((d) => !d)}
                 style={{
-                  background: "#05328A",
+                  width: "100%",
+                  background: "#2563eb",
                   color: "#fff",
                   border: "none",
-                  borderRadius: 8,
-                  padding: "10px 18px",
-                  fontSize: 13,
+                  borderRadius: 10,
+                  padding: "13px 0",
+                  fontSize: 14,
                   fontWeight: 700,
                   cursor: "pointer",
+                  opacity: otpValue.some((d) => !d) ? 0.6 : 1,
                 }}
               >
-                {otpVerifying ? "Verifying…" : "Verify"}
+                {otpVerifying ? "Verifying…" : "Verify Code"}
               </button>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginTop: 14,
+                }}
+              >
+                <button
+                  onClick={() => {
+                    setOtpStep(false);
+                    setPendingLogin(null);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#94a3b8",
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    setOtpValue(["", "", "", "", "", ""]);
+                    setOtpError("");
+                    setOtpSending(true);
+                    await supabase.functions.invoke("send-login-otp", {
+                      body: {
+                        user_id: pendingLogin.user.id,
+                        email: email.trim(),
+                      },
+                    });
+                    setOtpSending(false);
+                  }}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    color: "#2563eb",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    padding: 0,
+                  }}
+                >
+                  {otpSending ? "Sending…" : "Resend Code"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
