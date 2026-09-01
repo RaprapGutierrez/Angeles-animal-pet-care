@@ -965,7 +965,8 @@ const Walkin = () => {
     let q = supabase
       .from("walkins")
       .select("*")
-      .order("arrived_at", { ascending: false });
+      .order("arrived_at", { ascending: false })
+      .limit(300);
     if (!seeAllBranches && user?.branchId) q = q.eq("branch_id", user.branchId);
     if (seeAllBranches && branchFilter) q = q.eq("branch_id", branchFilter);
     const { data, error } = await q;

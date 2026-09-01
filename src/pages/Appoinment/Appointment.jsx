@@ -46,8 +46,18 @@ const DEFAULT_VET_SCHEDULE = {
 };
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MONTH_NAMES = [
-  "January", "February", "March", "April", "May", "June",
-  "July", "August", "September", "October", "November", "December",
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
 ];
 
 // ── Vet time-of-day availability defaults — which slots each vet actually works ──
@@ -95,6 +105,15 @@ const S = {
 const canEdit = (appt) => appt?.status === "Pending";
 const sanitizeContact = (v) => v.replace(/\D/g, "").slice(0, 11);
 const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, "");
+
+const useDebouncedValue = (value, delay = 350) => {
+  const [debounced, setDebounced] = React.useState(value);
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+};
 
 const CustomSelect = ({
   value,
@@ -1207,6 +1226,7 @@ const Appointment = () => {
   const [selectedAppt, setSelectedAppt] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 350);
   const [filterDate, setFilterDate] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [calMonth, setCalMonth] = useState(new Date());
@@ -1488,13 +1508,16 @@ const Appointment = () => {
   const [exportMonth, setExportMonth] = useState(
     String(new Date().getMonth() + 1).padStart(2, "0"),
   );
-  const [exportYear, setExportYear] = useState(String(new Date().getFullYear()));
+  const [exportYear, setExportYear] = useState(
+    String(new Date().getFullYear()),
+  );
   const [exportFormat, setExportFormat] = useState("excel");
   const [exporting, setExporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState(null);
   const [sortDir, setSortDir] = useState("desc");
+  const [totalApptCount, setTotalApptCount] = useState(0);
   const toastTimerRef = React.useRef(null);
 
   const closeModal = () => setModal((m) => ({ ...m, show: false }));
@@ -1788,20 +1811,80 @@ const Appointment = () => {
   const fetchAppts = useCallback(async () => {
     if (userLoading || !user) return;
     setLoading(true);
-    let q = supabase
-      .from("appointments")
-      .select("*")
-      .order("date", { ascending: true });
+    let q = supabase.from("appointments").select("*", { count: "exact" });
     if (!seeAllBranches && user.branchId) q = q.eq("branch_id", user.branchId);
     if (seeAllBranches && branchFilter) q = q.eq("branch_id", branchFilter);
-    const { data, error } = await q;
-    if (!error) setAppts(data || []);
+    if (isCustomer && user?.id) q = q.eq("user_id", user.id);
+    if (filterDate) q = q.eq("date", filterDate);
+    if (filterStatus) q = q.eq("status", filterStatus);
+    if (debouncedSearch.trim()) {
+      const s = debouncedSearch.trim();
+      q = q.or(`patient.ilike.%${s}%,owner.ilike.%${s}%,vet.ilike.%${s}%`);
+    }
+    const sortColumn = sortField === "patient" ? "patient" : "date";
+    const sortAscending = sortField ? sortDir === "asc" : true;
+    q = q.order(sortColumn, { ascending: sortAscending });
+    if (view === "list") {
+      const from = (currentPage - 1) * ROWS_PER_PAGE;
+      const to = from + ROWS_PER_PAGE - 1;
+      q = q.range(from, to);
+    }
+    const { data, error, count } = await q;
+    if (!error) {
+      setAppts(data || []);
+      setTotalApptCount(count || 0);
+    }
     setLoading(false);
-  }, [user, seeAllBranches, branchFilter, userLoading]);
+  }, [
+    user,
+    seeAllBranches,
+    branchFilter,
+    userLoading,
+    isCustomer,
+    filterDate,
+    filterStatus,
+    debouncedSearch,
+    sortField,
+    sortDir,
+    currentPage,
+    view,
+  ]);
 
   useEffect(() => {
     fetchAppts();
   }, [fetchAppts]);
+
+  const [calendarAppts, setCalendarAppts] = useState([]);
+  const fetchCalendarAppts = useCallback(async () => {
+    if (userLoading || !user || view !== "calendar") return;
+    const y = calMonth.getFullYear();
+    const m = calMonth.getMonth();
+    const start = `${y}-${String(m + 1).padStart(2, "0")}-01`;
+    const endDate = new Date(y, m + 1, 0).getDate();
+    const end = `${y}-${String(m + 1).padStart(2, "0")}-${String(endDate).padStart(2, "0")}`;
+    let q = supabase
+      .from("appointments")
+      .select("*")
+      .gte("date", start)
+      .lte("date", end);
+    if (!seeAllBranches && user.branchId) q = q.eq("branch_id", user.branchId);
+    if (seeAllBranches && branchFilter) q = q.eq("branch_id", branchFilter);
+    if (isCustomer && user?.id) q = q.eq("user_id", user.id);
+    const { data, error } = await q;
+    if (!error) setCalendarAppts(data || []);
+  }, [
+    user,
+    userLoading,
+    view,
+    calMonth,
+    seeAllBranches,
+    branchFilter,
+    isCustomer,
+  ]);
+
+  useEffect(() => {
+    fetchCalendarAppts();
+  }, [fetchCalendarAppts]);
 
   useEffect(() => {
     if (!user) return;
@@ -1810,13 +1893,19 @@ const Appointment = () => {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "appointments" },
-        (p) => setAppts((prev) => [...prev, p.new]),
+        () => {
+          fetchAppts();
+          fetchCalendarAppts();
+        },
       )
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "appointments" },
         (p) => {
           setAppts((prev) => prev.map((a) => (a.id === p.new.id ? p.new : a)));
+          setCalendarAppts((prev) =>
+            prev.map((a) => (a.id === p.new.id ? p.new : a)),
+          );
           setSelectedAppt((prev) => (prev?.id === p.new.id ? p.new : prev));
         },
       )
@@ -1825,6 +1914,7 @@ const Appointment = () => {
         { event: "DELETE", schema: "public", table: "appointments" },
         (p) => {
           setAppts((prev) => prev.filter((a) => a.id !== p.old.id));
+          setCalendarAppts((prev) => prev.filter((a) => a.id !== p.old.id));
           setSelectedAppt((prev) => (prev?.id === p.old.id ? null : prev));
         },
       )
@@ -1859,49 +1949,13 @@ const Appointment = () => {
   useEffect(() => {
     setCurrentPage(1);
     setSelectedIds([]);
-  }, [search, filterDate, filterStatus, sortField, sortDir]);
+  }, [debouncedSearch, filterDate, filterStatus, sortField, sortDir]);
 
-  const filtered = appts.filter((a) => {
-    const q = search.toLowerCase();
-    if (isCustomer && user && a.user_id !== user.id) return false;
-    return (
-      (!search ||
-        `${a.patient} ${a.owner} ${a.vet}`.toLowerCase().includes(q)) &&
-      (!filterDate || a.date === filterDate) &&
-      (!filterStatus || a.status === filterStatus)
-    );
-  });
-
-  let sortedFiltered = filtered;
-  if (sortField) {
-    sortedFiltered = [...filtered].sort((a, b) => {
-      let av, bv;
-      if (sortField === "created_at") {
-        av = new Date(
-          a.created_at || `${a.date}T${a.time || "00:00"}`,
-        ).getTime();
-        bv = new Date(
-          b.created_at || `${b.date}T${b.time || "00:00"}`,
-        ).getTime();
-      } else {
-        av = (a.patient || "").toString().toLowerCase();
-        bv = (b.patient || "").toString().toLowerCase();
-      }
-      if (av < bv) return sortDir === "asc" ? -1 : 1;
-      if (av > bv) return sortDir === "asc" ? 1 : -1;
-      return 0;
-    });
-  }
-
-  const totalPages = Math.max(
-    1,
-    Math.ceil(sortedFiltered.length / ROWS_PER_PAGE),
-  );
-  const safePage = Math.min(currentPage, totalPages);
-  const paginated = sortedFiltered.slice(
-    (safePage - 1) * ROWS_PER_PAGE,
-    safePage * ROWS_PER_PAGE,
-  );
+  // appts is already filtered, sorted, and paginated server-side in fetchAppts().
+  const sortedFiltered = appts;
+  const totalPages = Math.max(1, Math.ceil(totalApptCount / ROWS_PER_PAGE));
+  const safePage = currentPage;
+  const paginated = appts;
 
   const counts = {
     today: appts.filter((a) => a.date === today).length,
@@ -2786,7 +2840,10 @@ const Appointment = () => {
         const ws = XLSX.utils.json_to_sheet(rows);
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Appointments");
-        XLSX.writeFile(wb, `Appointments_${periodLabel.replace(" ", "_")}.xlsx`);
+        XLSX.writeFile(
+          wb,
+          `Appointments_${periodLabel.replace(" ", "_")}.xlsx`,
+        );
       } else {
         const { default: jsPDF } = await import("jspdf");
         const { default: autoTable } = await import("jspdf-autotable");
@@ -2802,7 +2859,10 @@ const Appointment = () => {
         });
         doc.save(`Appointments_${periodLabel.replace(" ", "_")}.pdf`);
       }
-      showToast(`✓ Exported ${data.length} appointment(s) for ${periodLabel}`, "success");
+      showToast(
+        `✓ Exported ${data.length} appointment(s) for ${periodLabel}`,
+        "success",
+      );
     } catch (err) {
       console.error(err);
       showToast("Export failed. Please try again.", "error");
@@ -2912,7 +2972,7 @@ const Appointment = () => {
               );
 
             const dateStr = `${monthStr}-${String(day).padStart(2, "0")}`;
-            const dayAppts = appts.filter((a) => {
+            const dayAppts = calendarAppts.filter((a) => {
               if (a.date !== dateStr) return false;
               if (!search) return true;
               const q = search.toLowerCase();
@@ -3529,8 +3589,7 @@ const Appointment = () => {
                       padding: "14px 12px",
                       borderRadius: 10,
                       border: `2px solid ${exportFormat === f.key ? f.color : "var(--border)"}`,
-                      background:
-                        exportFormat === f.key ? f.bg : "var(--card)",
+                      background: exportFormat === f.key ? f.bg : "var(--card)",
                       cursor: "pointer",
                       textAlign: "left",
                       fontFamily: "inherit",
@@ -3540,8 +3599,7 @@ const Appointment = () => {
                       style={{
                         fontSize: 14,
                         fontWeight: 800,
-                        color:
-                          exportFormat === f.key ? f.color : "var(--text)",
+                        color: exportFormat === f.key ? f.color : "var(--text)",
                       }}
                     >
                       {f.label}
@@ -4673,7 +4731,8 @@ const Appointment = () => {
           zIndex: 40,
           background: "var(--card)",
           flexWrap: "wrap",
-          borderTop: (isAdmin || isSuperAdmin) ? "3px solid #f59e0b" : "3px solid #3b82f6",
+          borderTop:
+            isAdmin || isSuperAdmin ? "3px solid #f59e0b" : "3px solid #3b82f6",
         }}
       >
         <div className="topbar-title">
@@ -4728,7 +4787,9 @@ const Appointment = () => {
               >
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
-              {isSuperAdmin ? "Super Admin — Full Access" : "Administrator View"}
+              {isSuperAdmin
+                ? "Super Admin — Full Access"
+                : "Administrator View"}
             </span>
           )}
           {isEmployee && !isAdmin && !isSuperAdmin && (
@@ -5268,7 +5329,14 @@ const Appointment = () => {
                 >
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                 </svg>
-                <h2 style={{ fontSize: 14, fontWeight: 800, color: "#fff", margin: 0 }}>
+                <h2
+                  style={{
+                    fontSize: 14,
+                    fontWeight: 800,
+                    color: "#fff",
+                    margin: 0,
+                  }}
+                >
                   Admin Insights
                 </h2>
               </div>
@@ -5342,7 +5410,14 @@ const Appointment = () => {
                   >
                     {s.label}
                   </p>
-                  <p style={{ margin: 0, fontSize: 18, fontWeight: 800, color: "#fff" }}>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 18,
+                      fontWeight: 800,
+                      color: "#fff",
+                    }}
+                  >
                     {s.value}
                   </p>
                 </div>

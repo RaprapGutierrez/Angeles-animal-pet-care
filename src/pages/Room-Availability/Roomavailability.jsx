@@ -2074,7 +2074,9 @@ const RoomAvailability = () => {
       .from("appointments")
       .select("id, patient, owner, status, room, branch_id")
       .in("status", ["Pending", "Confirmed"])
-      .or("room.is.null,room.eq.");
+      .or("room.is.null,room.eq.")
+      .order("date", { ascending: true })
+      .limit(200);
     if (user?.branchId && !seeAllBranches) q = q.eq("branch_id", user.branchId);
     const { data, error } = await q;
     if (error) {
@@ -2111,27 +2113,29 @@ const RoomAvailability = () => {
       .from("branches")
       .select("id, name")
       .order("name");
-    const results = await Promise.all(
-      (allBranches || []).map(async (b) => {
-        const { data } = await supabase
-          .from("rooms")
-          .select("status")
-          .eq("branch_id", b.id)
-          .is("deleted_at", null);
-        const list = data || [];
-        const occupied = list.filter((r) => r.status === "Occupied").length;
-        const quarantine = list.filter((r) => r.status === "Quarantine").length;
-        return {
-          id: b.id,
-          name: b.name,
-          total: list.length,
-          occupied,
-          quarantine,
-          rate:
-            list.length > 0 ? Math.round((occupied / list.length) * 100) : 0,
-        };
-      }),
-    );
+    const { data: allRooms, error } = await supabase
+      .from("rooms")
+      .select("branch_id, status")
+      .is("deleted_at", null);
+    if (error) {
+      console.error("fetchBranchRoomComparison error:", error.message);
+      setBranchRoomStats([]);
+      setBranchRoomStatsLoading(false);
+      return;
+    }
+    const results = (allBranches || []).map((b) => {
+      const list = (allRooms || []).filter((r) => r.branch_id === b.id);
+      const occupied = list.filter((r) => r.status === "Occupied").length;
+      const quarantine = list.filter((r) => r.status === "Quarantine").length;
+      return {
+        id: b.id,
+        name: b.name,
+        total: list.length,
+        occupied,
+        quarantine,
+        rate: list.length > 0 ? Math.round((occupied / list.length) * 100) : 0,
+      };
+    });
     setBranchRoomStats(results.sort((a, b) => b.rate - a.rate));
     setBranchRoomStatsLoading(false);
   };

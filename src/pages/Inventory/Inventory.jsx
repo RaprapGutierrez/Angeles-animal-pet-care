@@ -21,6 +21,15 @@ const Skel = ({ w = "100%", h = 16 }) => (
   />
 );
 
+const useDebouncedValue = (value, delay = 350) => {
+  const [debounced, setDebounced] = React.useState(value);
+  React.useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+};
+
 /* ─── Shared CustomSelect / DatePicker (matches Appointments.jsx) ───────────── */
 const CustomSelect = ({
   value,
@@ -2749,8 +2758,11 @@ const Inventory = () => {
   const [adminView, setAdminView] = useState("table"); // "table" | "board" — board is admin-only
 
   const [items, setItems] = useState([]);
+  const [itemsLite, setItemsLite] = useState([]); // lightweight full dataset for stat cards
+  const [totalItemCount, setTotalItemCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 350);
   const [catFilter, setCatFilter] = useState("");
   const [stockFilter, setStockFilter] = useState("");
   const [expiryFilter, setExpiryFilter] = useState(false);
@@ -2796,17 +2808,65 @@ const Inventory = () => {
     applyFilterRef.current = applyFilter;
   }, [applyFilter]);
 
+  const expiryFilterRef = useRef(expiryFilter);
+  useEffect(() => {
+    expiryFilterRef.current = expiryFilter;
+  }, [expiryFilter]);
+
   const fetchItems = useCallback(async () => {
     setLoading(true);
+    let q = supabase
+      .from("inventory")
+      .select("*", { count: "exact" })
+      .is("deleted_at", null);
+    if (catFilter) q = q.eq("category", catFilter);
+    if (stockFilter === "low") q = q.eq("is_low_stock", true);
+    else if (stockFilter === "ok") q = q.eq("is_low_stock", false);
+    if (expiryFilterRef.current) {
+      const in30 = new Date();
+      in30.setDate(in30.getDate() + 30);
+      q = q
+        .not("expiry", "is", null)
+        .gte("expiry", new Date().toISOString().split("T")[0])
+        .lte("expiry", in30.toISOString().split("T")[0]);
+    }
+    if (debouncedSearch.trim()) {
+      const s = debouncedSearch.trim();
+      q = q.or(`name.ilike.%${s}%,supplier.ilike.%${s}%,category.ilike.%${s}%`);
+    }
+    const sortColumn = sortConfig.key || "name";
+    q = q.order(sortColumn, { ascending: sortConfig.direction !== "desc" });
+    const from = (currentPage - 1) * ROWS_PER_PAGE;
+    const to = from + ROWS_PER_PAGE - 1;
+    q = q.range(from, to);
+    const { data, error, count } = await applyFilterRef.current(q);
+    if (!error) {
+      setItems(data || []);
+      setTotalItemCount(count || 0);
+    }
+    setLoading(false);
+  }, [
+    catFilter,
+    stockFilter,
+    debouncedSearch,
+    sortConfig,
+    currentPage,
+    ROWS_PER_PAGE,
+  ]);
+
+  // Lightweight fetch (few columns, no pagination) that powers the stat cards,
+  // low-stock banner, category board, and category/supplier aggregates —
+  // these need visibility into the whole branch's inventory, not one page.
+  const fetchItemsLite = useCallback(async () => {
     const { data, error } = await applyFilterRef.current(
       supabase
         .from("inventory")
-        .select("*")
-        .is("deleted_at", null)
-        .order("name"),
+        .select(
+          "id, name, category, qty, threshold, price, expiry, supplier, is_low_stock, unit, image_url",
+        )
+        .is("deleted_at", null),
     );
-    if (!error) setItems(data || []);
-    setLoading(false);
+    if (!error) setItemsLite(data || []);
   }, []);
 
   const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -2846,9 +2906,17 @@ const Inventory = () => {
       return;
     }
     fetchItems();
+    fetchItemsLite();
     fetchDeletedItems();
     if (user) logActivity(user, "Viewed inventory", "Opened inventory list");
-  }, [userLoading, perms.canView, fetchItems, fetchDeletedItems]);
+  }, [
+    userLoading,
+    perms.canView,
+    fetchItems,
+    fetchItemsLite,
+    fetchDeletedItems,
+    expiryFilter,
+  ]);
 
   useEffect(() => {
     if (userLoading || !perms.canView) return;
@@ -2859,94 +2927,39 @@ const Inventory = () => {
         { event: "*", schema: "public", table: "inventory" },
         () => {
           fetchItems();
+          fetchItemsLite();
           fetchDeletedItems();
         },
       )
       .subscribe();
     return () => supabase.removeChannel(ch);
-  }, [userLoading, perms.canView, fetchItems, fetchDeletedItems]);
+  }, [
+    userLoading,
+    perms.canView,
+    fetchItems,
+    fetchItemsLite,
+    fetchDeletedItems,
+  ]);
 
   const lowStock = useMemo(
-    () =>
-      items.filter(
-        (i) =>
-          !NO_STOCK_CATEGORIES.includes(i.category) &&
-          i.qty <= (i.threshold ?? 10),
-      ),
-    [items],
+    () => itemsLite.filter((i) => i.is_low_stock),
+    [itemsLite],
   );
   const expiringSoon = useMemo(
     () =>
-      items.filter((i) => {
+      itemsLite.filter((i) => {
         if (!i.expiry) return false;
         const days = (new Date(i.expiry) - new Date()) / (1000 * 60 * 60 * 24);
         return days <= 30 && days >= 0;
       }),
-    [items],
+    [itemsLite],
   );
 
-  const filtered = useMemo(
-    () =>
-      items.filter((i) => {
-        const matchSearch =
-          !search ||
-          i.name.toLowerCase().includes(search.toLowerCase()) ||
-          (i.supplier || "").toLowerCase().includes(search.toLowerCase()) ||
-          (i.category || "").toLowerCase().includes(search.toLowerCase());
-        const matchCat = !catFilter || i.category === catFilter;
-        const matchStock =
-          !stockFilter ||
-          (stockFilter === "low"
-            ? i.qty <= (i.threshold ?? 10)
-            : i.qty > (i.threshold ?? 10));
-        const matchExpiry =
-          !expiryFilter ||
-          (i.expiry &&
-            (() => {
-              const d =
-                (new Date(i.expiry) - new Date()) / (1000 * 60 * 60 * 24);
-              return d <= 30 && d >= 0;
-            })());
-        return matchSearch && matchCat && matchStock && matchExpiry;
-      }),
-    [items, search, catFilter, stockFilter, expiryFilter],
-  );
-
-  useEffect(() => {
-    setCurrentPage(1);
-    setSelectedIds([]);
-  }, [search, catFilter, stockFilter, expiryFilter]);
-
-  const sorted = useMemo(() => {
-    if (!sortConfig.key) return filtered;
-    const { key, direction } = sortConfig;
-    const arr = [...filtered];
-    arr.sort((a, b) => {
-      let av = a[key],
-        bv = b[key];
-      if (key === "qty" || key === "price") {
-        av = Number(av) || 0;
-        bv = Number(bv) || 0;
-      } else if (key === "expiry") {
-        av = av ? new Date(av).getTime() : Infinity;
-        bv = bv ? new Date(bv).getTime() : Infinity;
-      } else {
-        av = (av || "").toString().toLowerCase();
-        bv = (bv || "").toString().toLowerCase();
-      }
-      if (av < bv) return direction === "asc" ? -1 : 1;
-      if (av > bv) return direction === "asc" ? 1 : -1;
-      return 0;
-    });
-    return arr;
-  }, [filtered, sortConfig]);
-
-  const totalPages = Math.max(1, Math.ceil(sorted.length / ROWS_PER_PAGE));
-  const safePage = Math.min(currentPage, totalPages);
-  const paginated = sorted.slice(
-    (safePage - 1) * ROWS_PER_PAGE,
-    safePage * ROWS_PER_PAGE,
-  );
+  // Items are already filtered, sorted, and paginated server-side in fetchItems().
+  const filtered = items;
+  const totalPages = Math.max(1, Math.ceil(totalItemCount / ROWS_PER_PAGE));
+  const safePage = currentPage;
+  const paginated = items;
 
   const openAdd = () =>
     perms.canAdd &&
@@ -3465,17 +3478,17 @@ const Inventory = () => {
               {[
                 {
                   label: "Total Inventory Value",
-                  value: `₱${items.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 0), 0).toLocaleString()}`,
+                  value: `₱${itemsLite.reduce((sum, i) => sum + (Number(i.price) || 0) * (Number(i.qty) || 0), 0).toLocaleString()}`,
                 },
                 {
                   label: "Avg. Item Price",
-                  value: items.length
-                    ? `₱${(items.reduce((sum, i) => sum + (Number(i.price) || 0), 0) / items.length).toFixed(2)}`
+                  value: itemsLite.length
+                    ? `₱${(itemsLite.reduce((sum, i) => sum + (Number(i.price) || 0), 0) / itemsLite.length).toFixed(2)}`
                     : "₱0",
                 },
                 {
                   label: "Items Expired",
-                  value: items.filter(
+                  value: itemsLite.filter(
                     (i) => i.expiry && new Date(i.expiry) < new Date(),
                   ).length,
                 },
@@ -3483,7 +3496,7 @@ const Inventory = () => {
                   label: "Top Supplier",
                   value:
                     Object.entries(
-                      items.reduce((acc, i) => {
+                      itemsLite.reduce((acc, i) => {
                         if (i.supplier)
                           acc[i.supplier] = (acc[i.supplier] || 0) + 1;
                         return acc;
@@ -3607,7 +3620,7 @@ const Inventory = () => {
             : [
                 {
                   label: "Total Items",
-                  value: items.length,
+                  value: itemsLite.length,
                   icon: "/icon/inventory.png",
                   color: "blue",
                   sub: "All inventory items",
@@ -3647,7 +3660,7 @@ const Inventory = () => {
                 },
                 {
                   label: "Categories",
-                  value: [...new Set(items.map((i) => i.category))].length,
+                  value: [...new Set(itemsLite.map((i) => i.category))].length,
                   icon: "/icon/category.png",
                   color: "green",
                   sub: "Distinct categories",
@@ -3857,7 +3870,7 @@ const Inventory = () => {
             }}
           >
             {CATEGORIES.map((cat) => {
-              const catItems = filtered.filter(
+              const catItems = itemsLite.filter(
                 (i) => (i.category || "Other") === cat,
               );
               if (catItems.length === 0) return null;

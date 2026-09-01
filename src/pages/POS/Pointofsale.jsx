@@ -737,7 +737,8 @@ const PointOfSale = () => {
       supabase
         .from("transactions")
         .select("*")
-        .order("created_at", { ascending: false }),
+        .order("created_at", { ascending: false })
+        .limit(200),
     );
     if (error) {
       console.error("fetchTransactions error:", error.message);
