@@ -1515,7 +1515,7 @@ const Appointment = () => {
   const [exporting, setExporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
-  const [sortField, setSortField] = useState(null);
+  const [sortField, setSortField] = useState("created_at");
   const [sortDir, setSortDir] = useState("desc");
   const [totalApptCount, setTotalApptCount] = useState(0);
   const toastTimerRef = React.useRef(null);

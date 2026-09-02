@@ -1574,7 +1574,8 @@ const CustomerAppointment = () => {
       .from("reviews")
       .select("*")
       .eq("branch_id", user.branchId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(100);
     if (!error) setAllReviews(data || []);
     setLoadingAllReviews(false);
   };
@@ -1638,10 +1639,15 @@ const CustomerAppointment = () => {
     fetchMyReviews();
 
     const channel = supabase
-      .channel(`customer-appts-realtime-${user.branchId || "all"}`)
+      .channel(`customer-appts-realtime-${user.id}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "appointments" },
+        {
+          event: "*",
+          schema: "public",
+          table: "appointments",
+          filter: `user_id=eq.${user.id}`,
+        },
         () => {
           fetchAppts();
         },

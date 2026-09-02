@@ -883,7 +883,12 @@ const RoomFormModal = ({
   };
   const selectStyle = { ...fieldStyle };
 
-  const DatePicker = ({ value, onChange, placeholder = "Pick a date" }) => {
+  const DatePicker = ({
+    value,
+    onChange,
+    placeholder = "Pick a date",
+    min = "",
+  }) => {
     const [open, setOpen] = React.useState(false);
     const [viewDate, setViewDate] = React.useState(() =>
       value ? new Date(value + "T00:00:00") : new Date(),
@@ -947,6 +952,7 @@ const RoomFormModal = ({
     const todayStr = new Date().toISOString().split("T")[0];
     const selectDay = (day) => {
       const str = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+      if (min && str < min) return;
       onChange(str);
       setOpen(false);
     };
@@ -1092,12 +1098,13 @@ const RoomFormModal = ({
                   const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
                   const isSelected = dateStr === value;
                   const isToday = dateStr === todayStr;
+                  const isDisabled = min && dateStr < min;
                   const isSun = i % 7 === 0;
                   const isSat = i % 7 === 6;
                   return (
                     <div
                       key={i}
-                      onClick={() => selectDay(day)}
+                      onClick={() => !isDisabled && selectDay(day)}
                       style={{
                         width: 32,
                         height: 32,
@@ -1107,7 +1114,7 @@ const RoomFormModal = ({
                         justifyContent: "center",
                         fontSize: 12,
                         fontWeight: isSelected ? 800 : isToday ? 700 : 500,
-                        cursor: "pointer",
+                        cursor: isDisabled ? "not-allowed" : "pointer",
                         background: isSelected
                           ? "linear-gradient(135deg,#1e3a8a,#3b82f6)"
                           : isToday
@@ -1115,13 +1122,15 @@ const RoomFormModal = ({
                             : "transparent",
                         color: isSelected
                           ? "#fff"
-                          : isToday
-                            ? "#1e40af"
-                            : isSun
-                              ? "#ef4444"
-                              : isSat
-                                ? "#3b82f6"
-                                : "var(--text)",
+                          : isDisabled
+                            ? "#cbd5e1"
+                            : isToday
+                              ? "#1e40af"
+                              : isSun
+                                ? "#ef4444"
+                                : isSat
+                                  ? "#3b82f6"
+                                  : "var(--text)",
                         border:
                           isToday && !isSelected
                             ? "1.5px solid #bfdbfe"
@@ -1133,7 +1142,7 @@ const RoomFormModal = ({
                         transition: "background 0.12s",
                       }}
                       onMouseEnter={(e) => {
-                        if (!isSelected)
+                        if (!isSelected && !isDisabled)
                           e.currentTarget.style.background = "#f1f5f9";
                       }}
                       onMouseLeave={(e) => {
@@ -1635,6 +1644,7 @@ const RoomFormModal = ({
                 }
                 onChange={(val) => setForm({ ...form, discharge_date: val })}
                 placeholder="Select discharge date"
+                min={new Date().toISOString().split("T")[0]}
               />
               <div style={{ fontSize: 10, color: "#94a3b8", marginTop: 6 }}>
                 Room auto-switches to Available once this date is reached

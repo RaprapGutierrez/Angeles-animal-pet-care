@@ -1000,8 +1000,20 @@ const CAT_COLOR = {
 const getPermissions = (role) => {
   const r = (role || "").toLowerCase();
   if (["admin", "super_admin", "manager", "employee", "staff"].includes(r))
-    return { canView: true, canAdd: true, canEdit: true, canDelete: true };
-  return { canView: false, canAdd: false, canEdit: false, canDelete: false };
+    return {
+      canView: true,
+      canAdd: true,
+      canEdit: true,
+      canDelete: true,
+      canEditPrice: ["admin", "super_admin", "manager"].includes(r),
+    };
+  return {
+    canView: false,
+    canAdd: false,
+    canEdit: false,
+    canDelete: false,
+    canEditPrice: false,
+  };
 };
 
 /* ─── Small helpers ─────────────────────────────────────────────────────────── */
@@ -1255,15 +1267,20 @@ const ViewModal = ({ item, onClose, onEdit, onDelete }) => {
     { label: "Supplier", value: item.supplier || "—" },
     {
       label: "Expiry Date",
-      value: item.expiry
-        ? `${item.expiry}${exp ? (exp.expired ? " — EXPIRED" : exp.soon ? ` (${exp.days}d left)` : "") : ""}`
-        : "No expiry",
-      highlight: exp
+      value: item.expiry || "No expiry",
+      helper: exp
         ? exp.expired
+          ? `Expired on ${item.expiry} — remove from active stock.`
+          : exp.critical
+            ? `Expires in ${exp.days} day${exp.days === 1 ? "" : "s"} — reorder immediately.`
+            : exp.soon
+              ? `Expires in ${exp.days} days — plan to reorder soon.`
+              : null
+        : null,
+      helperColor: exp
+        ? exp.expired || exp.critical
           ? "#dc2626"
-          : exp.soon
-            ? "#d97706"
-            : undefined
+          : "#d97706"
         : undefined,
     },
   ];
@@ -1564,15 +1581,22 @@ const ViewModal = ({ item, onClose, onEdit, onDelete }) => {
               gap: 10,
             }}
           >
-            {fields.map(({ label, value, highlight }) => (
+            {fields.map(({ label, value, helper, helperColor }) => (
               <div key={label} className="inv-field-card">
                 <span className="inv-field-label">{label}</span>
-                <span
-                  className="inv-field-value"
-                  style={highlight ? { color: highlight, fontWeight: 700 } : {}}
-                >
-                  {value}
-                </span>
+                <span className="inv-field-value">{value}</span>
+                {helper && (
+                  <p
+                    style={{
+                      margin: "4px 0 0",
+                      fontSize: 11,
+                      color: helperColor,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {helper}
+                  </p>
+                )}
               </div>
             ))}
 
@@ -1667,6 +1691,52 @@ const ViewModal = ({ item, onClose, onEdit, onDelete }) => {
           </div>
         </div>
 
+        {/* Price history */}
+        {Array.isArray(item.price_history) && item.price_history.length > 0 && (
+          <div style={{ padding: "0 24px 16px" }}>
+            <p
+              style={{
+                margin: "0 0 8px",
+                fontSize: 10,
+                fontWeight: 800,
+                textTransform: "uppercase",
+                letterSpacing: 1,
+                color: "#94a3b8",
+              }}
+            >
+              Price History
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+              {item.price_history.map((h) => (
+                <div
+                  key={h.id}
+                  style={{
+                    fontSize: 12,
+                    color: "var(--text)",
+                    background: "var(--bg)",
+                    border: "1px solid var(--border)",
+                    borderRadius: 8,
+                    padding: "8px 10px",
+                  }}
+                >
+                  <strong>
+                    ₱{Number(h.old_price ?? 0).toFixed(2)} → ₱
+                    {Number(h.new_price).toFixed(2)}
+                  </strong>
+                  {" — "}
+                  {h.changed_by_name || "Unknown"} on{" "}
+                  {new Date(h.changed_at).toLocaleDateString()}
+                  <br />
+                  <span style={{ color: "#94a3b8" }}>
+                    Effective {h.effective_start}
+                    {h.effective_end ? ` – ${h.effective_end}` : " – ongoing"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div
           style={{
@@ -1716,11 +1786,17 @@ const ViewModal = ({ item, onClose, onEdit, onDelete }) => {
 };
 
 /* ─── Add / Edit Modal (patient-record style) ────────────────────────────────── */
-const ItemFormModal = ({ item, onClose, onSave, saving }) => {
+const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
   const isEdit = !!item?.id;
   const [form, setForm] = useState(
     item?.id
-      ? { ...item }
+      ? {
+          ...item,
+          price_effective_start:
+            item.price_effective_start ||
+            new Date().toISOString().split("T")[0],
+          price_effective_end: item.price_effective_end || "",
+        }
       : {
           name: "",
           category: "Medicine",
@@ -1728,6 +1804,8 @@ const ItemFormModal = ({ item, onClose, onSave, saving }) => {
           unit: "pcs",
           threshold: 10,
           price: 0,
+          price_effective_start: new Date().toISOString().split("T")[0],
+          price_effective_end: "",
           expiry: "",
           supplier: "",
           description: "",
@@ -2381,6 +2459,7 @@ const ItemFormModal = ({ item, onClose, onSave, saving }) => {
                   value={form.price}
                   min={0}
                   step="0.01"
+                  disabled={!canEditPrice}
                   onChange={(e) => set("price", e.target.value)}
                   style={{
                     width: "100%",
@@ -2389,14 +2468,84 @@ const ItemFormModal = ({ item, onClose, onSave, saving }) => {
                     background: "transparent",
                     fontSize: 13,
                     fontWeight: 600,
-                    color: "var(--text,#1e293b)",
+                    color: canEditPrice ? "var(--text,#1e293b)" : "#94a3b8",
                     outline: "none",
                     padding: "2px 0",
                     fontFamily: "inherit",
                     boxSizing: "border-box",
+                    cursor: canEditPrice ? "text" : "not-allowed",
                   }}
                 />
+                {!canEditPrice && (
+                  <p
+                    style={{
+                      fontSize: 11,
+                      color: "#94a3b8",
+                      margin: "4px 0 0",
+                    }}
+                  >
+                    Only Managers, Admins, and Super Admins can change price.
+                  </p>
+                )}
               </div>
+              {canEditPrice && (
+                <div
+                  style={{
+                    padding: "10px 16px",
+                    borderRight: "1px solid #e2e8f0",
+                    borderBottom: "1px solid #e2e8f0",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.8px",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Price Effective From{" "}
+                    <span style={{ color: "#ef4444" }}>*</span>
+                  </div>
+                  <DatePicker
+                    value={form.price_effective_start}
+                    onChange={(val) => set("price_effective_start", val)}
+                    placeholder="Select start date"
+                  />
+                </div>
+              )}
+              {canEditPrice && (
+                <div
+                  style={{
+                    padding: "10px 16px",
+                    borderBottom: "1px solid #e2e8f0",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.8px",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Price Effective Until{" "}
+                    <span style={{ fontWeight: 400, textTransform: "none" }}>
+                      (optional)
+                    </span>
+                  </div>
+                  <DatePicker
+                    value={form.price_effective_end}
+                    onChange={(val) => set("price_effective_end", val)}
+                    placeholder="No end date"
+                    min={form.price_effective_start}
+                  />
+                </div>
+              )}
               <div style={{ padding: "10px 16px" }}>
                 <div
                   style={{
@@ -2506,48 +2655,31 @@ const ItemFormModal = ({ item, onClose, onSave, saving }) => {
                 (() => {
                   const e = expiryInfo(form.expiry);
                   if (!e) return null;
-                  const c = e.expired
-                    ? {
-                        bg: "#fef2f2",
-                        border: "#fca5a5",
-                        text: "#dc2626",
-                        msg: "Expired!",
-                      }
+                  const msg = e.expired
+                    ? `This item expired on ${form.expiry} and should be pulled from stock.`
                     : e.critical
-                      ? {
-                          bg: "#fef2f2",
-                          border: "#fca5a5",
-                          text: "#dc2626",
-                          msg: `${e.days}d left — Critical`,
-                        }
+                      ? `Expires in ${e.days} day${e.days === 1 ? "" : "s"} — reorder immediately.`
                       : e.soon
-                        ? {
-                            bg: "#fffbeb",
-                            border: "#fde68a",
-                            text: "#d97706",
-                            msg: `${e.days}d left — Expiring soon`,
-                          }
-                        : {
-                            bg: "#f0fdf4",
-                            border: "#86efac",
-                            text: "#16a34a",
-                            msg: `${e.days}d remaining`,
-                          };
+                        ? `Expires in ${e.days} days — plan to reorder soon.`
+                        : `${e.days} days remaining before expiry.`;
+                  const color =
+                    e.expired || e.critical
+                      ? "#dc2626"
+                      : e.soon
+                        ? "#d97706"
+                        : "#16a34a";
                   return (
-                    <div
+                    <p
                       style={{
-                        background: c.bg,
-                        border: `1px solid ${c.border}`,
-                        borderRadius: 8,
-                        padding: "7px 12px",
+                        margin: "6px 0 0",
                         fontSize: 12,
-                        fontWeight: 700,
-                        color: c.text,
-                        flexShrink: 0,
+                        color,
+                        fontWeight: 600,
+                        width: "100%",
                       }}
                     >
-                      {c.msg}
-                    </div>
+                      {msg}
+                    </p>
                   );
                 })()}
             </div>
@@ -2742,6 +2874,16 @@ const validateInventoryItem = (form) => {
     };
   if (form.expiry && form.expiry < new Date().toISOString().split("T")[0])
     return { valid: false, message: "Expiry date cannot be in the past" };
+  if (!form.price_effective_start)
+    return { valid: false, message: "Price effective start date is required" };
+  if (
+    form.price_effective_end &&
+    form.price_effective_end < form.price_effective_start
+  )
+    return {
+      valid: false,
+      message: "Price end date cannot be before the start date",
+    };
   return { valid: true, message: "" };
 };
 
@@ -2977,28 +3119,47 @@ const Inventory = () => {
     e?.stopPropagation();
     perms.canEdit && setEditItem(item);
   };
-  const openView = (item) => setViewItem(item);
+  const openView = async (item) => {
+    setViewItem(item);
+    const { data, error } = await supabase
+      .from("inventory_price_history")
+      .select("*")
+      .eq("item_id", item.id)
+      .order("changed_at", { ascending: false })
+      .limit(20);
+    if (!error)
+      setViewItem((prev) =>
+        prev?.id === item.id ? { ...prev, price_history: data || [] } : prev,
+      );
+  };
 
-  const handleSave = async (form) => {
-    const check = validateInventoryItem(form);
-    if (!check.valid) {
-      alert(check.message);
-      return;
-    }
+  const commitSave = async (form) => {
     setSaving(true);
     const isService = NO_STOCK_CATEGORIES.includes(form.category);
+    const oldPrice = form.id
+      ? Number(
+          items.find((i) => i.id === form.id)?.price ??
+            itemsLite.find((i) => i.id === form.id)?.price ??
+            form.price,
+        )
+      : null;
+    const newPrice = Number(form.price);
+    const priceChanged = form.id ? oldPrice !== newPrice : true;
     const base = {
       name: form.name,
       category: form.category,
       qty: isService ? 999999 : Number(form.qty),
       unit: isService ? "service" : form.unit,
       threshold: isService ? 0 : Number(form.threshold),
-      price: Number(form.price),
+      price: newPrice,
+      price_effective_start: form.price_effective_start || null,
+      price_effective_end: form.price_effective_end || null,
       expiry: form.expiry || null,
       supplier: form.supplier,
       description: form.description || null,
       image_url: form.image_url || null,
     };
+    let itemId = form.id;
     if (form.id) {
       const { error } = await supabase
         .from("inventory")
@@ -3013,19 +3174,65 @@ const Inventory = () => {
       showToast(`✓ ${form.name} updated`);
     } else {
       const payload = withBranchId(user, base);
-      const { error } = await supabase.from("inventory").insert([payload]);
+      const { data: inserted, error } = await supabase
+        .from("inventory")
+        .insert([payload])
+        .select()
+        .single();
       if (error) {
         alert("Error: " + error.message);
         setSaving(false);
         return;
       }
+      itemId = inserted?.id;
       logActivity(user, "Added inventory item", `Added: ${form.name}`);
       showToast(`✓ ${form.name} added to inventory`);
     }
+
+    if (priceChanged && itemId) {
+      const { error: histErr } = await supabase
+        .from("inventory_price_history")
+        .insert([
+          {
+            item_id: itemId,
+            old_price: oldPrice,
+            new_price: newPrice,
+            effective_start:
+              form.price_effective_start ||
+              new Date().toISOString().split("T")[0],
+            effective_end: form.price_effective_end || null,
+            changed_by: user?.id || null,
+            changed_by_name: user?.fullName || user?.email || "Unknown",
+          },
+        ]);
+      if (histErr) console.error("Price history log failed:", histErr.message);
+    }
+
     setSaving(false);
     setEditItem(null);
-    // Also close view if editing the same item
     if (form.id && viewItem?.id === form.id) setViewItem(null);
+  };
+
+  const handleSave = async (form) => {
+    const check = validateInventoryItem(form);
+    if (!check.valid) {
+      alert(check.message);
+      return;
+    }
+    if (form.id) {
+      const existingPrice = Number(
+        items.find((i) => i.id === form.id)?.price ??
+          itemsLite.find((i) => i.id === form.id)?.price ??
+          form.price,
+      );
+      if (Number(form.price) < existingPrice) {
+        const ok = window.confirm(
+          `You're lowering the price of "${form.name}" from ₱${existingPrice.toFixed(2)} to ₱${Number(form.price).toFixed(2)}. Continue?`,
+        );
+        if (!ok) return;
+      }
+    }
+    await commitSave(form);
   };
 
   const doDelete = async (id) => {
@@ -4759,6 +4966,7 @@ const Inventory = () => {
           onClose={() => setEditItem(null)}
           onSave={handleSave}
           saving={saving}
+          canEditPrice={perms.canEditPrice}
         />
       )}
 

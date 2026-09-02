@@ -597,8 +597,19 @@ const PointOfSale = () => {
   );
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
+  const DISCOUNT_OPTIONS = [
+    { value: 0, label: "No Discount" },
+    { value: 5, label: "Employee (5%)" },
+    { value: 10, label: "Senior Citizen (10%)" },
+    { value: 10, label: "PWD (10%)" },
+    { value: 15, label: "Loyalty Member (15%)" },
+  ];
   const [discount, setDiscount] = useState(0);
+  const [discountLabel, setDiscountLabel] = useState("No Discount");
+  const [overrideMode, setOverrideMode] = useState(false);
+  const [overrideReason, setOverrideReason] = useState("");
   const DISCOUNT_CAP = 30; // max allowed discount percentage
+  const canOverrideDiscount = isAdmin || isManager || isSuperAdmin;
   const [loading, setLoading] = useState(true);
   const [catFilter, setCatFilter] = useState("All");
   const [search, setSearch] = useState("");
@@ -935,6 +946,10 @@ const PointOfSale = () => {
       showToast("Please enter the walk-in client name", "error");
       return;
     }
+    if (overrideMode && Number(discount) > 0 && !overrideReason.trim()) {
+      showToast("Please enter a reason for the discount override", "error");
+      return;
+    }
 
     const cartSnapshot = [...cart];
     const items = cartSnapshot.map((i) => ({
@@ -998,6 +1013,13 @@ const PointOfSale = () => {
       "Completed sale",
       `Sale total: ₱${total.toFixed(2)} · Client: ${clientName}`,
     );
+    if (overrideMode && Number(discount) > 0) {
+      logActivity(
+        user,
+        "Applied manual discount override",
+        `${discount}% on ₱${subtotal.toFixed(2)} — Reason: ${overrideReason.trim()}`,
+      );
+    }
     showToast(`✓ Payment of ₱${total.toFixed(2)} processed`);
     setLastTx({
       ...data[0],
@@ -1017,6 +1039,9 @@ const PointOfSale = () => {
     setWalkinContact("");
     setClientType("registered");
     setDiscount(0);
+    setDiscountLabel("No Discount");
+    setOverrideMode(false);
+    setOverrideReason("");
     setAmountGiven("");
   };
 
@@ -2483,42 +2508,137 @@ const PointOfSale = () => {
                 <span style={{ color: "var(--muted)" }}>Subtotal</span>
                 <AnimatedPrice value={subtotal} />
               </div>
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  fontSize: 13,
-                  padding: "4px 0",
-                }}
-              >
-                <span style={{ color: "var(--muted)" }}>Discount (%)</span>
-                <input
-                  type="number"
-                  value={discount}
-                  min={0}
-                  max={DISCOUNT_CAP}
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    if (val === "") {
-                      setDiscount("");
-                      return;
-                    }
-                    setDiscount(
-                      Math.min(DISCOUNT_CAP, Math.max(0, Number(val))),
-                    );
-                  }}
+              <div style={{ padding: "4px 0" }}>
+                <div
                   style={{
-                    width: 64,
-                    padding: "4px 8px",
-                    border: "1.5px solid var(--border)",
-                    borderRadius: 6,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     fontSize: 13,
-                    textAlign: "right",
-                    fontFamily: "inherit",
-                    outline: "none",
                   }}
-                />
+                >
+                  <span style={{ color: "var(--muted)" }}>Discount</span>
+                  {canOverrideDiscount && !overrideMode && (
+                    <button
+                      onClick={() => setOverrideMode(true)}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "var(--royal)",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        width: "auto",
+                        padding: 0,
+                      }}
+                    >
+                      Manager override
+                    </button>
+                  )}
+                </div>
+
+                {!overrideMode ? (
+                  <div style={{ marginTop: 6 }}>
+                    <CustomSelect
+                      value={discount}
+                      accent="#6366f1"
+                      options={DISCOUNT_OPTIONS.map((o) => ({
+                        value: o.value,
+                        label: o.label,
+                      }))}
+                      onChange={(val) => {
+                        const opt = DISCOUNT_OPTIONS.find(
+                          (o) => o.value === val,
+                        );
+                        setDiscount(val);
+                        setDiscountLabel(opt?.label || "No Discount");
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      marginTop: 6,
+                      border: "1.5px solid #fbbf24",
+                      background: "#fffbeb",
+                      borderRadius: 8,
+                      padding: 10,
+                    }}
+                  >
+                    <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                      <input
+                        type="number"
+                        min={0}
+                        max={DISCOUNT_CAP}
+                        value={discount}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDiscount(
+                            val === ""
+                              ? ""
+                              : Math.min(
+                                  DISCOUNT_CAP,
+                                  Math.max(0, Number(val)),
+                                ),
+                          );
+                        }}
+                        style={{
+                          width: 70,
+                          padding: "6px 8px",
+                          border: "1.5px solid var(--border)",
+                          borderRadius: 6,
+                          fontSize: 13,
+                          fontFamily: "inherit",
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 12,
+                          alignSelf: "center",
+                          color: "var(--muted)",
+                        }}
+                      >
+                        % (max {DISCOUNT_CAP}%)
+                      </span>
+                    </div>
+                    <input
+                      type="text"
+                      placeholder="Reason for override (required)"
+                      value={overrideReason}
+                      onChange={(e) => setOverrideReason(e.target.value)}
+                      style={{
+                        width: "100%",
+                        padding: "7px 10px",
+                        border: "1.5px solid var(--border)",
+                        borderRadius: 6,
+                        fontSize: 12,
+                        fontFamily: "inherit",
+                        boxSizing: "border-box",
+                        marginBottom: 6,
+                      }}
+                    />
+                    <button
+                      onClick={() => {
+                        setOverrideMode(false);
+                        setDiscount(0);
+                        setOverrideReason("");
+                        setDiscountLabel("No Discount");
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        color: "#dc2626",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        width: "auto",
+                        padding: 0,
+                      }}
+                    >
+                      Cancel override
+                    </button>
+                  </div>
+                )}
               </div>
               {Number(discount) > 0 && (
                 <div
@@ -2563,32 +2683,67 @@ const PointOfSale = () => {
                 />
               </div>
 
-              <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-                {["Cash"].map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setPayMethod(m)}
-                    className="pay-method cash-btn"
-                    style={{
-                      flex: 1,
-                      padding: "9px 0",
-                      border: `2px solid ${payMethod === m ? "var(--royal)" : "var(--border)"}`,
-                      borderRadius: 8,
-                      background:
-                        payMethod === m ? "var(--royal)" : "var(--card)",
-                      color: payMethod === m ? "#fff" : "var(--muted)",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                      transition: "all 0.18s",
-                      width: "auto",
-                      letterSpacing: "0.3px",
-                    }}
-                  >
-                    {m}
-                  </button>
-                ))}
+              <div style={{ marginBottom: 14 }}>
+                <label
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.5px",
+                    display: "block",
+                    marginBottom: 8,
+                  }}
+                >
+                  Payment Method
+                </label>
+                <div
+                  role="radiogroup"
+                  style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                >
+                  {["Cash"].map((m) => (
+                    <label
+                      key={m}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        padding: "9px 12px",
+                        border: `1.5px solid ${payMethod === m ? "var(--royal)" : "var(--border)"}`,
+                        borderRadius: 8,
+                        background:
+                          payMethod === m
+                            ? "rgba(99,102,241,0.06)"
+                            : "var(--card)",
+                        cursor: "pointer",
+                        transition: "border-color 0.15s, background 0.15s",
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="payMethod"
+                        value={m}
+                        checked={payMethod === m}
+                        onChange={() => setPayMethod(m)}
+                        style={{
+                          width: 16,
+                          height: 16,
+                          accentColor: "var(--royal, #6366f1)",
+                        }}
+                      />
+                      <span
+                        style={{
+                          fontSize: 13,
+                          fontWeight: payMethod === m ? 700 : 500,
+                          color:
+                            payMethod === m ? "var(--royal)" : "var(--text)",
+                        }}
+                      >
+                        {m}
+                      </span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               <div style={{ marginBottom: 14 }}>
