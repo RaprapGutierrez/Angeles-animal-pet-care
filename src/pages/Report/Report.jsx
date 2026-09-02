@@ -644,34 +644,34 @@ const Report = () => {
       .from("branches")
       .select("id, name")
       .order("name");
-    const results = await Promise.all(
-      (allBranches || []).map(async (b) => {
-        const [tx, appts, pat] = await Promise.all([
-          supabase
-            .from("transactions")
-            .select("total,status")
-            .eq("branch_id", b.id),
-          supabase
-            .from("appointments")
-            .select("id", { count: "exact" })
-            .eq("branch_id", b.id),
-          supabase
-            .from("patients")
-            .select("id", { count: "exact" })
-            .eq("branch_id", b.id)
-            .is("deleted_at", null),
-        ]);
-        const activeTx = (tx.data || []).filter((t) => t.status !== "Voided");
-        return {
-          id: b.id,
-          name: b.name,
-          sales: activeTx.reduce((s, t) => s + Number(t.total || 0), 0),
-          voided: (tx.data || []).length - activeTx.length,
-          appointments: appts.count || 0,
-          patients: pat.count || 0,
-        };
-      }),
-    );
+    const [txRes, apptRes, patRes] = await Promise.all([
+      supabase.from("transactions").select("branch_id,total,status"),
+      supabase.from("appointments").select("branch_id"),
+      supabase.from("patients").select("branch_id").is("deleted_at", null),
+    ]);
+    if (txRes.error || apptRes.error || patRes.error) {
+      console.error(
+        "fetchBranchComparison error:",
+        txRes.error?.message || apptRes.error?.message || patRes.error?.message,
+      );
+      setBranchStats([]);
+      setBranchStatsLoading(false);
+      return;
+    }
+    const results = (allBranches || []).map((b) => {
+      const tx = (txRes.data || []).filter((t) => t.branch_id === b.id);
+      const activeTx = tx.filter((t) => t.status !== "Voided");
+      return {
+        id: b.id,
+        name: b.name,
+        sales: activeTx.reduce((s, t) => s + Number(t.total || 0), 0),
+        voided: tx.length - activeTx.length,
+        appointments: (apptRes.data || []).filter((a) => a.branch_id === b.id)
+          .length,
+        patients: (patRes.data || []).filter((p) => p.branch_id === b.id)
+          .length,
+      };
+    });
     setBranchStats(results.sort((a, b) => b.sales - a.sales));
     setBranchStatsLoading(false);
   }, [isAdminLevel, seeAllBranches]);
@@ -685,7 +685,8 @@ const Report = () => {
     let q = supabase
       .from("transactions")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(500);
     if (!seeAllBranches && user?.branchId) q = q.eq("branch_id", user.branchId);
     if (seeAllBranches && branchFilter) q = q.eq("branch_id", branchFilter);
     const { data, error } = await q;
@@ -827,36 +828,62 @@ const Report = () => {
     if (userLoading || !user) return;
     fetchReports();
 
+    const branchFilterClause =
+      user?.branchId && !seeAllBranches
+        ? { filter: `branch_id=eq.${user.branchId}` }
+        : {};
+    const chanSuffix =
+      user?.branchId && !seeAllBranches ? user.branchId : "all";
     const channels = [
       supabase
-        .channel("report-appointments")
+        .channel(`report-appointments-${chanSuffix}`)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "appointments" },
+          {
+            event: "*",
+            schema: "public",
+            table: "appointments",
+            ...branchFilterClause,
+          },
           () => fetchReports(),
         )
         .subscribe(),
       supabase
-        .channel("report-transactions")
+        .channel(`report-transactions-${chanSuffix}`)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "transactions" },
+          {
+            event: "*",
+            schema: "public",
+            table: "transactions",
+            ...branchFilterClause,
+          },
           () => fetchReports(),
         )
         .subscribe(),
       supabase
-        .channel("report-patients")
+        .channel(`report-patients-${chanSuffix}`)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "patients" },
+          {
+            event: "*",
+            schema: "public",
+            table: "patients",
+            ...branchFilterClause,
+          },
           () => fetchReports(),
         )
         .subscribe(),
       supabase
-        .channel("report-inventory")
+        .channel(`report-inventory-${chanSuffix}`)
         .on(
           "postgres_changes",
-          { event: "*", schema: "public", table: "inventory" },
+          {
+            event: "*",
+            schema: "public",
+            table: "inventory",
+            ...branchFilterClause,
+          },
           () => fetchReports(),
         )
         .subscribe(),

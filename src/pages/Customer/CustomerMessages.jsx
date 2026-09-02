@@ -591,7 +591,8 @@ const CustomerMessages = () => {
         .from(T_MESSAGES)
         .select("sender_id, receiver_id, created_at")
         .or(`sender_id.eq.${myId},receiver_id.eq.${myId}`)
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .limit(1000);
       const ids = new Set();
       const times = {};
       (data || []).forEach((m) => {
@@ -646,8 +647,9 @@ const CustomerMessages = () => {
         `and(sender_id.eq.${myId},receiver_id.eq.${staffId}),` +
           `and(sender_id.eq.${staffId},receiver_id.eq.${myId})`,
       )
-      .order("created_at");
-    setMessages(data || []);
+      .order("created_at", { ascending: false })
+      .limit(100);
+    setMessages((data || []).slice().reverse());
     setTimeout(
       () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
       80,

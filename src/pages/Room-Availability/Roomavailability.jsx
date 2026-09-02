@@ -2270,10 +2270,17 @@ const RoomAvailability = () => {
     fetchRooms();
     fetchDeletedRooms();
     const ch = supabase
-      .channel("rooms-availability-rt")
+      .channel(`rooms-availability-rt-${user?.branchId || "all"}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "rooms" },
+        {
+          event: "*",
+          schema: "public",
+          table: "rooms",
+          ...(user?.branchId && !seeAllBranches
+            ? { filter: `branch_id=eq.${user.branchId}` }
+            : {}),
+        },
         () => {
           fetchRooms();
           fetchDeletedRooms();

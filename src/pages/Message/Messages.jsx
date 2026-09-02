@@ -963,14 +963,16 @@ const Messages = () => {
           .from(MESSAGES_TABLE)
           .select("sender_id,receiver_id,created_at")
           .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(1000),
         supabase
           .from(CROSS_BRANCH_TABLE)
           .select("sender_id,recipient_id,created_at")
           .or(
             `sender_id.eq.${currentUser.id},recipient_id.eq.${currentUser.id}`,
           )
-          .order("created_at", { ascending: false }),
+          .order("created_at", { ascending: false })
+          .limit(1000),
       ]);
 
       // Track the most recent message timestamp per conversation partner
@@ -1190,14 +1192,16 @@ const Messages = () => {
           .or(
             `and(sender_id.eq.${currentUser.id},recipient_id.eq.${partner.id}),and(sender_id.eq.${partner.id},recipient_id.eq.${currentUser.id})`,
           )
-          .order("created_at", { ascending: true }),
+          .order("created_at", { ascending: false })
+          .limit(100),
         supabase
           .from(MESSAGES_TABLE)
           .select("*")
           .or(
             `and(sender_id.eq.${currentUser.id},receiver_id.eq.${partner.id}),and(sender_id.eq.${partner.id},receiver_id.eq.${currentUser.id})`,
           )
-          .order("created_at", { ascending: true }),
+          .order("created_at", { ascending: false })
+          .limit(100),
       ]);
 
       const crossMsgs = (crossResult.data || []).map((m) => ({

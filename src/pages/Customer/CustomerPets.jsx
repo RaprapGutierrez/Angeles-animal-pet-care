@@ -156,11 +156,13 @@ const CustomerPets = () => {
       (userId && row?.owner_user_id === userId) ||
       (userEmail && (row?.owner_email || "").toLowerCase() === userEmail);
 
+    const filterOpts = userId ? { filter: `owner_user_id=eq.${userId}` } : {};
+
     const channel = supabase
       .channel(`customer-pets-realtime-${userId || userEmail}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: T_PATIENTS },
+        { event: "INSERT", schema: "public", table: T_PATIENTS, ...filterOpts },
         (payload) => {
           if (matches(payload.new)) {
             setPets((prev) =>
@@ -173,7 +175,7 @@ const CustomerPets = () => {
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: T_PATIENTS },
+        { event: "UPDATE", schema: "public", table: T_PATIENTS, ...filterOpts },
         (payload) => {
           if (matches(payload.new)) {
             setPets((prev) =>

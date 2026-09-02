@@ -234,7 +234,8 @@ const CustomerShop = () => {
       .from(T_TRANSACTIONS)
       .select("*")
       .eq("client_id", userId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(500);
 
     // Fallback: match by name for older records without client_id
     const fullName = user?.fullName || null;
@@ -244,6 +245,7 @@ const CustomerShop = () => {
           .select("*")
           .eq("client", fullName)
           .order("created_at", { ascending: false })
+          .limit(500)
       : { data: [] };
 
     // Merge + deduplicate by id

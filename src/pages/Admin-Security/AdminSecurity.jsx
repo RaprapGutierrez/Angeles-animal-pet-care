@@ -1161,13 +1161,14 @@ const AdminSecurity = () => {
       .from("profiles")
       .select("*, branches(name)")
       .is("deleted_at", null)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(1000);
     if (canSeeAllBranches) {
       // SuperAdmin / Admin: optionally filter by selected branch dropdown
       if (branchFilter) {
         query = query.eq("branch_id", branchFilter);
       }
-      // else: no filter → fetch ALL branches
+      // else: no filter → fetch ALL branches (capped at 1000 most recent)
     } else {
       // Manager: always scope to their own branch only
       if (currentUser.branchId) {
@@ -1419,7 +1420,14 @@ const AdminSecurity = () => {
       .channel("realtime-profiles-admin")
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "profiles" },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "profiles",
+          ...(!canSeeAllBranches && currentUser?.branchId
+            ? { filter: `branch_id=eq.${currentUser.branchId}` }
+            : {}),
+        },
         (payload) => {
           const newUser = payload.new;
           // Managers: only show inserts from their own branch

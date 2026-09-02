@@ -4048,7 +4048,14 @@ const Emergency = ({ guestMode = false }) => {
       .channel("emergency-alerts-realtime-" + Date.now()) // ← unique channel name prevents stale subs
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "emergency_alerts" },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "emergency_alerts",
+          ...(!isAdmin && userBranch
+            ? { filter: `branch=eq.${userBranch}` }
+            : {}),
+        },
         (payload) => {
           const belongsToUser =
             isAdmin ||

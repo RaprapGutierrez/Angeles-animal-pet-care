@@ -1799,25 +1799,31 @@ const CustomerEmergency = () => {
     fetchAlerts();
 
     const channel = supabase
-      .channel("customer-emergency-alerts-realtime")
+      .channel(`customer-emergency-alerts-realtime-${userId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "emergency_alerts" },
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "emergency_alerts",
+          filter: `user_id=eq.${userId}`,
+        },
         (payload) => {
-          if (payload.new?.user_id === userId) {
-            setAlerts((prev) => [payload.new, ...prev].slice(0, 50));
-          }
+          setAlerts((prev) => [payload.new, ...prev].slice(0, 50));
         },
       )
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "emergency_alerts" },
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "emergency_alerts",
+          filter: `user_id=eq.${userId}`,
+        },
         (payload) => {
-          if (payload.new?.user_id === userId) {
-            setAlerts((prev) =>
-              prev.map((a) => (a.id === payload.new.id ? payload.new : a)),
-            );
-          }
+          setAlerts((prev) =>
+            prev.map((a) => (a.id === payload.new.id ? payload.new : a)),
+          );
         },
       )
       .on(
