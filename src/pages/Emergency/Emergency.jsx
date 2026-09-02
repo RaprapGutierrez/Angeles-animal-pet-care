@@ -22,6 +22,85 @@ const Skel = ({ w = "100%", h = 16 }) => (
   />
 );
 
+// ── Zoomable image lightbox modal ──
+const ImageLightbox = ({ src, onClose }) => {
+  const [zoom, setZoom] = useState(1);
+  if (!src) return null;
+  const clampZoom = (z) => Math.min(4, Math.max(1, z));
+  return ReactDOM.createPortal(
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        background: "rgba(0,0,0,0.85)",
+        zIndex: 999999,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        style={{
+          position: "absolute",
+          top: 16,
+          right: 16,
+          display: "flex",
+          gap: 8,
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button
+          onClick={() => setZoom((z) => clampZoom(z - 0.5))}
+          style={lightboxBtnStyle}
+        >
+          −
+        </button>
+        <button
+          onClick={() => setZoom((z) => clampZoom(z + 0.5))}
+          style={lightboxBtnStyle}
+        >
+          +
+        </button>
+        <button onClick={onClose} style={lightboxBtnStyle}>
+          ✕
+        </button>
+      </div>
+      <img
+        src={src}
+        alt="Pet"
+        onClick={(e) => e.stopPropagation()}
+        style={{
+          maxWidth: "90vw",
+          maxHeight: "85vh",
+          transform: `scale(${zoom})`,
+          transition: "transform 0.15s ease",
+          cursor: zoom > 1 ? "grab" : "default",
+          borderRadius: 8,
+        }}
+        onWheel={(e) => {
+          e.preventDefault();
+          setZoom((z) => clampZoom(z + (e.deltaY < 0 ? 0.2 : -0.2)));
+        }}
+      />
+    </div>,
+    document.body,
+  );
+};
+
+const lightboxBtnStyle = {
+  width: 34,
+  height: 34,
+  borderRadius: 8,
+  border: "1px solid rgba(255,255,255,0.3)",
+  background: "rgba(255,255,255,0.1)",
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: 700,
+  cursor: "pointer",
+};
+
 // ── Sanitizers ──────────────────────────────────────────────────────────────
 const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, "");
 const sanitizeContact = (v) => v.replace(/\D/g, "").slice(0, 11);
@@ -1243,6 +1322,7 @@ const AlertCard = ({ a, showActions = false, onUpdateStatus }) => {
   const status = a.status || "pending";
   const col = STATUS_COLORS[status] || STATUS_COLORS.pending;
   const [actionLock, setActionLock] = useState(false);
+  const [lightboxSrc, setLightboxSrc] = useState(null);
 
   const handleAction = (id, nextStatus) => {
     if (actionLock) return;
@@ -1533,11 +1613,13 @@ const AlertCard = ({ a, showActions = false, onUpdateStatus }) => {
         </p>
       )}
       {a.pet_photo_url && (
-        <a
-          href={a.pet_photo_url}
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display: "inline-block", marginBottom: 6 }}
+        <div
+          onClick={() => setLightboxSrc(a.pet_photo_url)}
+          style={{
+            display: "inline-block",
+            marginBottom: 6,
+            cursor: "zoom-in",
+          }}
         >
           <img
             src={a.pet_photo_url}
@@ -1550,8 +1632,9 @@ const AlertCard = ({ a, showActions = false, onUpdateStatus }) => {
               border: "1px solid var(--border)",
             }}
           />
-        </a>
+        </div>
       )}
+      <ImageLightbox src={lightboxSrc} onClose={() => setLightboxSrc(null)} />
 
       <p
         style={{
@@ -4028,8 +4111,12 @@ const StaffView = ({
               background: "var(--card)",
               borderRadius: "var(--radius-lg)",
               border: "1px solid var(--border)",
+              borderTop: "3px solid #dc2626",
               padding: 24,
               boxShadow: "var(--shadow)",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
             }}
           >
             <h3
@@ -4150,7 +4237,7 @@ const StaffView = ({
                   display: "flex",
                   flexDirection: "column",
                   gap: 12,
-                  maxHeight: 420,
+                  flex: 1,
                   overflowY: "auto",
                 }}
               >
@@ -4172,8 +4259,12 @@ const StaffView = ({
               background: "var(--card)",
               borderRadius: "var(--radius-lg)",
               border: "1px solid var(--border)",
+              borderTop: "3px solid var(--royal)",
               padding: 24,
               boxShadow: "var(--shadow)",
+              display: "flex",
+              flexDirection: "column",
+              height: "100%",
             }}
           >
             <h3
@@ -4258,7 +4349,7 @@ const StaffView = ({
                   display: "flex",
                   flexDirection: "column",
                   gap: 12,
-                  maxHeight: 400,
+                  flex: 1,
                   overflowY: "auto",
                 }}
               >
