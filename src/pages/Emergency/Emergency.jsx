@@ -4111,12 +4111,8 @@ const StaffView = ({
               background: "var(--card)",
               borderRadius: "var(--radius-lg)",
               border: "1px solid var(--border)",
-              borderTop: "3px solid #dc2626",
               padding: 24,
               boxShadow: "var(--shadow)",
-              display: "flex",
-              flexDirection: "column",
-              height: "100%",
             }}
           >
             <h3
@@ -4237,7 +4233,7 @@ const StaffView = ({
                   display: "flex",
                   flexDirection: "column",
                   gap: 12,
-                  flex: 1,
+                  maxHeight: 420,
                   overflowY: "auto",
                 }}
               >
@@ -4259,12 +4255,8 @@ const StaffView = ({
               background: "var(--card)",
               borderRadius: "var(--radius-lg)",
               border: "1px solid var(--border)",
-              borderTop: "3px solid var(--royal)",
               padding: 24,
               boxShadow: "var(--shadow)",
-              display: "flex",
-              flexDirection: "column",
-              height: "100%",
             }}
           >
             <h3
@@ -4349,7 +4341,7 @@ const StaffView = ({
                   display: "flex",
                   flexDirection: "column",
                   gap: 12,
-                  flex: 1,
+                  maxHeight: 400,
                   overflowY: "auto",
                 }}
               >
