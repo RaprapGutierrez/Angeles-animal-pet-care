@@ -26,6 +26,83 @@ const Skel = ({ w = "100%", h = 16 }) => (
 const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, "");
 const sanitizeContact = (v) => v.replace(/\D/g, "").slice(0, 11);
 
+// ── Client-side rate limit: caps emergency submissions per device/session.
+// This deters accidental/abusive spam from the same browser; it is NOT a
+// substitute for server-side rate limiting (e.g. a Postgres trigger or edge
+// function keyed on IP), which should also be added for real protection. ──
+const RATE_LIMIT_KEY = "emg_submit_log";
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_MAX = 3; // max submissions per window
+
+const checkAndRecordRateLimit = () => {
+  const now = Date.now();
+  let log = [];
+  try {
+    log = JSON.parse(localStorage.getItem(RATE_LIMIT_KEY) || "[]");
+  } catch {
+    log = [];
+  }
+  log = log.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  if (log.length >= RATE_LIMIT_MAX) {
+    const minutesLeft = Math.max(
+      1,
+      Math.ceil((RATE_LIMIT_WINDOW_MS - (now - log[0])) / 60000),
+    );
+    return { allowed: false, minutesLeft };
+  }
+  log.push(now);
+  localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(log));
+  return { allowed: true };
+};
+
+// ── Reverse-geocode a browser Geolocation position into an approximate
+// address using OpenStreetMap's free Nominatim API, then map the result back
+// onto our own PROVINCES / CITIES_BY_PROVINCE / BARANGAYS_BY_CITY option
+// lists so the dropdowns populate rather than showing raw free text. This is
+// best-effort: if nothing matches, the person can still fill the fields
+// manually — geolocation only pre-fills, it never blocks submission. ──
+const reverseGeocode = async (lat, lon) => {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=16&addressdetails=1`,
+    { headers: { Accept: "application/json" } },
+  );
+  if (!res.ok) throw new Error("Reverse geocoding failed");
+  const data = await res.json();
+  const addr = data.address || {};
+  const rawCity =
+    addr.city || addr.municipality || addr.town || addr.county || "";
+  const rawProvince = addr.state || addr.province || "";
+  const rawBarangay =
+    addr.suburb || addr.village || addr.neighbourhood || addr.quarter || "";
+  const rawStreet = [addr.road, addr.house_number].filter(Boolean).join(" ");
+
+  // Match against our known lists (case-insensitive, partial match) so the
+  // CustomSelect dropdowns show a real selected value instead of blank.
+  const matchCity =
+    ALL_CITIES.find((c) => c.toLowerCase() === rawCity.toLowerCase()) ||
+    ALL_CITIES.find((c) => c.toLowerCase().includes(rawCity.toLowerCase())) ||
+    "";
+  const matchProvince = matchCity
+    ? CITY_TO_PROVINCE[matchCity]
+    : PROVINCES.find((p) => p.toLowerCase() === rawProvince.toLowerCase()) ||
+      "";
+  const cityBarangays = matchCity ? BARANGAYS_BY_CITY[matchCity] || [] : [];
+  const matchBarangay =
+    cityBarangays.find((b) => b.toLowerCase() === rawBarangay.toLowerCase()) ||
+    cityBarangays.find((b) =>
+      b.toLowerCase().includes(rawBarangay.toLowerCase()),
+    ) ||
+    "";
+
+  return {
+    province: matchProvince,
+    city: matchCity,
+    barangay: matchBarangay,
+    street: rawStreet,
+    matched: !!matchCity,
+  };
+};
+
 // ── Custom dropdown (red-themed, matches Appointments.jsx pattern) ──────────
 const CustomSelect = ({
   value,
@@ -1036,9 +1113,9 @@ const ToastItem = ({ show, guestMode, variant = "submitted", onClose }) => {
             }}
           >
             {variant === "responding"
-              ? "Our team is now responding to your emergency. Please stay calm and keep your phone line open."
+              ? "Our team is now responding. A staff member will call you shortly to verify details and provide first-aid guidance — please keep your phone line open."
               : guestMode
-                ? "Our team has been notified and will respond shortly."
+                ? "Our team has been notified and will call you to verify the report and provide guidance."
                 : "Staff and branches have been notified."}
           </p>
         </div>
@@ -1302,6 +1379,94 @@ const AlertCard = ({ a, showActions = false, onUpdateStatus }) => {
         )}
       </div>
 
+      {(a.guest_contact || a.contact_number) && showActions && (
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            background: "#fff7ed",
+            border: "1px solid #fed7aa",
+            borderRadius: 8,
+            padding: "8px 10px",
+            marginBottom: 8,
+          }}
+        >
+          <div style={{ minWidth: 0 }}>
+            <p
+              style={{
+                margin: 0,
+                fontSize: 10,
+                fontWeight: 700,
+                color: "#9a3412",
+                textTransform: "uppercase",
+                letterSpacing: 0.4,
+              }}
+            >
+              Reporter Contact
+            </p>
+            <p
+              style={{
+                margin: "2px 0 0",
+                fontSize: 13,
+                fontWeight: 700,
+                color: "#7c2d12",
+              }}
+            >
+              {a.guest_contact}
+            </p>
+          </div>
+          <a
+            href={`tel:${a.guest_contact}`}
+            style={{
+              flexShrink: 0,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 5,
+              background: "#dc2626",
+              color: "#fff",
+              borderRadius: 20,
+              padding: "6px 12px",
+              fontSize: 11,
+              fontWeight: 700,
+              textDecoration: "none",
+            }}
+          >
+            <svg
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+            </svg>
+            Call Now
+          </a>
+        </div>
+      )}
+      {showActions && (a.status || "pending") === "pending" && (
+        <div
+          style={{
+            fontSize: 11,
+            color: "#7c2d12",
+            background: "#fffbeb",
+            border: "1px solid #fde68a",
+            borderRadius: 8,
+            padding: "7px 10px",
+            marginBottom: 8,
+            lineHeight: 1.5,
+          }}
+        >
+          <strong>Before marking Responding:</strong> call the reporter to
+          verify the emergency and provide initial first-aid guidance if
+          appropriate.
+        </div>
+      )}
+
       {a.description && (
         <p
           style={{
@@ -1366,6 +1531,26 @@ const AlertCard = ({ a, showActions = false, onUpdateStatus }) => {
             {a.patient_name}
           </span>
         </p>
+      )}
+      {a.pet_photo_url && (
+        <a
+          href={a.pet_photo_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: "inline-block", marginBottom: 6 }}
+        >
+          <img
+            src={a.pet_photo_url}
+            alt="Pet"
+            style={{
+              width: 64,
+              height: 64,
+              borderRadius: 8,
+              objectFit: "cover",
+              border: "1px solid var(--border)",
+            }}
+          />
+        </a>
       )}
 
       <p
@@ -1490,8 +1675,102 @@ const EmergencyForm = memo(
       guest_barangay: "",
       guest_street: "",
       patient_name: "",
+      pet_photo_url: "",
     });
     const [errors, setErrors] = useState({});
+    const [locating, setLocating] = useState(false);
+    const [locateStatus, setLocateStatus] = useState(null); // {type:'ok'|'partial'|'error', message}
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const photoInputRef = useRef(null);
+
+    const detectLocation = () => {
+      if (!("geolocation" in navigator)) {
+        setLocateStatus({
+          type: "error",
+          message: "Location detection isn't supported on this device.",
+        });
+        return;
+      }
+      setLocating(true);
+      setLocateStatus(null);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const { latitude, longitude } = pos.coords;
+            const result = await reverseGeocode(latitude, longitude);
+            const prefix = guestMode ? "guest_" : "location_";
+            setForm((f) => ({
+              ...f,
+              [`${prefix}province`]: result.province || f[`${prefix}province`],
+              [`${prefix}city`]: result.city || f[`${prefix}city`],
+              [`${prefix}barangay`]: result.barangay || f[`${prefix}barangay`],
+              [`${prefix}street`]: result.street || f[`${prefix}street`],
+            }));
+            setLocateStatus(
+              result.matched
+                ? {
+                    type: "ok",
+                    message:
+                      "Location detected and filled in. Please double-check it's correct.",
+                  }
+                : {
+                    type: "partial",
+                    message:
+                      "We found your coordinates but couldn't match them to a listed area — please fill in the address manually.",
+                  },
+            );
+          } catch {
+            setLocateStatus({
+              type: "error",
+              message:
+                "Couldn't determine your address automatically. Please fill it in manually.",
+            });
+          } finally {
+            setLocating(false);
+          }
+        },
+        () => {
+          setLocating(false);
+          setLocateStatus({
+            type: "error",
+            message:
+              "Location permission denied or unavailable. Please fill in the address manually.",
+          });
+        },
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    };
+
+    const uploadPetPhoto = async (file) => {
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors((e) => ({
+          ...e,
+          pet_photo: "Please choose an image under 5MB.",
+        }));
+        return;
+      }
+      setUploadingPhoto(true);
+      try {
+        const ext = file.name.split(".").pop();
+        const path = `emergency/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("attachments")
+          .upload(path, file);
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage
+          .from("attachments")
+          .getPublicUrl(path);
+        set("pet_photo_url", pub?.publicUrl || "");
+      } catch (err) {
+        setErrors((e) => ({
+          ...e,
+          pet_photo: "Upload failed: " + err.message,
+        }));
+      } finally {
+        setUploadingPhoto(false);
+      }
+    };
 
     const set = (key, val) => {
       setForm((f) => ({ ...f, [key]: val }));
@@ -1591,6 +1870,14 @@ const EmergencyForm = memo(
       const errs = validate();
       if (Object.keys(errs).length) {
         setErrors(errs);
+        return;
+      }
+      const rl = checkAndRecordRateLimit();
+      if (!rl.allowed) {
+        setErrors((e) => ({
+          ...e,
+          rateLimit: `Too many reports submitted from this device. Please wait about ${rl.minutesLeft} minute${rl.minutesLeft === 1 ? "" : "s"} before submitting again, or call the branch directly for an urgent emergency.`,
+        }));
         return;
       }
       const finalForm = {
@@ -1780,9 +2067,66 @@ const EmergencyForm = memo(
                 }}
               >
                 <div>
-                  <label style={labelStyle}>
-                    Your Address <span style={{ color: "#dc2626" }}>*</span>
-                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 5,
+                    }}
+                  >
+                    <label style={{ ...labelStyle, marginBottom: 0 }}>
+                      Your Address <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={detectLocation}
+                      disabled={locating}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        background: "none",
+                        border: "1px solid #fecaca",
+                        color: "#dc2626",
+                        borderRadius: 20,
+                        padding: "3px 10px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: locating ? "default" : "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <svg
+                        width="11"
+                        height="11"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                      </svg>
+                      {locating ? "Locating..." : "Use my location"}
+                    </button>
+                  </div>
+                  {locateStatus && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        margin: "0 0 8px",
+                        color:
+                          locateStatus.type === "ok"
+                            ? "#16a34a"
+                            : locateStatus.type === "partial"
+                              ? "#d97706"
+                              : "#dc2626",
+                      }}
+                    >
+                      {locateStatus.message}
+                    </p>
+                  )}
                   <div
                     style={{
                       display: "grid",
@@ -1938,6 +2282,122 @@ const EmergencyForm = memo(
                   {errors.patient_name && (
                     <p style={errStyle}>{errors.patient_name}</p>
                   )}
+
+                  <label style={{ ...labelStyle, marginTop: 12 }}>
+                    Photo of Pet{" "}
+                    <span style={{ fontWeight: 400 }}>
+                      (optional — helps the vet prepare)
+                    </span>
+                  </label>
+                  <input
+                    ref={photoInputRef}
+                    type="file"
+                    accept="image/*"
+                    capture="environment"
+                    style={{ display: "none" }}
+                    onChange={(e) => {
+                      const f = e.target.files?.[0];
+                      if (f) uploadPetPhoto(f);
+                      e.target.value = "";
+                    }}
+                  />
+                  {form.pet_photo_url ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 10,
+                        border: "1.5px solid var(--border)",
+                        borderRadius: 8,
+                        padding: 8,
+                      }}
+                    >
+                      <img
+                        src={form.pet_photo_url}
+                        alt="Pet"
+                        style={{
+                          width: 48,
+                          height: 48,
+                          borderRadius: 8,
+                          objectFit: "cover",
+                          flexShrink: 0,
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => photoInputRef.current?.click()}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#dc2626",
+                          background: "none",
+                          border: "1px solid #fecaca",
+                          borderRadius: 20,
+                          padding: "5px 10px",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        Change
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => set("pet_photo_url", "")}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#64748b",
+                          background: "none",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 20,
+                          padding: "5px 10px",
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => photoInputRef.current?.click()}
+                      disabled={uploadingPhoto}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        border: "1.5px dashed #fecaca",
+                        borderRadius: 8,
+                        background: "#fff7f7",
+                        color: "#dc2626",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: uploadingPhoto ? "default" : "pointer",
+                        fontFamily: "inherit",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <svg
+                        width="13"
+                        height="13"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      >
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+                        <circle cx="12" cy="13" r="4" />
+                      </svg>
+                      {uploadingPhoto ? "Uploading..." : "Take or Upload Photo"}
+                    </button>
+                  )}
+                  {errors.pet_photo && (
+                    <p style={errStyle}>{errors.pet_photo}</p>
+                  )}
                 </div>
               </div>
               <hr
@@ -2062,10 +2522,75 @@ const EmergencyForm = memo(
                 )}
               </div>
               <div>
-                <label style={{ ...labelStyle, whiteSpace: "nowrap" }}>
-                  Location of Emergency{" "}
-                  <span style={{ color: "#dc2626" }}>*</span>
-                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 5,
+                    flexWrap: "wrap",
+                    gap: 6,
+                  }}
+                >
+                  <label
+                    style={{
+                      ...labelStyle,
+                      whiteSpace: "nowrap",
+                      marginBottom: 0,
+                    }}
+                  >
+                    Location of Emergency{" "}
+                    <span style={{ color: "#dc2626" }}>*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={detectLocation}
+                    disabled={locating}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 5,
+                      background: "none",
+                      border: "1px solid #fecaca",
+                      color: "#dc2626",
+                      borderRadius: 20,
+                      padding: "3px 10px",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      cursor: locating ? "default" : "pointer",
+                      fontFamily: "inherit",
+                    }}
+                  >
+                    <svg
+                      width="11"
+                      height="11"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                    </svg>
+                    {locating ? "Locating..." : "Use my location"}
+                  </button>
+                </div>
+                {locateStatus && (
+                  <p
+                    style={{
+                      fontSize: 11,
+                      margin: "0 0 8px",
+                      color:
+                        locateStatus.type === "ok"
+                          ? "#16a34a"
+                          : locateStatus.type === "partial"
+                            ? "#d97706"
+                            : "#dc2626",
+                    }}
+                  >
+                    {locateStatus.message}
+                  </p>
+                )}
                 <div
                   style={{
                     display: "grid",
@@ -2207,6 +2732,21 @@ const EmergencyForm = memo(
         </div>
 
         <div style={{ maxWidth: 320, margin: "16px auto 0" }}>
+          {errors.rateLimit && (
+            <div
+              style={{
+                marginBottom: 10,
+                padding: "8px 14px",
+                background: "#fee2e2",
+                border: "1px solid #fecaca",
+                borderRadius: 8,
+                fontSize: 12,
+                color: "#991b1b",
+              }}
+            >
+              {errors.rateLimit}
+            </div>
+          )}
           <button
             className="send-alert-btn"
             onClick={handleSend}
@@ -4126,6 +4666,7 @@ const Emergency = ({ guestMode = false }) => {
               guest_contact: formData.guest_contact?.trim() || null,
               guest_address: formData.guest_address?.trim() || null,
               patient_name: formData.patient_name?.trim() || null,
+              pet_photo_url: formData.pet_photo_url || null,
             }
           : {
               guest_contact: formData.contact_number?.trim() || null,
@@ -4196,16 +4737,25 @@ const Emergency = ({ guestMode = false }) => {
         return;
       }
 
-      // ── Notify the user when staff marks "responding" ──
-      if (status === "responding") {
+      // ── Notify the reporter on any status change, with guidance to expect a call ──
+      if (status === "responding" || status === "resolved") {
         const alert = alerts.find((a) => a.id === id);
         if (alert?.user_id) {
+          const message =
+            status === "responding"
+              ? `Our team is now responding to your emergency report (${alert.type}) at ${alert.branch}. A staff member will call you shortly to verify the situation and provide first-aid guidance. Please keep your phone line open.`
+              : `Your emergency report (${alert.type}) at ${alert.branch} has been marked resolved. If the situation is still ongoing, please submit a new report or call the branch directly.`;
           await supabase.from("notifications").insert([
             {
               user_id: alert.user_id,
-              title: "🚨 Help is on the way!",
-              message: `Our team is now responding to your emergency report (${alert.type}) at ${alert.branch}. Please stay calm and keep your phone line open.`,
+              title:
+                status === "responding"
+                  ? "🚨 Help is on the way!"
+                  : "✅ Emergency report resolved",
+              message,
               type: "emergency",
+              related_id: alert.id,
+              related_type: "emergency_alert",
               is_read: false,
               created_at: new Date().toISOString(),
             },

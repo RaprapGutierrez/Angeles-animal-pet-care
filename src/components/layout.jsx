@@ -4506,10 +4506,23 @@ export const Layout = ({ children }) => {
                               return (
                                 <div
                                   key={a.id}
+                                  onClick={() => {
+                                    setShowNotifDrop(false);
+                                    navigate("/customer/emergency");
+                                  }}
                                   style={{
                                     padding: "12px 14px",
                                     borderBottom: "1px solid #f1f5f9",
+                                    cursor: "pointer",
                                   }}
+                                  onMouseEnter={(e) =>
+                                    (e.currentTarget.style.background =
+                                      "#f8fafc")
+                                  }
+                                  onMouseLeave={(e) =>
+                                    (e.currentTarget.style.background =
+                                      "transparent")
+                                  }
                                 >
                                   <div
                                     style={{
@@ -4581,10 +4594,22 @@ export const Layout = ({ children }) => {
                           custAppts.map((a) => (
                             <div
                               key={a.id}
+                              onClick={() => {
+                                setShowNotifDrop(false);
+                                navigate("/customer/appointments");
+                              }}
                               style={{
                                 padding: "12px 14px",
                                 borderBottom: "1px solid #f1f5f9",
+                                cursor: "pointer",
                               }}
+                              onMouseEnter={(e) =>
+                                (e.currentTarget.style.background = "#f8fafc")
+                              }
+                              onMouseLeave={(e) =>
+                                (e.currentTarget.style.background =
+                                  "transparent")
+                              }
                             >
                               <div
                                 style={{

@@ -1610,6 +1610,35 @@ const CustomerAIChat = () => {
   const VETS = ["Dr. Santos", "Dr. Reyes", "Dr. Cruz", "Dr. Garcia"];
   const TODAY = new Date().toISOString().split("T")[0];
   const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  const BUSINESS_START_MIN = 8 * 60; // 08:00 AM
+  const BUSINESS_END_MIN = 17 * 60; // 05:00 PM (last bookable slot 04:00 PM)
+
+  // Parses "08:00 AM" / "01:00 PM" style strings into minutes-from-midnight
+  const timeToMinutes = (t) => {
+    if (!t) return null;
+    const m = t.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+    if (!m) return null;
+    let [, h, min, ap] = m;
+    h = parseInt(h, 10) % 12;
+    if (ap.toUpperCase() === "PM") h += 12;
+    return h * 60 + parseInt(min, 10);
+  };
+
+  const isWithinBusinessHours = (t) => {
+    const mins = timeToMinutes(t);
+    if (mins === null) return false;
+    return mins >= BUSINESS_START_MIN && mins <= BUSINESS_END_MIN;
+  };
+
+  const isTimeInPast = (dateStr, t) => {
+    if (!dateStr || !t) return false;
+    if (dateStr !== TODAY) return false; // only relevant for today
+    const mins = timeToMinutes(t);
+    if (mins === null) return false;
+    const now = new Date();
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+    return mins <= nowMins;
+  };
 
   const [vets, setVets] = useState(VETS);
   const [vetSchedule, setVetSchedule] = useState({});
@@ -1650,6 +1679,19 @@ const CustomerAIChat = () => {
     };
     checkSlots();
   }, [form.vet, form.date]);
+
+  // Clear a selected time that becomes invalid (past, or outside business
+  // hours) once the date changes — e.g. picking "today" after choosing a
+  // time slot that's already passed.
+  useEffect(() => {
+    if (
+      form.time &&
+      (isTimeInPast(form.date, form.time) || !isWithinBusinessHours(form.time))
+    ) {
+      set("time", "");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.date]);
 
   const isVetAvailableOnDate = (vet, dateStr) => {
     if (!vet || !dateStr) return true;
@@ -1754,6 +1796,22 @@ Rules:
   const bookAppointment = async () => {
     if (!form.date || !form.time) {
       setError("Please select a date and time.");
+      return;
+    }
+    if (form.date < TODAY) {
+      setError("Please select a valid, current or future date.");
+      return;
+    }
+    if (!isWithinBusinessHours(form.time)) {
+      setError(
+        "Please select a time within business hours (8:00 AM – 5:00 PM).",
+      );
+      return;
+    }
+    if (isTimeInPast(form.date, form.time)) {
+      setError(
+        "That time has already passed today. Please choose a later slot.",
+      );
       return;
     }
     if (form.vet && !isVetAvailableOnDate(form.vet, form.date)) {
@@ -3320,19 +3378,34 @@ Rules:
                       placeholder="Select Time"
                       accent="#1e3a8a"
                       options={TIMES.map((t) => {
+                        const outOfHours = !isWithinBusinessHours(t);
+                        const isPast =
+                          !outOfHours && isTimeInPast(form.date, t);
                         const vetTimeBlocked =
-                          form.vet && !isVetAvailableAtTime(form.vet, t);
-                        const taken = !vetTimeBlocked && takenSlots.includes(t);
+                          !outOfHours &&
+                          !isPast &&
+                          form.vet &&
+                          !isVetAvailableAtTime(form.vet, t);
+                        const taken =
+                          !outOfHours &&
+                          !isPast &&
+                          !vetTimeBlocked &&
+                          takenSlots.includes(t);
                         return {
                           value: t,
                           label:
                             t +
-                            (vetTimeBlocked
-                              ? " — Not this vet's hours"
-                              : taken
-                                ? " — Taken"
-                                : ""),
-                          disabled: vetTimeBlocked || taken,
+                            (outOfHours
+                              ? " — Outside business hours"
+                              : isPast
+                                ? " — Already passed"
+                                : vetTimeBlocked
+                                  ? " — Not this vet's hours"
+                                  : taken
+                                    ? " — Taken"
+                                    : ""),
+                          disabled:
+                            outOfHours || isPast || vetTimeBlocked || taken,
                         };
                       })}
                     />

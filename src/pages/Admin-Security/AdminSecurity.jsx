@@ -24,13 +24,21 @@ const CustomSelect = ({
   options,
   placeholder = "—",
   accent = "#6366f1",
+  searchable = false,
 }) => {
   const [open, setOpen] = React.useState(false);
   const [dropPos, setDropPos] = React.useState({ top: 0, left: 0, width: 0 });
+  const [query, setQuery] = React.useState("");
   const triggerRef = React.useRef(null);
   const ref = React.useRef(null);
+  const searchInputRef = React.useRef(null);
   const selected = options.find((o) => getOptValue(o) === value);
   const label = selected ? getOptLabel(selected) : placeholder;
+  const filteredOptions = searchable
+    ? options.filter((o) =>
+        getOptLabel(o).toLowerCase().includes(query.toLowerCase()),
+      )
+    : options;
 
   React.useEffect(() => {
     const handler = (e) => {
@@ -50,7 +58,10 @@ const CustomSelect = ({
     if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      const dropHeight = Math.min((options.length + 1) * 38, 240);
+      const dropHeight = Math.min(
+        (options.length + 1) * 38 + (searchable ? 44 : 0),
+        280,
+      );
       const showAbove = spaceBelow < dropHeight + 10;
       setDropPos({
         top: showAbove
@@ -60,7 +71,11 @@ const CustomSelect = ({
         width: rect.width,
       });
     }
+    if (!open) setQuery("");
     setOpen((o) => !o);
+    if (searchable) {
+      setTimeout(() => searchInputRef.current?.focus(), 30);
+    }
   };
 
   const portal =
@@ -79,12 +94,99 @@ const CustomSelect = ({
               boxShadow:
                 "0 16px 40px rgba(0,0,0,0.13), 0 4px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06)",
               border: "1.5px solid #e8edf4",
-              maxHeight: 260,
+              maxHeight: 300,
               overflowY: "auto",
               padding: "5px",
             }}
           >
-            {[{ value: "", label: placeholder }, ...options].map((opt, i) => {
+            {searchable && (
+              <div
+                style={{
+                  padding: "4px 4px 8px",
+                  position: "sticky",
+                  top: 0,
+                  background: "var(--card)",
+                  zIndex: 1,
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                    border: "1.5px solid #e2e8f0",
+                    borderRadius: 8,
+                    padding: "6px 10px",
+                    background: "var(--bg)",
+                  }}
+                >
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#94a3b8"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.35-4.35" />
+                  </svg>
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                    placeholder="Search…"
+                    style={{
+                      border: "none",
+                      background: "transparent",
+                      outline: "none",
+                      fontSize: 13,
+                      fontFamily: "inherit",
+                      width: "100%",
+                      color: "var(--text)",
+                    }}
+                  />
+                  {query && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setQuery("");
+                        searchInputRef.current?.focus();
+                      }}
+                      style={{
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#94a3b8",
+                        padding: 0,
+                        display: "flex",
+                      }}
+                    >
+                      <svg
+                        width="12"
+                        height="12"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+            {(searchable
+              ? [{ value: "", label: placeholder }, ...filteredOptions]
+              : [{ value: "", label: placeholder }, ...options]
+            ).map((opt, i) => {
               const optVal = getOptValue(opt);
               const optLabel = getOptLabel(opt);
               const optDisabled = getOptDisabled(opt);
@@ -196,6 +298,18 @@ const CustomSelect = ({
                 </div>
               );
             })}
+            {searchable && filteredOptions.length === 0 && (
+              <div
+                style={{
+                  padding: "14px 10px",
+                  textAlign: "center",
+                  fontSize: 12,
+                  color: "#94a3b8",
+                }}
+              >
+                No matches for "{query}"
+              </div>
+            )}
           </div>,
           document.body,
         )
@@ -395,6 +509,17 @@ const sendVerificationCode = async (userId, email) => {
 };
 
 const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, "");
+
+// Formats an 11-digit PH mobile number as the person types: "0917 000 0000"
+const formatPhMobile = (digits) => {
+  const d = (digits || "").replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 4) return d;
+  if (d.length <= 7) return `${d.slice(0, 4)} ${d.slice(4)}`;
+  return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`;
+};
+
+// Valid PH mobile: 11 digits, starts with "09"
+const isValidPhMobile = (digits) => /^09\d{9}$/.test((digits || "").trim());
 
 const fmtDate = (str) =>
   str
@@ -1662,6 +1787,9 @@ const AdminSecurity = () => {
     // FIX 7: require branch selection for SuperAdmin/Admin when adding
     if (canSeeAllBranches && !addForm.branch_id)
       errs.branch_id = "Please select a branch";
+    if (addForm.phone_number && !isValidPhMobile(addForm.phone_number))
+      errs.phone_number =
+        "Enter a valid 11-digit mobile number starting with 09";
     return errs;
   };
 
@@ -1678,6 +1806,8 @@ const AdminSecurity = () => {
     if (!addForm.password.trim() || addForm.password.length < 8) return false;
     if (!addForm.role) return false;
     if (canSeeAllBranches && !addForm.branch_id) return false;
+    if (addForm.phone_number && !isValidPhMobile(addForm.phone_number))
+      return false;
     return true;
   };
 
@@ -1756,6 +1886,7 @@ const AdminSecurity = () => {
             role: addForm.role,
             status: addForm.status,
             sex: addForm.sex || null,
+            phone_number: addForm.phone_number || null,
             branch_id: addForm.branch_id || currentUser?.branchId || null,
           })
           .eq("id", userId);
@@ -1778,6 +1909,7 @@ const AdminSecurity = () => {
               role: addForm.role,
               status: addForm.status,
               sex: addForm.sex || null,
+              phone_number: addForm.phone_number || null,
               branch_id: addForm.branch_id || currentUser?.branchId || null,
             },
           ]);
@@ -2759,6 +2891,7 @@ const AdminSecurity = () => {
                   onChange={setBranchFilter}
                   placeholder="All Branches"
                   accent="#7c3aed"
+                  searchable
                   options={branches.map((b) => ({
                     value: b.id,
                     label: b.name,
@@ -5294,24 +5427,6 @@ const AdminSecurity = () => {
                       options={["Male", "Female"]}
                     />
                   </div>
-                  <div className="form-group" style={{ marginBottom: 14 }}>
-                    <label>Phone Number</label>
-                    <input
-                      type="text"
-                      inputMode="numeric"
-                      maxLength={11}
-                      value={editForm.phone_number}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          phone_number: e.target.value
-                            .replace(/\D/g, "")
-                            .slice(0, 11),
-                        })
-                      }
-                      placeholder="e.g. 09170000000"
-                    />
-                  </div>
                   <div style={{ padding: "10px 16px" }}>
                     <div className="usr-field-label">Status</div>
                     <CustomSelect
@@ -5323,6 +5438,40 @@ const AdminSecurity = () => {
                       options={["Active", "Inactive"]}
                     />
                   </div>
+                </div>
+                <div
+                  style={{
+                    padding: "10px 16px",
+                    borderBottom: "1px solid #e2e8f0",
+                  }}
+                >
+                  <div className="usr-field-label">
+                    Phone Number{" "}
+                    <span style={{ fontWeight: 400, color: "#94a3b8" }}>
+                      (optional)
+                    </span>
+                  </div>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="0917 000 0000"
+                    value={formatPhMobile(addForm.phone_number)}
+                    onChange={(e) => {
+                      const digits = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 11);
+                      setAddForm((f) => ({ ...f, phone_number: digits }));
+                      setAddErrors((er) => ({ ...er, phone_number: "" }));
+                    }}
+                    className={`usr-inline-inp${addErrors.phone_number ? " err" : ""}`}
+                  />
+                  {addErrors.phone_number && (
+                    <div
+                      style={{ fontSize: 10, color: "#dc2626", marginTop: 3 }}
+                    >
+                      {addErrors.phone_number}
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -5561,6 +5710,7 @@ const AdminSecurity = () => {
                             setAddForm((f) => ({ ...f, branch_id: val }))
                           }
                           placeholder="— Select branch —"
+                          searchable
                           options={branches.map((b) => ({
                             value: b.id,
                             label: b.name,
@@ -5961,14 +6111,50 @@ const AdminSecurity = () => {
                   />
                 </div>
               </div>
-              <div className="form-group" style={{ marginBottom: 14 }}>
-                <label>Sex</label>
-                <CustomSelect
-                  value={editForm.sex}
-                  onChange={(val) => setEditForm({ ...editForm, sex: val })}
-                  placeholder="— Select —"
-                  options={["Male", "Female"]}
-                />
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 12,
+                  marginBottom: 14,
+                }}
+              >
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label>Sex</label>
+                  <CustomSelect
+                    value={editForm.sex}
+                    onChange={(val) => setEditForm({ ...editForm, sex: val })}
+                    placeholder="— Select —"
+                    options={["Male", "Female"]}
+                  />
+                </div>
+                <div className="form-group" style={{ margin: 0 }}>
+                  <label>Phone Number</label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="0917 000 0000"
+                    value={formatPhMobile(editForm.phone_number)}
+                    onChange={(e) => {
+                      const digits = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 11);
+                      setEditForm({ ...editForm, phone_number: digits });
+                    }}
+                    style={
+                      editForm.phone_number &&
+                      !isValidPhMobile(editForm.phone_number)
+                        ? S.inpErr
+                        : S.inp
+                    }
+                  />
+                  {editForm.phone_number &&
+                    !isValidPhMobile(editForm.phone_number) && (
+                      <div style={S.errMsg}>
+                        Enter a valid 11-digit mobile number starting with 09
+                      </div>
+                    )}
+                </div>
               </div>
 
               {/* SuperAdmin only: edit email */}
@@ -6091,6 +6277,7 @@ const AdminSecurity = () => {
                       setEditForm({ ...editForm, branch_id: val })
                     }
                     placeholder="— No branch —"
+                    searchable
                     options={branches.map((b) => ({
                       value: b.id,
                       label: b.name,

@@ -2431,7 +2431,9 @@ const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+                gridTemplateColumns: canEditPrice
+                  ? "repeat(2, minmax(160px, 1fr))"
+                  : "repeat(auto-fit, minmax(160px, 1fr))",
                 borderBottom: "1px solid #e2e8f0",
               }}
             >
@@ -2492,7 +2494,6 @@ const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
                 <div
                   style={{
                     padding: "10px 16px",
-                    borderRight: "1px solid #e2e8f0",
                     borderBottom: "1px solid #e2e8f0",
                   }}
                 >
@@ -2520,6 +2521,7 @@ const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
                 <div
                   style={{
                     padding: "10px 16px",
+                    borderRight: "1px solid #e2e8f0",
                     borderBottom: "1px solid #e2e8f0",
                   }}
                 >
@@ -2546,7 +2548,14 @@ const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
                   />
                 </div>
               )}
-              <div style={{ padding: "10px 16px" }}>
+              <div
+                style={{
+                  padding: "10px 16px",
+                  borderBottom: "1px solid #e2e8f0",
+                  display: "flex",
+                  flexDirection: "column",
+                }}
+              >
                 <div
                   style={{
                     fontSize: 10,
@@ -2588,16 +2597,19 @@ const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
                     autoFocus
                     style={{
                       width: "100%",
-                      border: "none",
-                      borderBottom: "1.5px solid #cbd5e1",
-                      background: "transparent",
+                      border: "1.5px solid #cbd5e1",
+                      borderRadius: 7,
+                      background: "var(--card,#fff)",
                       fontSize: 13,
                       fontWeight: 600,
                       color: "var(--text,#1e293b)",
                       outline: "none",
-                      padding: "6px 0 2px",
+                      padding: "8px 10px",
+                      marginTop: 8,
                       fontFamily: "inherit",
                       boxSizing: "border-box",
+                      position: "relative",
+                      zIndex: 1,
                     }}
                   />
                 )}
