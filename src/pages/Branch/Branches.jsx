@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import ReactDOM from "react-dom";
 import Layout from "../../components/layout";
-import { supabase } from "../../js/Utils/supabase";
+import { supabase, supabaseAdmin } from "../../js/Utils/supabase";
 import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
 import "../../styles/Branches.css";
 
@@ -819,7 +819,7 @@ const validateBranchForm = (form, isEdit) => {
   if (!isEdit && !form.email?.trim())
     return {
       valid: false,
-      message: "Branch email is required to create a manager account",
+      message: "Add a manager account before saving the branch",
     };
   if (
     form.email?.trim() &&
@@ -1405,6 +1405,7 @@ const Branches = () => {
   const [deleteId, setDeleteId] = useState(null);
   const [createdAccount, setCreatedAccount] = useState(null);
   const [creating, setCreating] = useState(false);
+  const [provisioningId, setProvisioningId] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
   const [viewBranch, setViewBranch] = useState(null);
   const [toasts, setToasts] = useState([]);
@@ -1418,6 +1419,16 @@ const Branches = () => {
     onConfirm: null,
   });
   const [formDirty, setFormDirty] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [accountDraft, setAccountDraft] = useState(null); // { first_name, last_name, email, password }
+  const [accountForm, setAccountForm] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    password: "",
+  });
+  const [accountErrors, setAccountErrors] = useState({});
+  const [showAccountPassword, setShowAccountPassword] = useState(false);
 
   const showToast = (message, type = "success") => {
     const id = ++toastIdRef.current;
@@ -1550,6 +1561,7 @@ const Branches = () => {
       lng: "",
       modules: emptyModules(),
     });
+    setAccountDraft(null);
     setEditBranch(null);
     setFormDirty(false);
     setShowModal(true);
@@ -1596,6 +1608,53 @@ const Branches = () => {
     }));
   };
 
+  const openAccountModal = () => {
+    setAccountForm({
+      first_name: accountDraft?.first_name || "",
+      last_name: accountDraft?.last_name || "",
+      email: accountDraft?.email || "",
+      password: accountDraft?.password || generatePassword(),
+    });
+    setAccountErrors({});
+    setShowAccountPassword(false);
+    setShowAccountModal(true);
+  };
+
+  const validateAccountForm = () => {
+    const errs = {};
+    if (!accountForm.first_name.trim())
+      errs.first_name = "First name is required";
+    if (!accountForm.last_name.trim()) errs.last_name = "Last name is required";
+    if (!accountForm.email.trim()) errs.email = "Email is required";
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(accountForm.email))
+      errs.email = "Invalid email";
+    if (!accountForm.password.trim() || accountForm.password.length < 8)
+      errs.password = "Password must be at least 8 characters";
+    return errs;
+  };
+
+  const saveAccountDraft = () => {
+    const errs = validateAccountForm();
+    if (Object.keys(errs).length) {
+      setAccountErrors(errs);
+      return;
+    }
+    const draft = {
+      first_name: accountForm.first_name.trim(),
+      last_name: accountForm.last_name.trim(),
+      email: accountForm.email.trim().toLowerCase(),
+      password: accountForm.password,
+    };
+    setAccountDraft(draft);
+    setFormDirty(true);
+    setForm((prev) => ({
+      ...prev,
+      manager: `${draft.first_name} ${draft.last_name}`,
+      email: draft.email,
+    }));
+    setShowAccountModal(false);
+  };
+
   // Determine if services section should be shown (any role has appointment or walkin)
   const anyRoleHasServiceTrigger = Object.values(form.modules).some((mods) =>
     SERVICE_TRIGGER_MODULES.some((k) => mods.includes(k)),
@@ -1637,9 +1696,11 @@ const Branches = () => {
       setFormDirty(false);
       showToast("Branch updated successfully", "success");
     } else {
-      const { error: insertError } = await supabase
+      const { data: inserted, error: insertError } = await supabase
         .from("branches")
-        .insert([payload]);
+        .insert([payload])
+        .select()
+        .single();
       if (insertError) {
         setCreating(false);
         showToast("Error saving branch: " + insertError.message, "error");
@@ -1647,22 +1708,38 @@ const Branches = () => {
       }
 
       try {
-        const res = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-branch-account`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        const { data: authData, error: authError } =
+          await supabaseAdmin.auth.admin.createUser({
+            email: accountDraft.email,
+            password: accountDraft.password,
+            email_confirm: true,
+            user_metadata: {
+              first_name: accountDraft.first_name,
+              last_name: accountDraft.last_name,
+              role: "Manager",
+              branch_id: inserted.id,
             },
-            body: JSON.stringify({ email: form.email, branchName: form.name }),
-          },
-        );
-        const result = await res.json();
-        if (!result.success) throw new Error(result.error);
+          });
+        if (authError) throw new Error(authError.message);
+
+        const { error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .insert([
+            {
+              id: authData.user.id,
+              first_name: accountDraft.first_name,
+              last_name: accountDraft.last_name,
+              email: accountDraft.email,
+              role: "Manager",
+              status: "Active",
+              branch_id: inserted.id,
+            },
+          ]);
+        if (profileError) throw new Error(profileError.message);
+
         setCreatedAccount({
-          email: form.email,
-          password: result.password,
+          email: accountDraft.email,
+          password: accountDraft.password,
           branchName: form.name,
         });
         showToast("Branch added & manager account created", "success");
@@ -1673,6 +1750,7 @@ const Branches = () => {
         );
       }
 
+      setAccountDraft(null);
       setCreating(false);
       fetchBranches();
       setShowModal(false);
@@ -1692,6 +1770,38 @@ const Branches = () => {
     fetchBranches();
     setDeleteId(null);
     showToast("Branch deleted", "info");
+  };
+
+  const createAccountForBranch = async (b) => {
+    if (!b.email) {
+      showToast("This branch has no email set — edit it first", "error");
+      return;
+    }
+    setProvisioningId(b.id);
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-branch-account`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ email: b.email, branchName: b.name }),
+        },
+      );
+      const result = await res.json();
+      if (!result.success) throw new Error(result.error);
+      setCreatedAccount({
+        email: b.email,
+        password: result.password,
+        branchName: b.name,
+      });
+      showToast("Manager account created", "success");
+    } catch (err) {
+      showToast("Account creation failed: " + err.message, "error");
+    }
+    setProvisioningId(null);
   };
 
   const handleDeleteClick = (id) => {
@@ -2784,6 +2894,48 @@ const Branches = () => {
                           </svg>
                           Delete
                         </button>
+                        {b.email && (
+                          <button
+                            title="Create manager account"
+                            disabled={provisioningId === b.id}
+                            style={{
+                              height: 28,
+                              padding: "0 10px",
+                              gap: 5,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "#f0fdf4",
+                              border: "1.5px solid #86efac",
+                              color: "#15803d",
+                              borderRadius: 20,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor:
+                                provisioningId === b.id
+                                  ? "not-allowed"
+                                  : "pointer",
+                              opacity: provisioningId === b.id ? 0.6 : 1,
+                            }}
+                            onClick={() => createAccountForBranch(b)}
+                          >
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                            >
+                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+                              <circle cx="12" cy="7" r="4" />
+                              <line x1="19" y1="8" x2="19" y2="14" />
+                              <line x1="16" y1="11" x2="22" y2="11" />
+                            </svg>
+                            {provisioningId === b.id ? "Creating…" : "Account"}
+                          </button>
+                        )}
                         <button
                           title="View"
                           style={{
@@ -3757,21 +3909,108 @@ const Branches = () => {
                     placeholder="09XXXXXXXXX"
                   />
                 </div>
-                <div className="form-group">
-                  <label>
-                    Branch Email{" "}
-                    {!editBranch && <span style={{ color: "#dc2626" }}>*</span>}
-                  </label>
-                  <input
-                    type="email"
-                    value={form.email}
-                    onChange={(e) => {
-                      setFormDirty(true);
-                      setForm({ ...form, email: e.target.value });
-                    }}
-                    placeholder="manager@ach.com"
-                  />
-                </div>
+                {!editBranch && (
+                  <div className="form-group">
+                    <label>
+                      Manager Account{" "}
+                      <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    {accountDraft ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          gap: 10,
+                          padding: "8px 12px",
+                          border: "1.5px solid #86efac",
+                          background: "#f0fdf4",
+                          borderRadius: 9,
+                        }}
+                      >
+                        <div style={{ minWidth: 0 }}>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: 13,
+                              fontWeight: 700,
+                              color: "#166534",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {accountDraft.first_name} {accountDraft.last_name}
+                          </p>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: 11,
+                              color: "#15803d",
+                              whiteSpace: "nowrap",
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                            }}
+                          >
+                            {accountDraft.email}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={openAccountModal}
+                          style={{
+                            flexShrink: 0,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            color: "#166534",
+                            background: "#fff",
+                            border: "1px solid #86efac",
+                            borderRadius: 7,
+                            padding: "5px 10px",
+                            cursor: "pointer",
+                          }}
+                        >
+                          Edit
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={openAccountModal}
+                        style={{
+                          width: "100%",
+                          padding: "9px 12px",
+                          border: "1.5px dashed #a5b4fc",
+                          borderRadius: 9,
+                          background: "#eef2ff",
+                          color: "#4338ca",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: 6,
+                        }}
+                      >
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                        >
+                          <line x1="12" y1="5" x2="12" y2="19" />
+                          <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Add Account
+                      </button>
+                    )}
+                  </div>
+                )}
                 <div className="form-group">
                   <label>Manager Name</label>
                   <input
@@ -3781,6 +4020,12 @@ const Branches = () => {
                       setFormDirty(true);
                       setForm({ ...form, manager: e.target.value });
                     }}
+                    disabled={!editBranch && !!accountDraft}
+                    style={
+                      !editBranch && accountDraft
+                        ? { background: "#f8fafc", color: "#64748b" }
+                        : undefined
+                    }
                   />
                 </div>
                 <div className="form-group">
@@ -4141,6 +4386,251 @@ const Branches = () => {
                 onClick={() => setCreatedAccount(null)}
               >
                 Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── EMBEDDED MANAGER ACCOUNT MODAL ── */}
+      {showAccountModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 10500,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--card)",
+              borderRadius: 14,
+              width: "100%",
+              maxWidth: 420,
+              maxHeight: "90vh",
+              overflowY: "auto",
+              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+            }}
+          >
+            <div className="modal-header">
+              <h3>Manager Account</h3>
+              <button
+                className="btn btn-ghost btn-icon branches-btn-auto"
+                onClick={() => setShowAccountModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label>
+                    First Name <span style={{ color: "#dc2626" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={accountForm.first_name}
+                    onChange={(e) => {
+                      setAccountForm((f) => ({
+                        ...f,
+                        first_name: e.target.value,
+                      }));
+                      setAccountErrors((er) => ({ ...er, first_name: "" }));
+                    }}
+                    placeholder="e.g. Mia"
+                  />
+                  {accountErrors.first_name && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "#dc2626",
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      {accountErrors.first_name}
+                    </p>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label>
+                    Last Name <span style={{ color: "#dc2626" }}>*</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={accountForm.last_name}
+                    onChange={(e) => {
+                      setAccountForm((f) => ({
+                        ...f,
+                        last_name: e.target.value,
+                      }));
+                      setAccountErrors((er) => ({ ...er, last_name: "" }));
+                    }}
+                    placeholder="e.g. Dela Cruz"
+                  />
+                  {accountErrors.last_name && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "#dc2626",
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      {accountErrors.last_name}
+                    </p>
+                  )}
+                </div>
+                <div className="form-group form-full">
+                  <label>
+                    Email <span style={{ color: "#dc2626" }}>*</span>
+                  </label>
+                  <input
+                    type="email"
+                    value={accountForm.email}
+                    onChange={(e) => {
+                      setAccountForm((f) => ({ ...f, email: e.target.value }));
+                      setAccountErrors((er) => ({ ...er, email: "" }));
+                    }}
+                    placeholder="manager@ach.com"
+                  />
+                  {accountErrors.email && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "#dc2626",
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      {accountErrors.email}
+                    </p>
+                  )}
+                </div>
+                <div className="form-group form-full">
+                  <label>
+                    Password <span style={{ color: "#dc2626" }}>*</span>
+                  </label>
+                  <div
+                    style={{
+                      position: "relative",
+                      display: "flex",
+                      alignItems: "center",
+                    }}
+                  >
+                    <input
+                      type={showAccountPassword ? "text" : "password"}
+                      value={accountForm.password}
+                      onChange={(e) => {
+                        setAccountForm((f) => ({
+                          ...f,
+                          password: e.target.value,
+                        }));
+                        setAccountErrors((er) => ({ ...er, password: "" }));
+                      }}
+                      style={{
+                        paddingRight: 64,
+                        fontFamily: showAccountPassword
+                          ? "monospace"
+                          : "inherit",
+                        width: "100%",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAccountPassword((v) => !v)}
+                      style={{
+                        position: "absolute",
+                        right: 28,
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#94a3b8",
+                        padding: 0,
+                        display: "flex",
+                      }}
+                    >
+                      {showAccountPassword ? "🙈" : "👁"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setAccountForm((f) => ({
+                          ...f,
+                          password: generatePassword(),
+                        }))
+                      }
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        background: "none",
+                        border: "none",
+                        cursor: "pointer",
+                        color: "#2563eb",
+                        padding: 0,
+                        display: "flex",
+                      }}
+                    >
+                      <svg
+                        width="15"
+                        height="15"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
+                        <path d="M23 4v6h-6" />
+                        <path d="M1 20v-6h6" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                      </svg>
+                    </button>
+                  </div>
+                  {accountErrors.password && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "#dc2626",
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      {accountErrors.password}
+                    </p>
+                  )}
+                </div>
+                <div className="form-group form-full">
+                  <label>Role</label>
+                  <div
+                    style={{
+                      padding: "8px 12px",
+                      borderRadius: 9,
+                      border: "1.5px solid var(--border)",
+                      background: "#f8fafc",
+                      color: "#64748b",
+                      fontSize: 13,
+                      fontWeight: 600,
+                    }}
+                  >
+                    Manager
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                className="btn btn-ghost branches-btn-auto"
+                onClick={() => setShowAccountModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary branches-btn-auto"
+                onClick={saveAccountDraft}
+              >
+                Save Account
               </button>
             </div>
           </div>
