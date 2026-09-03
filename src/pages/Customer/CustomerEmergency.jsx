@@ -2257,6 +2257,7 @@ const CustomerEmergency = () => {
       const payload = {
         type: formData.type,
         description: formData.description.trim(),
+        guest_address: formData.description.trim(),
         branch: formData.branch,
         sent_by: customerName,
         user_id: userId,
