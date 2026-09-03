@@ -557,9 +557,7 @@ const Login = () => {
   const [keepEmailChoice, setKeepEmailChoice] = useState(null); // { user, session, role, fullName, branchName, newEmail, oldEmail }
   const [keepEmailSaving, setKeepEmailSaving] = useState(false);
   const [showCantVerify, setShowCantVerify] = useState(false);
-  const [cantVerifyNote, setCantVerifyNote] = useState("");
-  const [cantVerifySubmitting, setCantVerifySubmitting] = useState(false);
-  const [cantVerifySent, setCantVerifySent] = useState(false);
+  const [skippingVerification, setSkippingVerification] = useState(false);
   const navigate = useNavigate();
 
   // Accounts created with placeholder emails (auto-generated
@@ -804,32 +802,15 @@ const Login = () => {
     setOtpStep(true);
   };
 
-  const submitCantVerifyRequest = async () => {
+  const skipVerification = async () => {
     if (!pendingLogin) return;
-    setCantVerifySubmitting(true);
-    const { error } = await supabase
-      .from("login_verification_requests")
-      .insert([
-        {
-          user_id: pendingLogin.user.id,
-          note: cantVerifyNote.trim() || null,
-          status: "pending",
-        },
-      ]);
-    setCantVerifySubmitting(false);
-    if (error) {
-      setMethodError("Could not submit request: " + error.message);
-      return;
-    }
-    setCantVerifySent(true);
-  };
-
-  const closeCantVerify = () => {
+    setSkippingVerification(true);
+    const { user, session, role, fullName, branchName } = pendingLogin;
+    setSkippingVerification(false);
     setShowCantVerify(false);
-    setCantVerifySent(false);
-    setCantVerifyNote("");
     setShowMethodStep(false);
     setPendingLogin(null);
+    await completeLogin(user, session, role, fullName, branchName);
   };
 
   const verifyLoginOtp = async () => {
@@ -1091,7 +1072,7 @@ const Login = () => {
                   textDecoration: "underline",
                 }}
               >
-                Not sure this is the right email? Get help from staff
+                Not sure this is the right email? Skip verification
               </button>
             </div>
             <div style={{ padding: "16px 24px 24px", textAlign: "center" }}>
@@ -1148,146 +1129,54 @@ const Login = () => {
                   fontSize: 15,
                 }}
               >
-                Verification Help
+                Skip Verification?
               </h5>
             </div>
             <div style={{ padding: "24px" }}>
-              {!cantVerifySent ? (
-                <>
-                  <p
-                    style={{
-                      margin: "0 0 14px",
-                      fontSize: 13,
-                      color: "#475569",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    We won't log you in without verifying it's you, but we can
-                    flag your account for a staff member to confirm your
-                    identity manually and update your contact details. You'll
-                    need to wait for that before you can log in.
-                  </p>
-                  <textarea
-                    value={cantVerifyNote}
-                    onChange={(e) => setCantVerifyNote(e.target.value)}
-                    placeholder="Optional: let staff know what's wrong (e.g. 'my number changed', 'that's not my email')"
-                    rows={3}
-                    style={{
-                      width: "100%",
-                      boxSizing: "border-box",
-                      padding: "10px 14px",
-                      fontSize: 13,
-                      border: "1.5px solid #e2e8f0",
-                      borderRadius: 10,
-                      outline: "none",
-                      fontFamily: "inherit",
-                      resize: "vertical",
-                      marginBottom: 14,
-                    }}
-                  />
-                  <button
-                    onClick={submitCantVerifyRequest}
-                    disabled={cantVerifySubmitting}
-                    style={{
-                      width: "100%",
-                      background: "#b45309",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 10,
-                      padding: "12px 0",
-                      fontSize: 14,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {cantVerifySubmitting
-                      ? "Submitting…"
-                      : "Send Request to Staff"}
-                  </button>
-                  {methodError && (
-                    <p
-                      style={{
-                        color: "#dc3545",
-                        fontSize: 12,
-                        margin: "10px 0 0",
-                        textAlign: "center",
-                      }}
-                    >
-                      {methodError}
-                    </p>
-                  )}
-                  <button
-                    onClick={() => setShowCantVerify(false)}
-                    style={{
-                      display: "block",
-                      margin: "10px auto 0",
-                      background: "none",
-                      border: "none",
-                      color: "#94a3b8",
-                      fontSize: 12,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    ← Back
-                  </button>
-                </>
-              ) : (
-                <div style={{ textAlign: "center" }}>
-                  <div
-                    style={{
-                      width: 48,
-                      height: 48,
-                      borderRadius: "50%",
-                      background: "#fef3c7",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      margin: "0 auto 12px",
-                    }}
-                  >
-                    <svg
-                      width="22"
-                      height="22"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#b45309"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  </div>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 13,
-                      color: "#475569",
-                      lineHeight: 1.6,
-                    }}
-                  >
-                    Request sent. A staff member will reach out to verify your
-                    identity and update your contact details. Please try logging
-                    in again after that.
-                  </p>
-                  <button
-                    onClick={closeCantVerify}
-                    style={{
-                      marginTop: 18,
-                      background: "#b45309",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 8,
-                      padding: "10px 32px",
-                      fontSize: 13,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Done
-                  </button>
-                </div>
-              )}
+              <p
+                style={{
+                  margin: "0 0 18px",
+                  fontSize: 13,
+                  color: "#475569",
+                  lineHeight: 1.6,
+                }}
+              >
+                You can continue logging in without verifying your email or
+                phone right now. You can update your contact details later from
+                your profile.
+              </p>
+              <button
+                onClick={skipVerification}
+                disabled={skippingVerification}
+                style={{
+                  width: "100%",
+                  background: "#b45309",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "12px 0",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {skippingVerification ? "Logging in…" : "Yes, Log Me In"}
+              </button>
+              <button
+                onClick={() => setShowCantVerify(false)}
+                style={{
+                  display: "block",
+                  margin: "10px auto 0",
+                  background: "none",
+                  border: "none",
+                  color: "#94a3b8",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                ← Back
+              </button>
             </div>
           </div>
         </div>
