@@ -1542,7 +1542,8 @@ const CustomerAppointment = () => {
       .from("appointments")
       .select("*")
       .eq("user_id", user.id)
-      .order("date", { ascending: false });
+      .order("date", { ascending: false })
+      .order("time", { ascending: false });
     q = applyFilter(q);
     const { data, error } = await q;
     if (!error) setAppts(data || []);

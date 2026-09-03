@@ -1856,6 +1856,7 @@ Rules:
       .from("appointments")
       .insert([
         {
+          user_id: user?.id ?? null,
           patient: form.petName,
           owner: form.ownerName,
           contact: form.contact,

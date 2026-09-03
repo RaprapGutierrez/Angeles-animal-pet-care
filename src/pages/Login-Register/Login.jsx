@@ -549,14 +549,23 @@ const Login = () => {
   const [otpError, setOtpError] = useState("");
   const [otpSending, setOtpSending] = useState(false);
   const [otpVerifying, setOtpVerifying] = useState(false);
-  const [pendingLogin, setPendingLogin] = useState(null); // { user, session, role, fullName, branchName }
-  const [backupCodeMode, setBackupCodeMode] = useState(false);
-  const [backupCodeValue, setBackupCodeValue] = useState("");
-  const [backupCodeError, setBackupCodeError] = useState("");
-  const [backupCodeVerifying, setBackupCodeVerifying] = useState(false);
-  const [showBackupCodesModal, setShowBackupCodesModal] = useState(false);
-  const [newBackupCodes, setNewBackupCodes] = useState([]);
+  const [pendingLogin, setPendingLogin] = useState(null); // { user, session, role, fullName, branchName, emailIsFake, phoneOnFile, realEmail }
+  const [showMethodStep, setShowMethodStep] = useState(false);
+  const [methodEmailInput, setMethodEmailInput] = useState("");
+  const [showEmailOverrideInput, setShowEmailOverrideInput] = useState(false);
+  const [methodError, setMethodError] = useState("");
+  const [keepEmailChoice, setKeepEmailChoice] = useState(null); // { user, session, role, fullName, branchName, newEmail, oldEmail }
+  const [keepEmailSaving, setKeepEmailSaving] = useState(false);
+  const [showCantVerify, setShowCantVerify] = useState(false);
+  const [cantVerifyNote, setCantVerifyNote] = useState("");
+  const [cantVerifySubmitting, setCantVerifySubmitting] = useState(false);
+  const [cantVerifySent, setCantVerifySent] = useState(false);
   const navigate = useNavigate();
+
+  // Accounts created with placeholder emails (auto-generated
+  // customer/manager/employee addresses) can't actually receive mail there.
+  const FAKE_EMAIL_DOMAINS =
+    /@([a-z0-9-]+\.)*(customer|manager|employee)\.(com|local)$/i;
 
   const showModal = useCallback(
     (type, title, message) => setModal({ type, title, message }),
@@ -608,7 +617,9 @@ const Login = () => {
 
       const { data: profile } = await supabase
         .from("profiles")
-        .select("first_name, last_name, role, branch_id, status, phone")
+        .select(
+          "first_name, last_name, role, branch_id, status, verified_email",
+        )
         .eq("id", user.id)
         .single();
 
@@ -639,36 +650,38 @@ const Login = () => {
         branchName = branchRow?.name ?? null;
       }
 
-      const isGmail = email.trim().toLowerCase().endsWith("@gmail.com");
+      const trimmedEmail = email.trim();
+      const emailIsFake = FAKE_EMAIL_DOMAINS.test(trimmedEmail);
+      const verifiedEmail = profile?.verified_email || null;
 
-      if (isGmail) {
-        setOtpValue(["", "", "", "", "", ""]);
-        setOtpError("");
-        setPendingLogin({ user, session, role, fullName, branchName });
-        setOtpSending(true);
-        const { error: sendErr } = await supabase.functions.invoke(
-          "send-login-otp",
-          { body: { user_id: user.id, email: email.trim() } },
-        );
-        setOtpSending(false);
-        if (sendErr) {
-          showModal(
-            "danger",
-            "Error",
-            "Could not send verification code. Please try again.",
-          );
-          return;
+      const pending = {
+        user,
+        session,
+        role,
+        fullName,
+        branchName,
+        emailIsFake,
+        verifiedEmail,
+        realEmail: trimmedEmail,
+      };
+      setPendingLogin(pending);
+      setMethodError("");
+      setShowEmailOverrideInput(false);
+      setMethodEmailInput("");
+
+      if (emailIsFake) {
+        if (verifiedEmail) {
+          // They already chose to save a real email last time — use it
+          // directly without asking again.
+          await sendOtpTo(pending, "email", verifiedEmail);
+        } else {
+          // No usable email on file yet — ask them to enter one.
+          setShowMethodStep(true);
+          setShowEmailOverrideInput(true);
         }
-        // Silently ensure backup codes exist (first-time only, no UI blocking)
-        supabase.functions
-          .invoke("generate-backup-codes", { body: { user_id: user.id } })
-          .then(({ data }) => {
-            if (data?.codes) setNewBackupCodes(data.codes);
-          })
-          .catch(() => {});
-        setOtpStep(true);
       } else {
-        await completeLogin(user, session, role, fullName, branchName);
+        // Login email is real — send immediately, same as before.
+        await sendOtpTo(pending, "email", trimmedEmail);
       }
     } catch (err) {
       console.error("Login error:", err);
@@ -762,29 +775,61 @@ const Login = () => {
     setForgotStep("sent");
   };
 
-  const verifyBackupCode = async () => {
-    if (!pendingLogin) return;
-    const cleaned = backupCodeValue.trim().toUpperCase();
-    if (!cleaned) {
-      setBackupCodeError("Enter a backup code.");
+  const sendOtpTo = async (pending, method, destination) => {
+    if (!destination) {
+      setMethodError("Please enter an email address.");
       return;
     }
-    setBackupCodeVerifying(true);
-    setBackupCodeError("");
-    const { data, error } = await supabase.functions.invoke(
-      "verify-backup-code",
-      { body: { user_id: pendingLogin.user.id, code: cleaned } },
+    setOtpValue(["", "", "", "", "", ""]);
+    setOtpError("");
+    setMethodError("");
+    setOtpSending(true);
+    const { error: sendErr } = await supabase.functions.invoke(
+      "send-login-otp",
+      { body: { user_id: pending.user.id, method, destination } },
     );
-    setBackupCodeVerifying(false);
-    if (error || !data?.valid) {
-      setBackupCodeError("Invalid or already-used backup code.");
+    setOtpSending(false);
+    if (sendErr) {
+      showModal(
+        "danger",
+        "Error",
+        "Could not send verification code. Please try again.",
+      );
       return;
     }
-    const { user, session, role, fullName, branchName } = pendingLogin;
-    setOtpStep(false);
-    setBackupCodeMode(false);
+    setPendingLogin((p) =>
+      p ? { ...p, lastMethod: method, lastDestination: destination } : p,
+    );
+    setShowMethodStep(false);
+    setOtpStep(true);
+  };
+
+  const submitCantVerifyRequest = async () => {
+    if (!pendingLogin) return;
+    setCantVerifySubmitting(true);
+    const { error } = await supabase
+      .from("login_verification_requests")
+      .insert([
+        {
+          user_id: pendingLogin.user.id,
+          note: cantVerifyNote.trim() || null,
+          status: "pending",
+        },
+      ]);
+    setCantVerifySubmitting(false);
+    if (error) {
+      setMethodError("Could not submit request: " + error.message);
+      return;
+    }
+    setCantVerifySent(true);
+  };
+
+  const closeCantVerify = () => {
+    setShowCantVerify(false);
+    setCantVerifySent(false);
+    setCantVerifyNote("");
+    setShowMethodStep(false);
     setPendingLogin(null);
-    await completeLogin(user, session, role, fullName, branchName);
   };
 
   const verifyLoginOtp = async () => {
@@ -805,9 +850,46 @@ const Login = () => {
       setOtpError(data?.error || "Invalid or expired code.");
       return;
     }
+
+    // Verified via a freshly-typed email that wasn't on file yet — ask
+    // whether to save it for next time before finishing login.
+    if (
+      pendingLogin.emailIsFake &&
+      !pendingLogin.verifiedEmail &&
+      pendingLogin.lastDestination
+    ) {
+      setKeepEmailChoice({
+        user: pendingLogin.user,
+        session: pendingLogin.session,
+        role: pendingLogin.role,
+        fullName: pendingLogin.fullName,
+        branchName: pendingLogin.branchName,
+        newEmail: pendingLogin.lastDestination,
+        oldEmail: pendingLogin.realEmail,
+      });
+      setOtpStep(false);
+      setPendingLogin(null);
+      return;
+    }
+
     const { user, session, role, fullName, branchName } = pendingLogin;
     setOtpStep(false);
     setPendingLogin(null);
+    await completeLogin(user, session, role, fullName, branchName);
+  };
+
+  const resolveKeepEmailChoice = async (keep) => {
+    if (!keepEmailChoice) return;
+    setKeepEmailSaving(true);
+    if (keep) {
+      await supabase
+        .from("profiles")
+        .update({ verified_email: keepEmailChoice.newEmail })
+        .eq("id", keepEmailChoice.user.id);
+    }
+    setKeepEmailSaving(false);
+    const { user, session, role, fullName, branchName } = keepEmailChoice;
+    setKeepEmailChoice(null);
     await completeLogin(user, session, role, fullName, branchName);
   };
 
@@ -880,28 +962,22 @@ const Login = () => {
   return (
     <>
       <AlertModal modal={modal} onClose={closeModal} />
-      {welcome && !showBackupCodesModal && (
+      {welcome && (
         <WelcomePopup
           name={welcome.name}
           role={welcome.role}
           branch={welcome.branch}
-          onDone={() => {
-            if (newBackupCodes.length > 0) {
-              setShowBackupCodesModal(true);
-            } else {
-              navigate(welcome.redirectTo);
-            }
-          }}
+          onDone={() => navigate(welcome.redirectTo)}
         />
       )}
 
-      {showBackupCodesModal && (
+      {showMethodStep && pendingLogin && (
         <div
           style={{
             position: "fixed",
             inset: 0,
             zIndex: 99999,
-            background: "rgba(0,0,0,0.6)",
+            background: "rgba(0,0,0,0.55)",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -912,95 +988,401 @@ const Login = () => {
             style={{
               background: "#fff",
               borderRadius: 16,
+              overflow: "hidden",
               width: "100%",
-              maxWidth: 420,
-              padding: 28,
+              maxWidth: 380,
               boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
             }}
           >
-            <h5
-              style={{
-                margin: "0 0 6px",
-                fontWeight: 700,
-                fontSize: 16,
-                color: "#0f172a",
-              }}
-            >
-              Save Your Backup Codes
-            </h5>
-            <p
-              style={{
-                fontSize: 12.5,
-                color: "#64748b",
-                margin: "0 0 16px",
-                lineHeight: 1.5,
-              }}
-            >
-              Use one of these if you ever can't receive your login code. Each
-              code works once. Save them somewhere safe — they won't be shown
-              again.
-            </p>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 8,
-                background: "#f8fafc",
-                border: "1px solid #e2e8f0",
-                borderRadius: 10,
-                padding: 16,
-                marginBottom: 16,
-                fontFamily: "monospace",
-                fontSize: 14,
-                fontWeight: 700,
-                color: "#0f172a",
-              }}
-            >
-              {newBackupCodes.map((c, i) => (
-                <div key={i} style={{ textAlign: "center" }}>
-                  {c}
-                </div>
-              ))}
+            <div style={{ background: "#05328A", padding: "16px 20px" }}>
+              <h5
+                style={{
+                  margin: 0,
+                  fontWeight: 700,
+                  color: "#fff",
+                  fontSize: 15,
+                }}
+              >
+                Verify Your Identity
+              </h5>
             </div>
-            <button
-              onClick={() => {
-                navigator.clipboard?.writeText(newBackupCodes.join("\n"));
-              }}
-              style={{
-                width: "100%",
-                background: "#f1f5f9",
-                color: "#334155",
-                border: "none",
-                borderRadius: 8,
-                padding: "10px 0",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-                marginBottom: 10,
-              }}
-            >
-              Copy Codes
-            </button>
-            <button
-              onClick={() => {
-                setShowBackupCodesModal(false);
-                setNewBackupCodes([]);
-                navigate(welcome.redirectTo);
-              }}
-              style={{
-                width: "100%",
-                background: "#2563eb",
-                color: "#fff",
-                border: "none",
-                borderRadius: 8,
-                padding: "10px 0",
-                fontSize: 13,
-                fontWeight: 700,
-                cursor: "pointer",
-              }}
-            >
-              I've Saved My Codes
-            </button>
+            <div style={{ padding: "24px 24px 8px" }}>
+              <p
+                style={{
+                  margin: "0 0 18px",
+                  fontSize: 13,
+                  color: "#475569",
+                  textAlign: "center",
+                }}
+              >
+                Your account email can't receive mail. Enter an email address to
+                receive your verification code.
+              </p>
+
+              <div>
+                <input
+                  type="email"
+                  autoFocus
+                  placeholder="you@example.com"
+                  value={methodEmailInput}
+                  onChange={(e) => setMethodEmailInput(e.target.value)}
+                  onKeyDown={(e) =>
+                    e.key === "Enter" &&
+                    sendOtpTo(pendingLogin, "email", methodEmailInput.trim())
+                  }
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "10px 14px",
+                    fontSize: 14,
+                    border: `1.5px solid ${methodError ? "#dc3545" : "#e2e8f0"}`,
+                    borderRadius: 10,
+                    outline: "none",
+                    fontFamily: "inherit",
+                    marginBottom: 10,
+                  }}
+                />
+                <button
+                  onClick={() =>
+                    sendOtpTo(pendingLogin, "email", methodEmailInput.trim())
+                  }
+                  disabled={otpSending || !methodEmailInput.trim()}
+                  style={{
+                    width: "100%",
+                    background: "#2563eb",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "12px 0",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    opacity: !methodEmailInput.trim() ? 0.6 : 1,
+                  }}
+                >
+                  {otpSending ? "Sending…" : "Send Code"}
+                </button>
+              </div>
+              {methodError && (
+                <p
+                  style={{
+                    color: "#dc3545",
+                    fontSize: 12,
+                    margin: "10px 0 0",
+                    textAlign: "center",
+                  }}
+                >
+                  {methodError}
+                </p>
+              )}
+              <button
+                onClick={() => setShowCantVerify(true)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  marginTop: 14,
+                  background: "none",
+                  border: "none",
+                  color: "#94a3b8",
+                  fontSize: 11.5,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                  textAlign: "center",
+                  textDecoration: "underline",
+                }}
+              >
+                Not sure this is the right email? Get help from staff
+              </button>
+            </div>
+            <div style={{ padding: "16px 24px 24px", textAlign: "center" }}>
+              <button
+                onClick={() => {
+                  setShowMethodStep(false);
+                  setPendingLogin(null);
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#94a3b8",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showCantVerify && pendingLogin && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 100000,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 16,
+              overflow: "hidden",
+              width: "100%",
+              maxWidth: 380,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div style={{ background: "#b45309", padding: "16px 20px" }}>
+              <h5
+                style={{
+                  margin: 0,
+                  fontWeight: 700,
+                  color: "#fff",
+                  fontSize: 15,
+                }}
+              >
+                Verification Help
+              </h5>
+            </div>
+            <div style={{ padding: "24px" }}>
+              {!cantVerifySent ? (
+                <>
+                  <p
+                    style={{
+                      margin: "0 0 14px",
+                      fontSize: 13,
+                      color: "#475569",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    We won't log you in without verifying it's you, but we can
+                    flag your account for a staff member to confirm your
+                    identity manually and update your contact details. You'll
+                    need to wait for that before you can log in.
+                  </p>
+                  <textarea
+                    value={cantVerifyNote}
+                    onChange={(e) => setCantVerifyNote(e.target.value)}
+                    placeholder="Optional: let staff know what's wrong (e.g. 'my number changed', 'that's not my email')"
+                    rows={3}
+                    style={{
+                      width: "100%",
+                      boxSizing: "border-box",
+                      padding: "10px 14px",
+                      fontSize: 13,
+                      border: "1.5px solid #e2e8f0",
+                      borderRadius: 10,
+                      outline: "none",
+                      fontFamily: "inherit",
+                      resize: "vertical",
+                      marginBottom: 14,
+                    }}
+                  />
+                  <button
+                    onClick={submitCantVerifyRequest}
+                    disabled={cantVerifySubmitting}
+                    style={{
+                      width: "100%",
+                      background: "#b45309",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 10,
+                      padding: "12px 0",
+                      fontSize: 14,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {cantVerifySubmitting
+                      ? "Submitting…"
+                      : "Send Request to Staff"}
+                  </button>
+                  {methodError && (
+                    <p
+                      style={{
+                        color: "#dc3545",
+                        fontSize: 12,
+                        margin: "10px 0 0",
+                        textAlign: "center",
+                      }}
+                    >
+                      {methodError}
+                    </p>
+                  )}
+                  <button
+                    onClick={() => setShowCantVerify(false)}
+                    style={{
+                      display: "block",
+                      margin: "10px auto 0",
+                      background: "none",
+                      border: "none",
+                      color: "#94a3b8",
+                      fontSize: 12,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    ← Back
+                  </button>
+                </>
+              ) : (
+                <div style={{ textAlign: "center" }}>
+                  <div
+                    style={{
+                      width: 48,
+                      height: 48,
+                      borderRadius: "50%",
+                      background: "#fef3c7",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      margin: "0 auto 12px",
+                    }}
+                  >
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#b45309"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  </div>
+                  <p
+                    style={{
+                      margin: 0,
+                      fontSize: 13,
+                      color: "#475569",
+                      lineHeight: 1.6,
+                    }}
+                  >
+                    Request sent. A staff member will reach out to verify your
+                    identity and update your contact details. Please try logging
+                    in again after that.
+                  </p>
+                  <button
+                    onClick={closeCantVerify}
+                    style={{
+                      marginTop: 18,
+                      background: "#b45309",
+                      color: "#fff",
+                      border: "none",
+                      borderRadius: 8,
+                      padding: "10px 32px",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Done
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {keepEmailChoice && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 99999,
+            background: "rgba(0,0,0,0.55)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "#fff",
+              borderRadius: 16,
+              overflow: "hidden",
+              width: "100%",
+              maxWidth: 380,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.3)",
+            }}
+          >
+            <div style={{ background: "#05328A", padding: "16px 20px" }}>
+              <h5
+                style={{
+                  margin: 0,
+                  fontWeight: 700,
+                  color: "#fff",
+                  fontSize: 15,
+                }}
+              >
+                Save This Email?
+              </h5>
+            </div>
+            <div style={{ padding: "24px" }}>
+              <p
+                style={{
+                  margin: "0 0 18px",
+                  fontSize: 13,
+                  color: "#475569",
+                  lineHeight: 1.6,
+                  textAlign: "center",
+                }}
+              >
+                You verified using <strong>{keepEmailChoice.newEmail}</strong>.
+                Keep using this email for future logins, or keep your account's
+                current placeholder email and enter this one again next time?
+              </p>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+              >
+                <button
+                  onClick={() => resolveKeepEmailChoice(true)}
+                  disabled={keepEmailSaving}
+                  style={{
+                    width: "100%",
+                    background: "#2563eb",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "12px 0",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  {keepEmailSaving
+                    ? "Saving…"
+                    : `Keep ${keepEmailChoice.newEmail}`}
+                </button>
+                <button
+                  onClick={() => resolveKeepEmailChoice(false)}
+                  disabled={keepEmailSaving}
+                  style={{
+                    width: "100%",
+                    background: "#f1f5f9",
+                    color: "#475569",
+                    border: "none",
+                    borderRadius: 10,
+                    padding: "12px 0",
+                    fontSize: 14,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                  }}
+                >
+                  Keep old email, ask again next time
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
@@ -1046,6 +1428,17 @@ const Login = () => {
               </h5>
             </div>
             <div style={{ padding: "28px 24px 8px", textAlign: "center" }}>
+              {pendingLogin?.lastDestination && (
+                <p
+                  style={{
+                    margin: "0 0 6px",
+                    fontSize: 13,
+                    color: "#475569",
+                  }}
+                >
+                  Code sent to <strong>{pendingLogin.lastDestination}</strong>
+                </p>
+              )}
               <p
                 style={{
                   margin: "0 0 20px",
@@ -1123,109 +1516,26 @@ const Login = () => {
                   {otpError}
                 </p>
               )}
-              {backupCodeMode && (
-                <div style={{ marginTop: 16 }}>
-                  <input
-                    type="text"
-                    placeholder="XXXX-XXXX"
-                    value={backupCodeValue}
-                    onChange={(e) => {
-                      setBackupCodeValue(e.target.value);
-                      setBackupCodeError("");
-                    }}
-                    onKeyDown={(e) => e.key === "Enter" && verifyBackupCode()}
-                    style={{
-                      width: "100%",
-                      boxSizing: "border-box",
-                      padding: "10px 14px",
-                      fontSize: 14,
-                      textAlign: "center",
-                      letterSpacing: 2,
-                      border: `1.5px solid ${backupCodeError ? "#dc3545" : "#e2e8f0"}`,
-                      borderRadius: 10,
-                      outline: "none",
-                      fontFamily: "inherit",
-                      textTransform: "uppercase",
-                    }}
-                  />
-                  {backupCodeError && (
-                    <p
-                      style={{
-                        color: "#dc3545",
-                        fontSize: 12,
-                        margin: "6px 0 0",
-                        textAlign: "center",
-                      }}
-                    >
-                      {backupCodeError}
-                    </p>
-                  )}
-                </div>
-              )}
             </div>
             <div style={{ padding: "16px 24px 24px" }}>
-              {backupCodeMode ? (
-                <button
-                  onClick={verifyBackupCode}
-                  disabled={backupCodeVerifying || !backupCodeValue.trim()}
-                  style={{
-                    width: "100%",
-                    background: "#2563eb",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 10,
-                    padding: "13px 0",
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    opacity: !backupCodeValue.trim() ? 0.6 : 1,
-                  }}
-                >
-                  {backupCodeVerifying ? "Verifying…" : "Use Backup Code"}
-                </button>
-              ) : (
-                <button
-                  onClick={verifyLoginOtp}
-                  disabled={otpVerifying || otpValue.some((d) => !d)}
-                  style={{
-                    width: "100%",
-                    background: "#2563eb",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 10,
-                    padding: "13px 0",
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    opacity: otpValue.some((d) => !d) ? 0.6 : 1,
-                  }}
-                >
-                  {otpVerifying ? "Verifying…" : "Verify Code"}
-                </button>
-              )}
-              <div style={{ textAlign: "center", marginTop: 10 }}>
-                <button
-                  onClick={() => {
-                    setBackupCodeMode((prev) => !prev);
-                    setBackupCodeError("");
-                    setBackupCodeValue("");
-                  }}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    color: "#64748b",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    cursor: "pointer",
-                    padding: 0,
-                    textDecoration: "underline",
-                  }}
-                >
-                  {backupCodeMode
-                    ? "Use verification code instead"
-                    : "Trouble receiving your code? Use a backup code"}
-                </button>
-              </div>
+              <button
+                onClick={verifyLoginOtp}
+                disabled={otpVerifying || otpValue.some((d) => !d)}
+                style={{
+                  width: "100%",
+                  background: "#2563eb",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 10,
+                  padding: "13px 0",
+                  fontSize: 14,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  opacity: otpValue.some((d) => !d) ? 0.6 : 1,
+                }}
+              >
+                {otpVerifying ? "Verifying…" : "Verify Code"}
+              </button>
               <div
                 style={{
                   display: "flex",
@@ -1238,7 +1548,8 @@ const Login = () => {
                   onClick={() => {
                     setOtpStep(false);
                     setPendingLogin(null);
-                    setBackupCodeMode(false);
+                    setShowEmailOverrideInput(false);
+                    setMethodEmailInput("");
                   }}
                   style={{
                     background: "none",
@@ -1260,7 +1571,10 @@ const Login = () => {
                     await supabase.functions.invoke("send-login-otp", {
                       body: {
                         user_id: pendingLogin.user.id,
-                        email: email.trim(),
+                        method: pendingLogin.lastMethod || "email",
+                        destination:
+                          pendingLogin.lastDestination ||
+                          pendingLogin.realEmail,
                       },
                     });
                     setOtpSending(false);

@@ -6169,11 +6169,11 @@ const PatientRecord = () => {
           className="pr-stat-grid"
           style={{
             display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
+            gridTemplateColumns: "repeat(4, 1fr)",
             gap: 14,
             marginBottom: "var(--pr-stat-gap-bottom, 24px)",
             marginTop: 0,
-            overflowX: "hidden",
+            overflow: "visible",
             width: "100%",
             boxSizing: "border-box",
           }}

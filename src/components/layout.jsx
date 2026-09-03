@@ -542,7 +542,17 @@ const AlertDetailModal = ({ alert, onClose, onUpdateStatus, isAdmin }) => {
             </p>
           </div>
           <div
-            style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 12,
+              marginBottom:
+                alert.patient_name ||
+                alert.guest_contact ||
+                alert.contact_number
+                  ? 12
+                  : 0,
+            }}
           >
             {[
               { label: "Branch", value: alert.branch },
@@ -585,6 +595,109 @@ const AlertDetailModal = ({ alert, onClose, onUpdateStatus, isAdmin }) => {
               </div>
             ))}
           </div>
+          {(alert.patient_name ||
+            alert.guest_contact ||
+            alert.contact_number) && (
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 12,
+                paddingTop: 12,
+                borderTop: "1px solid var(--border)",
+              }}
+            >
+              {alert.patient_name && (
+                <div>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      color: "#64748b",
+                      fontWeight: 600,
+                      margin: "0 0 2px",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    Patient (Pet)
+                  </p>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "#1e293b",
+                      margin: 0,
+                      fontWeight: 600,
+                    }}
+                  >
+                    {alert.patient_name}
+                  </p>
+                </div>
+              )}
+              {(alert.guest_contact || alert.contact_number) && (
+                <div>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      color: "#64748b",
+                      fontWeight: 600,
+                      margin: "0 0 2px",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                    }}
+                  >
+                    Contact Number
+                  </p>
+                  <a
+                    href={`tel:${alert.guest_contact || alert.contact_number}`}
+                    style={{
+                      fontSize: 13,
+                      color: "#dc2626",
+                      margin: 0,
+                      fontWeight: 700,
+                      textDecoration: "none",
+                    }}
+                  >
+                    {alert.guest_contact || alert.contact_number}
+                  </a>
+                </div>
+              )}
+            </div>
+          )}
+          {alert.pet_photo_url && (
+            <div
+              style={{
+                marginTop: 12,
+                paddingTop: 12,
+                borderTop: "1px solid var(--border)",
+              }}
+            >
+              <p
+                style={{
+                  fontSize: 11,
+                  color: "#64748b",
+                  fontWeight: 600,
+                  margin: "0 0 6px",
+                  textTransform: "uppercase",
+                  letterSpacing: 0.5,
+                }}
+              >
+                Pet Photo
+              </p>
+              <a href={alert.pet_photo_url} target="_blank" rel="noreferrer">
+                <img
+                  src={alert.pet_photo_url}
+                  alt="Pet"
+                  style={{
+                    width: 72,
+                    height: 72,
+                    borderRadius: 8,
+                    objectFit: "cover",
+                    border: "1px solid var(--border)",
+                  }}
+                />
+              </a>
+            </div>
+          )}
         </div>
         {isAdmin && status !== "resolved" && (
           <div style={{ display: "flex", gap: 10, marginBottom: 12 }}>

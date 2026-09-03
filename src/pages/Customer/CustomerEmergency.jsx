@@ -269,6 +269,78 @@ Object.entries(CITIES_BY_PROVINCE).forEach(([prov, cities]) => {
 });
 const ALL_CITIES = Object.keys(CITY_TO_PROVINCE).sort();
 
+// ── Sanitizers ──────────────────────────────────────────────────────────────
+const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, "");
+const sanitizeContact = (v) => v.replace(/\D/g, "").slice(0, 11);
+
+// ── Client-side rate limit: caps emergency submissions per device/session ──
+const RATE_LIMIT_KEY = "emg_submit_log_customer";
+const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
+const RATE_LIMIT_MAX = 3;
+
+const checkAndRecordRateLimit = () => {
+  const now = Date.now();
+  let log = [];
+  try {
+    log = JSON.parse(localStorage.getItem(RATE_LIMIT_KEY) || "[]");
+  } catch {
+    log = [];
+  }
+  log = log.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+  if (log.length >= RATE_LIMIT_MAX) {
+    const minutesLeft = Math.max(
+      1,
+      Math.ceil((RATE_LIMIT_WINDOW_MS - (now - log[0])) / 60000),
+    );
+    return { allowed: false, minutesLeft };
+  }
+  log.push(now);
+  localStorage.setItem(RATE_LIMIT_KEY, JSON.stringify(log));
+  return { allowed: true };
+};
+
+// ── Reverse-geocode a browser Geolocation position into an approximate
+// address, then map it onto our own option lists so dropdowns populate. ──
+const reverseGeocode = async (lat, lon) => {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=16&addressdetails=1`,
+    { headers: { Accept: "application/json" } },
+  );
+  if (!res.ok) throw new Error("Reverse geocoding failed");
+  const data = await res.json();
+  const addr = data.address || {};
+  const rawCity =
+    addr.city || addr.municipality || addr.town || addr.county || "";
+  const rawProvince = addr.state || addr.province || "";
+  const rawBarangay =
+    addr.suburb || addr.village || addr.neighbourhood || addr.quarter || "";
+  const rawStreet = [addr.road, addr.house_number].filter(Boolean).join(" ");
+
+  const matchCity =
+    ALL_CITIES.find((c) => c.toLowerCase() === rawCity.toLowerCase()) ||
+    ALL_CITIES.find((c) => c.toLowerCase().includes(rawCity.toLowerCase())) ||
+    "";
+  const matchProvince = matchCity
+    ? CITY_TO_PROVINCE[matchCity]
+    : PROVINCES.find((p) => p.toLowerCase() === rawProvince.toLowerCase()) ||
+      "";
+  const cityBarangays = matchCity ? BARANGAYS_BY_CITY[matchCity] || [] : [];
+  const matchBarangay =
+    cityBarangays.find((b) => b.toLowerCase() === rawBarangay.toLowerCase()) ||
+    cityBarangays.find((b) =>
+      b.toLowerCase().includes(rawBarangay.toLowerCase()),
+    ) ||
+    "";
+
+  return {
+    province: matchProvince,
+    city: matchCity,
+    barangay: matchBarangay,
+    street: rawStreet,
+    matched: !!matchCity,
+  };
+};
+
 // ── Barangay lists for the cities your branches actually serve ──
 const BARANGAYS_BY_CITY = {
   "Angeles City": [
@@ -1012,495 +1084,822 @@ const CustomSelect = ({
 };
 
 // ── Report Form ───────────────────────────────────────────────────────────────
-const ReportForm = memo(({ sending, onSend, defaultBranch }) => {
-  const [form, setForm] = useState({
-    type: "",
-    customType: "",
-    province: "",
-    city: "",
-    barangay: "",
-    street: "",
-    branch: defaultBranch || "",
-  });
-  const [descErr, setDescErr] = useState("");
-  const [typeErr, setTypeErr] = useState("");
-  const [branchErr, setBranchErr] = useState("");
+const ReportForm = memo(
+  ({ sending, onSend, defaultBranch, branchAvailability }) => {
+    const [form, setForm] = useState({
+      type: "",
+      customType: "",
+      contact_number: "",
+      patient_name: "",
+      pet_photo_url: "",
+      province: "",
+      city: "",
+      barangay: "",
+      street: "",
+      branch: defaultBranch || "",
+    });
+    const [descErr, setDescErr] = useState("");
+    const [typeErr, setTypeErr] = useState("");
+    const [branchErr, setBranchErr] = useState("");
+    const [contactErr, setContactErr] = useState("");
+    const [rateLimitErr, setRateLimitErr] = useState("");
+    const [locating, setLocating] = useState(false);
+    const [locateStatus, setLocateStatus] = useState(null);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const photoInputRef = React.useRef(null);
 
-  const handleSend = useCallback(async () => {
-    let hasErr = false;
+    const detectLocation = () => {
+      if (!("geolocation" in navigator)) {
+        setLocateStatus({
+          type: "error",
+          message: "Location detection isn't supported on this device.",
+        });
+        return;
+      }
+      setLocating(true);
+      setLocateStatus(null);
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            const { latitude, longitude } = pos.coords;
+            const result = await reverseGeocode(latitude, longitude);
+            setForm((f) => ({
+              ...f,
+              province: result.province || f.province,
+              city: result.city || f.city,
+              barangay: result.barangay || f.barangay,
+              street: result.street || f.street,
+            }));
+            setDescErr("");
+            setLocateStatus(
+              result.matched
+                ? {
+                    type: "ok",
+                    message:
+                      "Location detected and filled in. Please double-check it's correct.",
+                  }
+                : {
+                    type: "partial",
+                    message:
+                      "We found your coordinates but couldn't match them to a listed area — please fill in the address manually.",
+                  },
+            );
+          } catch {
+            setLocateStatus({
+              type: "error",
+              message:
+                "Couldn't determine your address automatically. Please fill it in manually.",
+            });
+          } finally {
+            setLocating(false);
+          }
+        },
+        () => {
+          setLocating(false);
+          setLocateStatus({
+            type: "error",
+            message:
+              "Location permission denied or unavailable. Please fill in the address manually.",
+          });
+        },
+        { enableHighAccuracy: true, timeout: 10000 },
+      );
+    };
 
-    if (!form.type) {
-      setTypeErr("Please select the emergency type.");
-      hasErr = true;
-    } else if (form.type === OTHER_TYPE && !form.customType.trim()) {
-      setTypeErr("Please describe the emergency.");
-      hasErr = true;
-    } else {
-      setTypeErr("");
-    }
+    const uploadPetPhoto = async (file) => {
+      if (!file) return;
+      if (file.size > 5 * 1024 * 1024) {
+        setContactErr("Please choose an image under 5MB.");
+        return;
+      }
+      setUploadingPhoto(true);
+      try {
+        const ext = file.name.split(".").pop();
+        const path = `emergency/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("attachments")
+          .upload(path, file);
+        if (upErr) throw upErr;
+        const { data: pub } = supabase.storage
+          .from("attachments")
+          .getPublicUrl(path);
+        setForm((p) => ({ ...p, pet_photo_url: pub?.publicUrl || "" }));
+      } catch (err) {
+        setContactErr("Upload failed: " + err.message);
+      } finally {
+        setUploadingPhoto(false);
+      }
+    };
 
-    if (!form.province) {
-      setDescErr("Please select a province.");
-      hasErr = true;
-    } else if (!form.city) {
-      setDescErr("Please select a city.");
-      hasErr = true;
-    } else if (!form.street.trim()) {
-      setDescErr("Please enter the street/barangay.");
-      hasErr = true;
-    } else {
-      setDescErr("");
-    }
+    const handleSend = useCallback(async () => {
+      let hasErr = false;
 
-    if (!form.branch) {
-      setBranchErr("Please select the nearest branch.");
-      hasErr = true;
-    } else if (
+      if (!form.type) {
+        setTypeErr("Please select the emergency type.");
+        hasErr = true;
+      } else if (form.type === OTHER_TYPE && !form.customType.trim()) {
+        setTypeErr("Please describe the emergency.");
+        hasErr = true;
+      } else {
+        setTypeErr("");
+      }
+
+      if (!form.province) {
+        setDescErr("Please select a province.");
+        hasErr = true;
+      } else if (!form.city) {
+        setDescErr("Please select a city.");
+        hasErr = true;
+      } else if (!form.street.trim()) {
+        setDescErr("Please enter the street/barangay.");
+        hasErr = true;
+      } else {
+        setDescErr("");
+      }
+
+      if (!form.contact_number.trim()) {
+        setContactErr("Please enter your contact number.");
+        hasErr = true;
+      } else if (form.contact_number.length !== 11) {
+        setContactErr("Contact number must be 11 digits.");
+        hasErr = true;
+      } else {
+        setContactErr("");
+      }
+
+      if (!form.branch) {
+        setBranchErr("Please select the nearest branch.");
+        hasErr = true;
+      } else if (
+        form.province &&
+        form.city &&
+        isLocationTooFar(form.branch, form.province, form.city)
+      ) {
+        const d = Math.round(
+          distanceToBranchKm(form.branch, form.province, form.city),
+        );
+        setBranchErr(
+          `${form.city} is about ${d}km from ${form.branch}, which is too far for this branch to respond. Please pick a closer branch.`,
+        );
+        hasErr = true;
+      } else {
+        setBranchErr("");
+      }
+
+      if (hasErr) return;
+
+      const rl = checkAndRecordRateLimit();
+      if (!rl.allowed) {
+        setRateLimitErr(
+          `Too many reports submitted from this device. Please wait about ${rl.minutesLeft} minute${rl.minutesLeft === 1 ? "" : "s"}, or call the branch directly for an urgent emergency.`,
+        );
+        return;
+      }
+      setRateLimitErr("");
+
+      const finalLocation = [
+        form.street.trim(),
+        form.barangay,
+        form.city,
+        form.province,
+      ]
+        .filter(Boolean)
+        .join(", ");
+      const finalType =
+        form.type === OTHER_TYPE ? form.customType.trim() : form.type;
+      const result = await onSend({
+        ...form,
+        type: finalType,
+        description: finalLocation,
+      });
+      if (result?.success) {
+        setForm({
+          type: "",
+          customType: "",
+          contact_number: "",
+          patient_name: "",
+          pet_photo_url: "",
+          province: "",
+          city: "",
+          barangay: "",
+          street: "",
+          branch: defaultBranch || "",
+        });
+        setLocateStatus(null);
+      }
+    }, [form, onSend, defaultBranch]);
+
+    const canSend = !!(
+      form.type &&
+      (form.type !== OTHER_TYPE || form.customType.trim()) &&
       form.province &&
       form.city &&
-      isLocationTooFar(form.branch, form.province, form.city)
-    ) {
-      const d = Math.round(
-        distanceToBranchKm(form.branch, form.province, form.city),
-      );
-      setBranchErr(
-        `${form.city} is about ${d}km from ${form.branch}, which is too far for this branch to respond. Please pick a closer branch.`,
-      );
-      hasErr = true;
-    } else {
-      setBranchErr("");
-    }
+      form.street.trim() &&
+      form.branch &&
+      !isLocationTooFar(form.branch, form.province, form.city)
+    );
 
-    if (hasErr) return;
-
-    const finalLocation = [
-      form.street.trim(),
-      form.barangay,
-      form.city,
-      form.province,
-    ]
-      .filter(Boolean)
-      .join(", ");
-    const finalType =
-      form.type === OTHER_TYPE ? form.customType.trim() : form.type;
-    const result = await onSend({
-      ...form,
-      type: finalType,
-      description: finalLocation,
-    });
-    if (result?.success) {
-      setForm({
-        type: "",
-        customType: "",
-        province: "",
-        city: "",
-        barangay: "",
-        street: "",
-        branch: defaultBranch || "",
-      });
-    }
-  }, [form, onSend, defaultBranch]);
-
-  const canSend = !!(
-    form.type &&
-    (form.type !== OTHER_TYPE || form.customType.trim()) &&
-    form.province &&
-    form.city &&
-    form.street.trim() &&
-    form.branch &&
-    !isLocationTooFar(form.branch, form.province, form.city)
-  );
-
-  return (
-    <div
-      style={{
-        background: "var(--card)",
-        borderRadius: "var(--radius-lg)",
-        border: "1px solid var(--border)",
-        padding: 24,
-        boxShadow: "var(--shadow)",
-      }}
-    >
+    return (
       <div
         style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 8,
-          marginBottom: 4,
+          background: "var(--card)",
+          borderRadius: "var(--radius-lg)",
+          border: "1px solid var(--border)",
+          padding: 24,
+          boxShadow: "var(--shadow)",
         }}
       >
-        <img
-          src="/icon/warning.png"
-          alt=""
+        <div
           style={{
-            width: 16,
-            height: 16,
-            filter:
-              "brightness(0) saturate(100%) invert(20%) sepia(80%) saturate(2000%) hue-rotate(350deg)",
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            marginBottom: 4,
           }}
-        />
-        <h3
-          style={{ fontSize: 15, fontWeight: 700, color: "#dc2626", margin: 0 }}
         >
-          Report an Emergency
-        </h3>
-      </div>
-      <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 16px" }}>
-        Tell us about your pet's emergency. We'll respond as fast as possible.
-      </p>
-      <hr
-        style={{
-          border: "none",
-          borderTop: "1px solid var(--border)",
-          marginBottom: 20,
-        }}
-      />
-
-      <div className="form-group" style={{ marginBottom: 14 }}>
-        <label>Emergency Type</label>
-        <CustomSelect
-          value={form.type}
-          onChange={(val) => {
-            setForm((p) => ({ ...p, type: val }));
-            setTypeErr("");
+          <img
+            src="/icon/warning.png"
+            alt=""
+            style={{
+              width: 16,
+              height: 16,
+              filter:
+                "brightness(0) saturate(100%) invert(20%) sepia(80%) saturate(2000%) hue-rotate(350deg)",
+            }}
+          />
+          <h3
+            style={{
+              fontSize: 15,
+              fontWeight: 700,
+              color: "#dc2626",
+              margin: 0,
+            }}
+          >
+            Report an Emergency
+          </h3>
+        </div>
+        <p style={{ fontSize: 12, color: "var(--muted)", margin: "0 0 16px" }}>
+          Tell us about your pet's emergency. We'll respond as fast as possible.
+        </p>
+        <hr
+          style={{
+            border: "none",
+            borderTop: "1px solid var(--border)",
+            marginBottom: 20,
           }}
-          options={EMERGENCY_TYPES.map((t) =>
-            t === OTHER_TYPE
-              ? { value: t, label: "Other (describe emergency)" }
-              : t,
-          )}
-          placeholder="— Select Emergency Type —"
-          accent="#dc2626"
         />
-        {form.type === OTHER_TYPE && (
-          <textarea
-            value={form.customType}
-            onChange={(e) => {
-              setForm((p) => ({ ...p, customType: e.target.value }));
+
+        <div className="form-group" style={{ marginBottom: 14 }}>
+          <label>Emergency Type</label>
+          <CustomSelect
+            value={form.type}
+            onChange={(val) => {
+              setForm((p) => ({ ...p, type: val }));
               setTypeErr("");
             }}
-            placeholder="Briefly describe the emergency"
+            options={EMERGENCY_TYPES.map((t) =>
+              t === OTHER_TYPE
+                ? { value: t, label: "Other (describe emergency)" }
+                : t,
+            )}
+            placeholder="— Select Emergency Type —"
+            accent="#dc2626"
+          />
+          {form.type === OTHER_TYPE && (
+            <textarea
+              value={form.customType}
+              onChange={(e) => {
+                setForm((p) => ({ ...p, customType: e.target.value }));
+                setTypeErr("");
+              }}
+              placeholder="Briefly describe the emergency"
+              style={{
+                marginTop: 8,
+                minHeight: 60,
+                resize: "vertical",
+                border: `1.5px solid ${typeErr ? "#f87171" : "var(--border)"}`,
+                width: "100%",
+                boxSizing: "border-box",
+                borderRadius: 8,
+                fontSize: 13,
+                fontFamily: "inherit",
+                padding: "8px 12px",
+                background: "var(--card)",
+                color: "var(--text)",
+                outline: "none",
+              }}
+            />
+          )}
+          {typeErr && (
+            <p style={{ fontSize: 11, color: "#dc2626", marginTop: 3 }}>
+              {typeErr}
+            </p>
+          )}
+        </div>
+
+        <div className="form-group" style={{ marginBottom: 14 }}>
+          <label>
+            Your Contact Number <span style={{ color: "#dc2626" }}>*</span>
+          </label>
+          <input
+            type="tel"
+            inputMode="numeric"
+            maxLength={11}
+            value={form.contact_number}
+            onChange={(e) => {
+              setForm((p) => ({
+                ...p,
+                contact_number: sanitizeContact(e.target.value),
+              }));
+              setContactErr("");
+            }}
+            placeholder="e.g. 09170000000"
             style={{
-              marginTop: 8,
-              minHeight: 60,
-              resize: "vertical",
-              border: `1.5px solid ${typeErr ? "#f87171" : "var(--border)"}`,
               width: "100%",
+              padding: "8px 12px",
               boxSizing: "border-box",
+              border: `1.5px solid ${contactErr ? "#f87171" : "var(--border)"}`,
               borderRadius: 8,
               fontSize: 13,
               fontFamily: "inherit",
-              padding: "8px 12px",
               background: "var(--card)",
               color: "var(--text)",
               outline: "none",
             }}
           />
-        )}
-        {typeErr && (
-          <p style={{ fontSize: 11, color: "#dc2626", marginTop: 3 }}>
-            {typeErr}
-          </p>
-        )}
-      </div>
+          {contactErr && (
+            <p style={{ fontSize: 11, color: "#dc2626", marginTop: 3 }}>
+              {contactErr}
+            </p>
+          )}
+        </div>
 
-      <div className="form-group" style={{ marginBottom: 14 }}>
-        <label>
-          Location of Emergency <span style={{ color: "#dc2626" }}>*</span>
-        </label>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 8,
-            marginBottom: 8,
-          }}
-        >
-          <div>
-            <label
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: "var(--muted)",
-                marginBottom: 4,
-                display: "block",
-              }}
-            >
-              Province
-            </label>
-            <CustomSelect
-              value={form.province}
-              onChange={(val) => {
-                setForm((p) => ({
-                  ...p,
-                  province: val,
-                  city: CITY_TO_PROVINCE[p.city] === val ? p.city : "",
-                  barangay: CITY_TO_PROVINCE[p.city] === val ? p.barangay : "",
-                }));
-                setDescErr("");
-              }}
-              options={PROVINCES.map((p) => ({ value: p, label: p }))}
-              placeholder="— Province —"
-              accent="#dc2626"
-              disabled={!form.type}
-            />
-          </div>
-          <div>
-            <label
-              style={{
-                fontSize: 11,
-                fontWeight: 600,
-                color: "var(--muted)",
-                marginBottom: 4,
-                display: "block",
-              }}
-            >
-              City
-            </label>
-            <CustomSelect
-              value={form.city}
-              onChange={(val) => {
-                setForm((p) => ({
-                  ...p,
-                  city: val,
-                  province: CITY_TO_PROVINCE[val] || "",
-                  barangay: BARANGAYS_BY_CITY[val]?.includes(p.barangay)
-                    ? p.barangay
-                    : "",
-                }));
-                setDescErr("");
-              }}
-              options={(form.province
-                ? CITIES_BY_PROVINCE[form.province] || []
-                : ALL_CITIES
-              ).map((c) => ({ value: c, label: c }))}
-              placeholder="— City —"
-              accent="#dc2626"
-              disabled={!form.province}
-            />
-          </div>
-        </div>
-        <div style={{ marginBottom: 8 }}>
-          <label
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--muted)",
-              marginBottom: 4,
-              display: "block",
-            }}
-          >
-            Barangay
-          </label>
-          <CustomSelect
-            value={
-              form.city
-                ? form.barangay
-                : form.barangay
-                  ? `${form.barangay}||${form.city}`
-                  : ""
-            }
-            onChange={(val) => {
-              if (form.city) {
-                setForm((p) => ({ ...p, barangay: val }));
-              } else {
-                const [brgy, city] = val.split("||");
-                setForm((p) => ({
-                  ...p,
-                  barangay: brgy,
-                  city,
-                  province: CITY_TO_PROVINCE[city] || "",
-                }));
-              }
-              setDescErr("");
-            }}
-            options={
-              form.city
-                ? (BARANGAYS_BY_CITY[form.city] || []).map((b) => ({
-                    value: b,
-                    label: b,
-                  }))
-                : BARANGAY_CITY_OPTIONS
-            }
-            placeholder="— Barangay —"
-            accent="#dc2626"
-            disabled={!form.city}
-          />
-        </div>
-        <div>
-          <label
-            style={{
-              fontSize: 11,
-              fontWeight: 600,
-              color: "var(--muted)",
-              marginBottom: 4,
-              display: "block",
-            }}
-          >
-            Street
-          </label>
+        <div className="form-group" style={{ marginBottom: 14 }}>
+          <label>Patient (Pet) Name</label>
           <input
             type="text"
-            value={form.street}
-            onChange={(e) => {
-              setForm((p) => ({ ...p, street: e.target.value }));
-              setDescErr("");
-            }}
-            placeholder="House No. / Street / Subdivision (optional)"
-            disabled={!form.barangay}
+            value={form.patient_name}
+            onChange={(e) =>
+              setForm((p) => ({
+                ...p,
+                patient_name: sanitizeName(e.target.value),
+              }))
+            }
+            placeholder="e.g. Brownie"
             style={{
               width: "100%",
               padding: "8px 12px",
               boxSizing: "border-box",
-              border: `1.5px solid ${descErr ? "#f87171" : "var(--border)"}`,
+              border: "1.5px solid var(--border)",
               borderRadius: 8,
               fontSize: 13,
               fontFamily: "inherit",
-              background: !form.barangay ? "var(--bg, #f8fafc)" : "var(--card)",
+              background: "var(--card)",
               color: "var(--text)",
               outline: "none",
             }}
           />
+          <label style={{ marginTop: 8, display: "block" }}>
+            Photo of Pet{" "}
+            <span style={{ fontWeight: 400, fontSize: 11 }}>
+              (optional — helps the vet prepare)
+            </span>
+          </label>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) uploadPetPhoto(f);
+              e.target.value = "";
+            }}
+          />
+          {form.pet_photo_url ? (
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                border: "1.5px solid var(--border)",
+                borderRadius: 8,
+                padding: 8,
+                marginTop: 4,
+              }}
+            >
+              <img
+                src={form.pet_photo_url}
+                alt="Pet"
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 8,
+                  objectFit: "cover",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setForm((p) => ({ ...p, pet_photo_url: "" }))}
+                style={{
+                  fontSize: 11,
+                  fontWeight: 700,
+                  color: "#64748b",
+                  background: "none",
+                  border: "1px solid #e2e8f0",
+                  borderRadius: 20,
+                  padding: "5px 10px",
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                Remove
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={uploadingPhoto}
+              style={{
+                width: "100%",
+                marginTop: 4,
+                padding: "9px 12px",
+                border: "1.5px dashed #fecaca",
+                borderRadius: 8,
+                background: "#fff7f7",
+                color: "#dc2626",
+                fontSize: 12,
+                fontWeight: 700,
+                cursor: uploadingPhoto ? "default" : "pointer",
+                fontFamily: "inherit",
+              }}
+            >
+              {uploadingPhoto ? "Uploading..." : "Take or Upload Photo"}
+            </button>
+          )}
         </div>
-        {descErr && (
-          <p style={{ fontSize: 11, color: "#dc2626", marginTop: 3 }}>
-            {descErr}
-          </p>
-        )}
-      </div>
 
-      <div className="form-group" style={{ marginBottom: 20 }}>
-        <label>
-          Nearest Branch <span style={{ color: "#dc2626" }}>*</span>
-        </label>
-        <CustomSelect
-          value={form.branch}
-          onChange={(val) => {
-            setForm((p) => ({ ...p, branch: val }));
-            setBranchErr("");
-          }}
-          options={BRANCHES.map((b) => ({ value: b, label: b }))}
-          placeholder="— Select Branch —"
-          accent="#dc2626"
-          disabled={!form.barangay}
-        />
-        {branchErr && (
-          <p style={{ fontSize: 11, color: "#dc2626", marginTop: 3 }}>
-            {branchErr}
-          </p>
-        )}
-      </div>
-
-      <button
-        onClick={handleSend}
-        disabled={sending || !canSend}
-        style={{
-          width: "100%",
-          padding: "12px",
-          background: sending || !canSend ? "#94a3b8" : "#dc2626",
-          color: "#fff",
-          border: "none",
-          borderRadius: 8,
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: sending || !canSend ? "not-allowed" : "pointer",
-          fontFamily: "inherit",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 8,
-        }}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#fff"
-          strokeWidth="2"
-          strokeLinecap="round"
-          style={{ width: 16, height: 16 }}
-        >
-          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-          <path d="M12 9v4" />
-          <path d="M12 17h.01" />
-        </svg>
-        {sending ? "Sending..." : "Send Emergency Alert to Staff"}
-      </button>
-
-      {form.branch &&
-        form.province &&
-        form.city &&
-        isLocationTooFar(form.branch, form.province, form.city) && (
+        <div className="form-group" style={{ marginBottom: 14 }}>
+          <label>
+            Location of Emergency <span style={{ color: "#dc2626" }}>*</span>
+          </label>
           <div
             style={{
-              marginTop: 10,
-              padding: "8px 14px",
-              background: "#fee2e2",
-              border: "1px solid #fecaca",
-              borderRadius: 8,
-              fontSize: 12,
-              color: "#991b1b",
               display: "flex",
-              alignItems: "flex-start",
-              gap: 6,
+              alignItems: "center",
+              justifyContent: "flex-end",
+              marginBottom: 8,
             }}
           >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#991b1b"
-              strokeWidth="2"
-              strokeLinecap="round"
-              style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1 }}
+            <button
+              type="button"
+              onClick={detectLocation}
+              disabled={locating}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 5,
+                background: "none",
+                border: "1px solid #fecaca",
+                color: "#dc2626",
+                borderRadius: 20,
+                padding: "3px 10px",
+                fontSize: 11,
+                fontWeight: 700,
+                cursor: locating ? "default" : "pointer",
+                fontFamily: "inherit",
+              }}
             >
-              <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-              <path d="M12 9v4" />
-              <path d="M12 17h.01" />
-            </svg>
-            <span>
-              Cannot send: {form.city} is about{" "}
-              {Math.round(
-                distanceToBranchKm(form.branch, form.province, form.city),
-              )}
-              km from {form.branch}, which is too far for this branch to
-              respond. Please pick a closer branch.
-            </span>
+              {locating ? "Locating..." : "📍 Use my location"}
+            </button>
           </div>
-        )}
+          {locateStatus && (
+            <p
+              style={{
+                fontSize: 11,
+                margin: "0 0 8px",
+                color:
+                  locateStatus.type === "ok"
+                    ? "#16a34a"
+                    : locateStatus.type === "partial"
+                      ? "#d97706"
+                      : "#dc2626",
+              }}
+            >
+              {locateStatus.message}
+            </p>
+          )}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: 8,
+              marginBottom: 8,
+            }}
+          >
+            <div>
+              <label
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "var(--muted)",
+                  marginBottom: 4,
+                  display: "block",
+                }}
+              >
+                Province
+              </label>
+              <CustomSelect
+                value={form.province}
+                onChange={(val) => {
+                  setForm((p) => ({
+                    ...p,
+                    province: val,
+                    city: CITY_TO_PROVINCE[p.city] === val ? p.city : "",
+                    barangay:
+                      CITY_TO_PROVINCE[p.city] === val ? p.barangay : "",
+                  }));
+                  setDescErr("");
+                }}
+                options={PROVINCES.map((p) => ({ value: p, label: p }))}
+                placeholder="— Province —"
+                accent="#dc2626"
+                disabled={!form.type}
+              />
+            </div>
+            <div>
+              <label
+                style={{
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "var(--muted)",
+                  marginBottom: 4,
+                  display: "block",
+                }}
+              >
+                City
+              </label>
+              <CustomSelect
+                value={form.city}
+                onChange={(val) => {
+                  setForm((p) => ({
+                    ...p,
+                    city: val,
+                    province: CITY_TO_PROVINCE[val] || "",
+                    barangay: BARANGAYS_BY_CITY[val]?.includes(p.barangay)
+                      ? p.barangay
+                      : "",
+                  }));
+                  setDescErr("");
+                }}
+                options={(form.province
+                  ? CITIES_BY_PROVINCE[form.province] || []
+                  : ALL_CITIES
+                ).map((c) => ({ value: c, label: c }))}
+                placeholder="— City —"
+                accent="#dc2626"
+                disabled={!form.province}
+              />
+            </div>
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <label
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: "var(--muted)",
+                marginBottom: 4,
+                display: "block",
+              }}
+            >
+              Barangay
+            </label>
+            <CustomSelect
+              value={
+                form.city
+                  ? form.barangay
+                  : form.barangay
+                    ? `${form.barangay}||${form.city}`
+                    : ""
+              }
+              onChange={(val) => {
+                if (form.city) {
+                  setForm((p) => ({ ...p, barangay: val }));
+                } else {
+                  const [brgy, city] = val.split("||");
+                  setForm((p) => ({
+                    ...p,
+                    barangay: brgy,
+                    city,
+                    province: CITY_TO_PROVINCE[city] || "",
+                  }));
+                }
+                setDescErr("");
+              }}
+              options={
+                form.city
+                  ? (BARANGAYS_BY_CITY[form.city] || []).map((b) => ({
+                      value: b,
+                      label: b,
+                    }))
+                  : BARANGAY_CITY_OPTIONS
+              }
+              placeholder="— Barangay —"
+              accent="#dc2626"
+              disabled={!form.city}
+            />
+          </div>
+          <div>
+            <label
+              style={{
+                fontSize: 11,
+                fontWeight: 600,
+                color: "var(--muted)",
+                marginBottom: 4,
+                display: "block",
+              }}
+            >
+              Street
+            </label>
+            <input
+              type="text"
+              value={form.street}
+              onChange={(e) => {
+                setForm((p) => ({ ...p, street: e.target.value }));
+                setDescErr("");
+              }}
+              placeholder="House No. / Street / Subdivision (optional)"
+              disabled={!form.barangay}
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                boxSizing: "border-box",
+                border: `1.5px solid ${descErr ? "#f87171" : "var(--border)"}`,
+                borderRadius: 8,
+                fontSize: 13,
+                fontFamily: "inherit",
+                background: !form.barangay
+                  ? "var(--bg, #f8fafc)"
+                  : "var(--card)",
+                color: "var(--text)",
+                outline: "none",
+              }}
+            />
+          </div>
+          {descErr && (
+            <p style={{ fontSize: 11, color: "#dc2626", marginTop: 3 }}>
+              {descErr}
+            </p>
+          )}
+        </div>
 
-      <div
-        style={{
-          marginTop: 12,
-          padding: "8px 14px",
-          background: "#fef3c7",
-          border: "1px solid #fde68a",
-          borderRadius: 8,
-          fontSize: 12,
-          color: "#92400e",
-          display: "flex",
-          alignItems: "flex-start",
-          gap: 6,
-        }}
-      >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="#92400e"
-          strokeWidth="2"
-          strokeLinecap="round"
-          style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1 }}
+        <div className="form-group" style={{ marginBottom: 20 }}>
+          <label>
+            Nearest Branch <span style={{ color: "#dc2626" }}>*</span>
+          </label>
+          <CustomSelect
+            value={form.branch}
+            onChange={(val) => {
+              setForm((p) => ({ ...p, branch: val }));
+              setBranchErr("");
+            }}
+            options={BRANCHES.map((b) => {
+              const isAvail = branchAvailability?.[b] !== false;
+              return {
+                value: b,
+                label: isAvail ? b : `${b} — Unavailable`,
+                disabled: !isAvail,
+              };
+            })}
+            placeholder="— Select Branch —"
+            accent="#dc2626"
+            disabled={!form.barangay}
+          />
+          {rateLimitErr && (
+            <p style={{ fontSize: 11, color: "#dc2626", marginTop: 6 }}>
+              {rateLimitErr}
+            </p>
+          )}
+          {branchErr && (
+            <p style={{ fontSize: 11, color: "#dc2626", marginTop: 3 }}>
+              {branchErr}
+            </p>
+          )}
+        </div>
+
+        <button
+          onClick={handleSend}
+          disabled={sending || !canSend}
+          style={{
+            width: "100%",
+            padding: "12px",
+            background: sending || !canSend ? "#94a3b8" : "#dc2626",
+            color: "#fff",
+            border: "none",
+            borderRadius: 8,
+            fontSize: 14,
+            fontWeight: 700,
+            cursor: sending || !canSend ? "not-allowed" : "pointer",
+            fontFamily: "inherit",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 8,
+          }}
         >
-          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
-          <path d="M12 9v4" />
-          <path d="M12 17h.01" />
-        </svg>
-        <span>
-          <strong>For life-threatening emergencies:</strong> Please also call us
-          directly to ensure the fastest response possible.
-        </span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2"
+            strokeLinecap="round"
+            style={{ width: 16, height: 16 }}
+          >
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+          </svg>
+          {sending ? "Sending..." : "Send Emergency Alert to Staff"}
+        </button>
+
+        {form.branch &&
+          form.province &&
+          form.city &&
+          isLocationTooFar(form.branch, form.province, form.city) && (
+            <div
+              style={{
+                marginTop: 10,
+                padding: "8px 14px",
+                background: "#fee2e2",
+                border: "1px solid #fecaca",
+                borderRadius: 8,
+                fontSize: 12,
+                color: "#991b1b",
+                display: "flex",
+                alignItems: "flex-start",
+                gap: 6,
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#991b1b"
+                strokeWidth="2"
+                strokeLinecap="round"
+                style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1 }}
+              >
+                <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+                <path d="M12 9v4" />
+                <path d="M12 17h.01" />
+              </svg>
+              <span>
+                Cannot send: {form.city} is about{" "}
+                {Math.round(
+                  distanceToBranchKm(form.branch, form.province, form.city),
+                )}
+                km from {form.branch}, which is too far for this branch to
+                respond. Please pick a closer branch.
+              </span>
+            </div>
+          )}
+
+        <div
+          style={{
+            marginTop: 12,
+            padding: "8px 14px",
+            background: "#fef3c7",
+            border: "1px solid #fde68a",
+            borderRadius: 8,
+            fontSize: 12,
+            color: "#92400e",
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 6,
+          }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#92400e"
+            strokeWidth="2"
+            strokeLinecap="round"
+            style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1 }}
+          >
+            <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+          </svg>
+          <span>
+            <strong>For life-threatening emergencies:</strong> Please also call
+            us directly to ensure the fastest response possible.
+          </span>
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 // ── Branch Status Cards ───────────────────────────────────────────────────────
 const BranchCards = ({ alerts, branchAvailability }) => (
@@ -1732,6 +2131,7 @@ const CustomerEmergency = () => {
   const [sending, setSending] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
   const [branchAvailability, setBranchAvailability] = useState({});
+  const [respondingToast, setRespondingToast] = useState(null);
 
   const userId = user?.id ?? null;
   const customerName = user?.fullName || user?.email || "Customer";
@@ -1821,9 +2221,18 @@ const CustomerEmergency = () => {
           filter: `user_id=eq.${userId}`,
         },
         (payload) => {
-          setAlerts((prev) =>
-            prev.map((a) => (a.id === payload.new.id ? payload.new : a)),
-          );
+          setAlerts((prev) => {
+            const old = prev.find((a) => a.id === payload.new.id);
+            if (
+              old &&
+              old.status !== "responding" &&
+              payload.new.status === "responding"
+            ) {
+              setRespondingToast(payload.new.type || "your alert");
+              setTimeout(() => setRespondingToast(null), 6000);
+            }
+            return prev.map((a) => (a.id === payload.new.id ? payload.new : a));
+          });
         },
       )
       .on(
@@ -1853,6 +2262,9 @@ const CustomerEmergency = () => {
         user_id: userId,
         status: "pending",
         branch_id: user?.branchId ?? null,
+        guest_contact: formData.contact_number?.trim() || null,
+        patient_name: formData.patient_name?.trim() || null,
+        pet_photo_url: formData.pet_photo_url || null,
       };
       const { error } = await supabase
         .from("emergency_alerts")
@@ -2053,6 +2465,38 @@ const CustomerEmergency = () => {
   return (
     <Layout isCustomer={true}>
       {showSuccess && <SuccessModal onClose={() => setShowSuccess(false)} />}
+      {respondingToast && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 24,
+            right: 24,
+            zIndex: 999999,
+            background: "var(--card)",
+            border: "1px solid #86efac",
+            borderRadius: 12,
+            boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
+            padding: "14px 16px",
+            maxWidth: 320,
+          }}
+        >
+          <p
+            style={{
+              margin: 0,
+              fontSize: 13,
+              fontWeight: 700,
+              color: "#16a34a",
+            }}
+          >
+            🚨 Help is on the way!
+          </p>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "var(--muted)" }}>
+            Our team is now responding to your report ({respondingToast}). A
+            staff member will call you shortly — please keep your phone line
+            open.
+          </p>
+        </div>
+      )}
       <div style={S.page}>
         <div style={S.topbar} className="branches-topbar">
           <div
@@ -2173,6 +2617,7 @@ const CustomerEmergency = () => {
                 sending={sending}
                 onSend={sendAlert}
                 defaultBranch=""
+                branchAvailability={branchAvailability}
               />
             </div>
 
