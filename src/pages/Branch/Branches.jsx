@@ -876,6 +876,15 @@ const generatePassword = () => {
   return [...required, ...rest].sort(() => Math.random() - 0.5).join("");
 };
 
+const formatPhMobile = (digits) => {
+  const d = (digits || "").replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 4) return d;
+  if (d.length <= 7) return `${d.slice(0, 4)} ${d.slice(4)}`;
+  return `${d.slice(0, 4)} ${d.slice(4, 7)} ${d.slice(7)}`;
+};
+
+const isValidPhMobile = (digits) => /^09\d{9}$/.test((digits || "").trim());
+
 // ── Module Selector sub-component ──
 const ModuleSelector = ({ modules, onChange }) => {
   const [activeRole, setActiveRole] = useState("admin");
@@ -1424,8 +1433,11 @@ const Branches = () => {
   const [accountForm, setAccountForm] = useState({
     first_name: "",
     last_name: "",
+    sex: "",
+    phone_number: "",
     email: "",
     password: "",
+    role: "Manager",
   });
   const [accountErrors, setAccountErrors] = useState({});
   const [showAccountPassword, setShowAccountPassword] = useState(false);
@@ -1612,8 +1624,11 @@ const Branches = () => {
     setAccountForm({
       first_name: accountDraft?.first_name || "",
       last_name: accountDraft?.last_name || "",
+      sex: accountDraft?.sex || "",
+      phone_number: accountDraft?.phone_number || "",
       email: accountDraft?.email || "",
       password: accountDraft?.password || generatePassword(),
+      role: accountDraft?.role || "Manager",
     });
     setAccountErrors({});
     setShowAccountPassword(false);
@@ -1630,6 +1645,10 @@ const Branches = () => {
       errs.email = "Invalid email";
     if (!accountForm.password.trim() || accountForm.password.length < 8)
       errs.password = "Password must be at least 8 characters";
+    if (!accountForm.role) errs.role = "Please select a role";
+    if (accountForm.phone_number && !isValidPhMobile(accountForm.phone_number))
+      errs.phone_number =
+        "Enter a valid 11-digit mobile number starting with 09";
     return errs;
   };
 
@@ -1642,14 +1661,19 @@ const Branches = () => {
     const draft = {
       first_name: accountForm.first_name.trim(),
       last_name: accountForm.last_name.trim(),
+      sex: accountForm.sex || null,
+      phone_number: accountForm.phone_number || null,
       email: accountForm.email.trim().toLowerCase(),
       password: accountForm.password,
+      role: accountForm.role,
     };
     setAccountDraft(draft);
     setFormDirty(true);
     setForm((prev) => ({
       ...prev,
-      manager: `${draft.first_name} ${draft.last_name}`,
+      ...(draft.role === "Manager"
+        ? { manager: `${draft.first_name} ${draft.last_name}` }
+        : {}),
       email: draft.email,
     }));
     setShowAccountModal(false);
@@ -1716,7 +1740,9 @@ const Branches = () => {
             user_metadata: {
               first_name: accountDraft.first_name,
               last_name: accountDraft.last_name,
-              role: "Manager",
+              role: accountDraft.role,
+              sex: accountDraft.sex,
+              phone_number: accountDraft.phone_number,
               branch_id: inserted.id,
             },
           });
@@ -1729,8 +1755,10 @@ const Branches = () => {
               id: authData.user.id,
               first_name: accountDraft.first_name,
               last_name: accountDraft.last_name,
+              sex: accountDraft.sex,
+              phone: accountDraft.phone_number,
               email: accountDraft.email,
-              role: "Manager",
+              role: accountDraft.role,
               status: "Active",
               branch_id: inserted.id,
             },
@@ -4418,13 +4446,21 @@ const Branches = () => {
             }}
           >
             <div className="modal-header">
-              <h3>Manager Account</h3>
-              <button
-                className="btn btn-ghost btn-icon branches-btn-auto"
-                onClick={() => setShowAccountModal(false)}
-              >
-                ✕
-              </button>
+              <h3>New Account</h3>
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <button
+                  className="btn btn-primary branches-btn-auto"
+                  onClick={saveAccountDraft}
+                >
+                  Create Account
+                </button>
+                <button
+                  className="btn btn-ghost btn-icon branches-btn-auto"
+                  onClick={() => setShowAccountModal(false)}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
             <div className="modal-body">
               <div className="form-grid">
@@ -4481,6 +4517,52 @@ const Branches = () => {
                       }}
                     >
                       {accountErrors.last_name}
+                    </p>
+                  )}
+                </div>
+                <div className="form-group">
+                  <label>Sex</label>
+                  <CustomSelect
+                    value={accountForm.sex}
+                    onChange={(val) =>
+                      setAccountForm((f) => ({ ...f, sex: val }))
+                    }
+                    placeholder="— Select —"
+                    options={["Male", "Female"]}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>
+                    Phone Number{" "}
+                    <span style={{ fontWeight: 400, color: "#94a3b8" }}>
+                      (optional)
+                    </span>
+                  </label>
+                  <input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="0917 000 0000"
+                    value={formatPhMobile(accountForm.phone_number)}
+                    onChange={(e) => {
+                      const digits = e.target.value
+                        .replace(/\D/g, "")
+                        .slice(0, 11);
+                      setAccountForm((f) => ({
+                        ...f,
+                        phone_number: digits,
+                      }));
+                      setAccountErrors((er) => ({ ...er, phone_number: "" }));
+                    }}
+                  />
+                  {accountErrors.phone_number && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "#dc2626",
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      {accountErrors.phone_number}
                     </p>
                   )}
                 </div>
@@ -4602,20 +4684,29 @@ const Branches = () => {
                   )}
                 </div>
                 <div className="form-group form-full">
-                  <label>Role</label>
-                  <div
-                    style={{
-                      padding: "8px 12px",
-                      borderRadius: 9,
-                      border: "1.5px solid var(--border)",
-                      background: "#f8fafc",
-                      color: "#64748b",
-                      fontSize: 13,
-                      fontWeight: 600,
+                  <label>
+                    Role <span style={{ color: "#dc2626" }}>*</span>
+                  </label>
+                  <CustomSelect
+                    value={accountForm.role}
+                    onChange={(val) => {
+                      setAccountForm((f) => ({ ...f, role: val }));
+                      setAccountErrors((er) => ({ ...er, role: "" }));
                     }}
-                  >
-                    Manager
-                  </div>
+                    placeholder="— Select Role —"
+                    options={["Manager", "Employee", "Customer"]}
+                  />
+                  {accountErrors.role && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "#dc2626",
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      {accountErrors.role}
+                    </p>
+                  )}
                 </div>
               </div>
             </div>
