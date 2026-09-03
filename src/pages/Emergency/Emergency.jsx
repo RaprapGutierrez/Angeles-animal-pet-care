@@ -3026,6 +3026,7 @@ const AdminView = ({
     w.close();
   };
 
+  const [adminView, setAdminView] = useState("table"); // "table" | "ward"
   const [historyStatusFilter, setHistoryStatusFilter] = useState("");
   const [historyTypeFilter, setHistoryTypeFilter] = useState("");
   const historyTypeOptions = [...new Set(historyAlerts.map((a) => a.type))]
@@ -3136,6 +3137,57 @@ const AdminView = ({
       <div className="emg-content">
         <div
           style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 18,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#94a3b8",
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+            }}
+          >
+            View:
+          </span>
+          <div
+            style={{
+              display: "flex",
+              border: "1.5px solid #fecaca",
+              borderRadius: 8,
+              overflow: "hidden",
+            }}
+          >
+            {[
+              { key: "table", label: "Table" },
+              { key: "ward", label: "Ward Board" },
+            ].map((v) => (
+              <button
+                key={v.key}
+                onClick={() => setAdminView(v.key)}
+                style={{
+                  padding: "6px 16px",
+                  border: "none",
+                  background: adminView === v.key ? "#dc2626" : "#fff5f5",
+                  color: adminView === v.key ? "#fff" : "#b91c1c",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div
+          style={{
             borderRadius: 14,
             marginBottom: 24,
             overflow: "hidden",
@@ -3154,733 +3206,865 @@ const AdminView = ({
           />
         </div>
 
-        {/* ── Stats ── */}
-        <div
-          className="emg-stats-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))",
-            gap: 10,
-            marginBottom: 24,
-          }}
-        >
-          {[
-            {
-              label: "Total Alerts",
-              value: visibleAlerts.length,
-              color: "#6366f1",
-              bg: "#eef2ff",
-              border: "#c7d2fe",
-            },
-            {
-              label: "Pending",
-              value: pending.length,
-              color: "#dc2626",
-              bg: "#fef2f2",
-              border: "#fecaca",
-            },
-            {
-              label: "Responding",
-              value: responding.length,
-              color: "#1d4ed8",
-              bg: "#dbeafe",
-              border: "#93c5fd",
-            },
-            {
-              label: "Resolved",
-              value: resolved.length,
-              color: "#16a34a",
-              bg: "#f0fdf4",
-              border: "#86efac",
-            },
-          ].map((s, i) => (
-            <div
-              key={s.label}
-              className="fade-in"
-              style={{
-                background: s.bg,
-                border: `1px solid ${s.border}`,
-                borderRadius: 12,
-                padding: "18px 20px",
-                position: "relative",
-                overflow: "hidden",
-                animationDelay: `${i * 0.1}s`,
-              }}
-            >
-              <div
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: 3,
-                  height: "100%",
-                  background: s.color,
-                  borderRadius: "12px 0 0 12px",
-                }}
-              />
-              <div
-                style={{
-                  fontSize: 30,
-                  fontWeight: 800,
-                  color: s.color,
-                  lineHeight: 1,
-                  marginBottom: 4,
-                }}
-              >
-                {s.value}
-              </div>
-              <div
-                style={{
-                  fontSize: 11,
-                  color: s.color,
-                  fontWeight: 700,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.4px",
-                  opacity: 0.8,
-                  wordBreak: "keep-all",
-                  overflowWrap: "normal",
-                }}
-              >
-                {s.label}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* ── Summary Report Card ── */}
-        <div
-          className="emg-panel"
-          style={{
-            background: "var(--card)",
-            borderRadius: "var(--radius-lg)",
-            border: "1px solid var(--border)",
-            padding: 24,
-            boxShadow: "var(--shadow)",
-            marginBottom: 24,
-          }}
-        >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              marginBottom: 16,
-              flexWrap: "wrap",
-              gap: 10,
-            }}
-          >
-            <h3
-              style={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: "var(--text)",
-                margin: 0,
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-              </svg>
-              Summary Report
-            </h3>
-            <button
-              onClick={printSummaryReport}
-              style={{
-                fontSize: 12,
-                fontWeight: 700,
-                padding: "7px 14px",
-                borderRadius: 8,
-                border: "1.5px solid var(--border)",
-                background: "var(--card)",
-                cursor: "pointer",
-                fontFamily: "inherit",
-                color: "var(--text)",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              <svg
-                width="13"
-                height="13"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              >
-                <polyline points="6 9 6 2 18 2 18 9" />
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
-                <rect x="6" y="14" width="12" height="8" />
-              </svg>
-              Print
-            </button>
-          </div>
-          <hr
-            style={{
-              border: "none",
-              borderTop: "1px solid var(--border)",
-              marginBottom: 16,
-            }}
-          />
+        {adminView === "ward" ? (
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-              gap: 20,
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 16,
             }}
           >
-            <div>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "var(--muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  margin: "0 0 10px",
-                }}
-              >
-                Top Emergency Types
-              </p>
-              {(() => {
-                const counts = {};
-                visibleAlerts.forEach((a) => {
-                  counts[a.type] = (counts[a.type] || 0) + 1;
-                });
-                const top = Object.entries(counts)
-                  .sort((a, b) => b[1] - a[1])
-                  .slice(0, 5);
-                if (top.length === 0)
-                  return (
-                    <p style={{ fontSize: 12, color: "var(--muted)" }}>
-                      No data yet
-                    </p>
-                  );
-                const max = top[0][1];
-                return top.map(([type, count]) => (
-                  <div key={type} style={{ marginBottom: 8 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: 12,
-                        color: "var(--text)",
-                        marginBottom: 3,
-                      }}
-                    >
-                      <span
-                        style={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          maxWidth: 160,
-                        }}
-                      >
-                        {type}
-                      </span>
-                      <strong>{count}</strong>
-                    </div>
-                    <div
-                      style={{
-                        background: "#fee2e2",
-                        borderRadius: 99,
-                        height: 6,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          background: "#dc2626",
-                          borderRadius: 99,
-                          width: `${(count / max) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-            <div>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "var(--muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  margin: "0 0 10px",
-                }}
-              >
-                Alerts by Branch
-              </p>
-              {(() => {
-                const counts = {};
-                alerts.forEach((a) => {
-                  const b = normalizeBranchName(a.branch) || "Unknown";
-                  counts[b] = (counts[b] || 0) + 1;
-                });
-                const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-                if (rows.length === 0)
-                  return (
-                    <p style={{ fontSize: 12, color: "var(--muted)" }}>
-                      No data yet
-                    </p>
-                  );
-                const max = rows[0][1];
-                return rows.map(([branch, count]) => (
-                  <div key={branch} style={{ marginBottom: 8 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        fontSize: 12,
-                        color: "var(--text)",
-                        marginBottom: 3,
-                      }}
-                    >
-                      <span>{branch}</span>
-                      <strong>{count}</strong>
-                    </div>
-                    <div
-                      style={{
-                        background: "#e0e7ff",
-                        borderRadius: 99,
-                        height: 6,
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          height: "100%",
-                          background: "#6366f1",
-                          borderRadius: 99,
-                          width: `${(count / max) * 100}%`,
-                        }}
-                      />
-                    </div>
-                  </div>
-                ));
-              })()}
-            </div>
-            <div>
-              <p
-                style={{
-                  fontSize: 11,
-                  fontWeight: 700,
-                  color: "var(--muted)",
-                  textTransform: "uppercase",
-                  letterSpacing: 0.5,
-                  margin: "0 0 10px",
-                }}
-              >
-                Resolution Status
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {[
-                  {
-                    label: "Pending",
-                    value: visibleAlerts.filter(
-                      (a) => (a.status || "pending") === "pending",
-                    ).length,
-                    color: "#dc2626",
-                  },
-                  {
-                    label: "Responding",
-                    value: responding.length,
-                    color: "#1d4ed8",
-                  },
-                  {
-                    label: "Resolved",
-                    value: resolved.length,
-                    color: "#16a34a",
-                  },
-                ].map((row) => (
+            {[
+              {
+                key: "pending",
+                label: "Pending",
+                color: "#dc2626",
+                bg: "#fef2f2",
+                border: "#fecaca",
+                match: (a) => (a.status || "pending") === "pending",
+              },
+              {
+                key: "responding",
+                label: "Responding",
+                color: "#1d4ed8",
+                bg: "#dbeafe",
+                border: "#93c5fd",
+                match: (a) => a.status === "responding",
+              },
+              {
+                key: "resolved",
+                label: "Resolved",
+                color: "#16a34a",
+                bg: "#f0fdf4",
+                border: "#86efac",
+                match: (a) => a.status === "resolved",
+              },
+            ].map((col) => {
+              const colAlerts = visibleAlerts.filter(col.match);
+              return (
+                <div
+                  key={col.key}
+                  style={{
+                    background: "var(--card)",
+                    border: `1.5px solid ${col.border}`,
+                    borderRadius: 14,
+                    overflow: "hidden",
+                  }}
+                >
                   <div
-                    key={row.label}
                     style={{
+                      background: col.bg,
+                      padding: "12px 16px",
+                      borderBottom: `1.5px solid ${col.border}`,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      fontSize: 12,
                     }}
                   >
                     <span
                       style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        color: "var(--text)",
+                        fontSize: 13,
+                        fontWeight: 800,
+                        color: col.color,
                       }}
                     >
-                      <span
-                        style={{
-                          width: 7,
-                          height: 7,
-                          borderRadius: "50%",
-                          background: row.color,
-                          display: "inline-block",
-                        }}
-                      />
-                      {row.label}
+                      {col.label}
                     </span>
-                    <strong style={{ color: row.color }}>{row.value}</strong>
+                    <span
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: col.color,
+                        background: "rgba(255,255,255,0.6)",
+                        borderRadius: 20,
+                        padding: "2px 9px",
+                      }}
+                    >
+                      {colAlerts.length}
+                    </span>
                   </div>
-                ))}
-              </div>
-            </div>
+                  <div
+                    style={{
+                      maxHeight: 520,
+                      overflowY: "auto",
+                      padding: colAlerts.length ? 12 : 0,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                    }}
+                  >
+                    {colAlerts.length === 0 ? (
+                      <p
+                        style={{
+                          padding: 16,
+                          fontSize: 12,
+                          color: "var(--muted)",
+                          textAlign: "center",
+                          margin: 0,
+                        }}
+                      >
+                        None
+                      </p>
+                    ) : (
+                      colAlerts.map((a) => (
+                        <AlertCard
+                          key={a.id + a.status}
+                          a={a}
+                          showActions={true}
+                          onUpdateStatus={onUpdateStatus}
+                        />
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-
-        <div
-          className="emg-panels-grid"
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-            gap: 16,
-            marginBottom: 24,
-          }}
-        >
-          {/* ── Pending panel ── */}
-          <div
-            className="emg-panel"
-            style={{
-              background: "var(--card)",
-              borderRadius: "var(--radius-lg)",
-              border: "1px solid var(--border)",
-              padding: 24,
-              boxShadow: "var(--shadow)",
-            }}
-          >
+        ) : (
+          <>
+            {/* ── Stats ── */}
             <div
+              className="emg-stats-grid"
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 16,
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(80px, 1fr))",
+                gap: 10,
+                marginBottom: 24,
               }}
             >
-              <h3
-                style={{
-                  fontSize: 15,
-                  fontWeight: 700,
+              {[
+                {
+                  label: "Total Alerts",
+                  value: visibleAlerts.length,
+                  color: "#6366f1",
+                  bg: "#eef2ff",
+                  border: "#c7d2fe",
+                },
+                {
+                  label: "Pending",
+                  value: pending.length,
                   color: "#dc2626",
-                  margin: 0,
+                  bg: "#fef2f2",
+                  border: "#fecaca",
+                },
+                {
+                  label: "Responding",
+                  value: responding.length,
+                  color: "#1d4ed8",
+                  bg: "#dbeafe",
+                  border: "#93c5fd",
+                },
+                {
+                  label: "Resolved",
+                  value: resolved.length,
+                  color: "#16a34a",
+                  bg: "#f0fdf4",
+                  border: "#86efac",
+                },
+              ].map((s, i) => (
+                <div
+                  key={s.label}
+                  className="fade-in"
+                  style={{
+                    background: s.bg,
+                    border: `1px solid ${s.border}`,
+                    borderRadius: 12,
+                    padding: "18px 20px",
+                    position: "relative",
+                    overflow: "hidden",
+                    animationDelay: `${i * 0.1}s`,
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: 3,
+                      height: "100%",
+                      background: s.color,
+                      borderRadius: "12px 0 0 12px",
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontSize: 30,
+                      fontWeight: 800,
+                      color: s.color,
+                      lineHeight: 1,
+                      marginBottom: 4,
+                    }}
+                  >
+                    {s.value}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: s.color,
+                      fontWeight: 700,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.4px",
+                      opacity: 0.8,
+                      wordBreak: "keep-all",
+                      overflowWrap: "normal",
+                    }}
+                  >
+                    {s.label}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* ── Summary Report Card ── */}
+            <div
+              className="emg-panel"
+              style={{
+                background: "var(--card)",
+                borderRadius: "var(--radius-lg)",
+                border: "1px solid var(--border)",
+                padding: 24,
+                boxShadow: "var(--shadow)",
+                marginBottom: 24,
+              }}
+            >
+              <div
+                style={{
                   display: "flex",
                   alignItems: "center",
-                  gap: 8,
+                  justifyContent: "space-between",
+                  marginBottom: 16,
+                  flexWrap: "wrap",
+                  gap: 10,
                 }}
               >
-                <img
-                  src="/icon/warning.png"
-                  alt=""
+                <h3
                   style={{
-                    width: 16,
-                    height: 16,
-                    filter:
-                      "brightness(0) saturate(100%) invert(20%) sepia(80%) saturate(2000%) hue-rotate(350deg)",
-                    flexShrink: 0,
-                  }}
-                />
-                Pending Alerts
-                {pending.length > 0 && (
-                  <span
-                    style={{
-                      marginLeft: 8,
-                      background: "#dc2626",
-                      color: "#fff",
-                      borderRadius: 20,
-                      fontSize: 11,
-                      padding: "1px 8px",
-                      fontWeight: 800,
-                    }}
-                  >
-                    {pending.length}
-                  </span>
-                )}
-              </h3>
-            </div>
-            <hr
-              style={{
-                border: "none",
-                borderTop: "1px solid var(--border)",
-                marginBottom: 16,
-              }}
-            />
-            {loading ? (
-              <div
-                style={{ display: "flex", flexDirection: "column", gap: 10 }}
-              >
-                {[1, 2, 3].map((i) => (
-                  <div
-                    key={i}
-                    style={{
-                      background: "#fef9c3",
-                      border: "1px solid #fde047",
-                      borderRadius: 10,
-                      padding: "12px 16px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: 8,
-                      }}
-                    >
-                      <Skel w="40%" h={13} />
-                      <Skel w="20%" h={13} />
-                    </div>
-                    <Skel w="90%" h={12} style={{ marginBottom: 6 }} />
-                    <Skel w="60%" h={11} />
-                  </div>
-                ))}
-              </div>
-            ) : pending.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "30px 0" }}>
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: "50%",
-                    background: "#f0fdf4",
-                    border: "1.5px solid #86efac",
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "var(--text)",
+                    margin: 0,
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    margin: "0 auto 10px",
+                    gap: 8,
                   }}
                 >
                   <svg
-                    width="22"
-                    height="22"
+                    width="15"
+                    height="15"
                     viewBox="0 0 24 24"
                     fill="none"
-                    stroke="#16a34a"
-                    strokeWidth="2"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
+                    strokeLinejoin="round"
                   >
-                    <polyline points="20 6 9 17 4 12" />
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
                   </svg>
-                </div>
-                <p
-                  style={{
-                    color: "var(--muted)",
-                    fontSize: 13,
-                    fontWeight: 600,
-                  }}
-                >
-                  All clear — no pending alerts
-                </p>
-              </div>
-            ) : (
-              <div
-                style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                  maxHeight: 420,
-                  overflowY: "auto",
-                }}
-              >
-                {pending.map((a) => (
-                  <AlertCard
-                    key={a.id + a.status}
-                    a={a}
-                    showActions={true}
-                    onUpdateStatus={onUpdateStatus}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* ── History panel ── */}
-          <div
-            className="emg-panel"
-            style={{
-              background: "var(--card)",
-              borderRadius: "var(--radius-lg)",
-              border: "1px solid var(--border)",
-              padding: 24,
-              boxShadow: "var(--shadow)",
-            }}
-          >
-            <h3
-              style={{
-                fontSize: 15,
-                fontWeight: 700,
-                color: "var(--royal)",
-                margin: "0 0 12px",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-              }}
-            >
-              <svg
-                width="15"
-                height="15"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10 9 9 9 8 9" />
-              </svg>
-              Alert History ({filteredHistoryAlerts.length}
-              {filteredHistoryAlerts.length !== historyAlerts.length
-                ? ` of ${historyAlerts.length}`
-                : ""}
-              )
-            </h3>
-            <div
-              style={{
-                display: "flex",
-                gap: 8,
-                marginBottom: 12,
-                flexWrap: "wrap",
-                alignItems: "center",
-              }}
-            >
-              <div style={{ width: 160 }}>
-                <CustomSelect
-                  value={historyStatusFilter}
-                  onChange={setHistoryStatusFilter}
-                  placeholder="All Statuses"
-                  accent="#dc2626"
-                  options={[
-                    { value: "responding", label: "Responding" },
-                    { value: "resolved", label: "Resolved" },
-                  ]}
-                />
-              </div>
-              <div style={{ width: 200 }}>
-                <CustomSelect
-                  value={historyTypeFilter}
-                  onChange={setHistoryTypeFilter}
-                  placeholder="All Types"
-                  accent="#dc2626"
-                  options={historyTypeOptions.map((t) => ({
-                    value: t,
-                    label: t,
-                  }))}
-                />
-              </div>
-              {(historyStatusFilter || historyTypeFilter) && (
+                  Summary Report
+                </h3>
                 <button
-                  onClick={() => {
-                    setHistoryStatusFilter("");
-                    setHistoryTypeFilter("");
-                  }}
+                  onClick={printSummaryReport}
                   style={{
-                    fontSize: 11,
+                    fontSize: 12,
                     fontWeight: 700,
-                    color: "var(--royal)",
-                    background: "none",
-                    border: "1px solid var(--royal)",
-                    borderRadius: 20,
-                    padding: "3px 10px",
+                    padding: "7px 14px",
+                    borderRadius: 8,
+                    border: "1.5px solid var(--border)",
+                    background: "var(--card)",
                     cursor: "pointer",
                     fontFamily: "inherit",
-                    flexShrink: 0,
+                    color: "var(--text)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
                   }}
                 >
-                  ✕ Clear filters
+                  <svg
+                    width="13"
+                    height="13"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <polyline points="6 9 6 2 18 2 18 9" />
+                    <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+                    <rect x="6" y="14" width="12" height="8" />
+                  </svg>
+                  Print
                 </button>
-              )}
-            </div>
-            <hr
-              style={{
-                border: "none",
-                borderTop: "1px solid var(--border)",
-                marginBottom: 16,
-              }}
-            />
-            {loading ? (
+              </div>
+              <hr
+                style={{
+                  border: "none",
+                  borderTop: "1px solid var(--border)",
+                  marginBottom: 16,
+                }}
+              />
               <div
-                style={{ display: "flex", flexDirection: "column", gap: 10 }}
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+                  gap: 20,
+                }}
               >
-                {[1, 2, 3, 4].map((i) => (
-                  <div
-                    key={i}
+                <div>
+                  <p
                     style={{
-                      background: "#f8fafc",
-                      border: "1px solid #e2e8f0",
-                      borderRadius: 10,
-                      padding: "12px 16px",
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      margin: "0 0 10px",
                     }}
                   >
+                    Top Emergency Types
+                  </p>
+                  {(() => {
+                    const counts = {};
+                    visibleAlerts.forEach((a) => {
+                      counts[a.type] = (counts[a.type] || 0) + 1;
+                    });
+                    const top = Object.entries(counts)
+                      .sort((a, b) => b[1] - a[1])
+                      .slice(0, 5);
+                    if (top.length === 0)
+                      return (
+                        <p style={{ fontSize: 12, color: "var(--muted)" }}>
+                          No data yet
+                        </p>
+                      );
+                    const max = top[0][1];
+                    return top.map(([type, count]) => (
+                      <div key={type} style={{ marginBottom: 8 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: 12,
+                            color: "var(--text)",
+                            marginBottom: 3,
+                          }}
+                        >
+                          <span
+                            style={{
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                              maxWidth: 160,
+                            }}
+                          >
+                            {type}
+                          </span>
+                          <strong>{count}</strong>
+                        </div>
+                        <div
+                          style={{
+                            background: "#fee2e2",
+                            borderRadius: 99,
+                            height: 6,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              background: "#dc2626",
+                              borderRadius: 99,
+                              width: `${(count / max) * 100}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+                <div>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      margin: "0 0 10px",
+                    }}
+                  >
+                    Alerts by Branch
+                  </p>
+                  {(() => {
+                    const counts = {};
+                    alerts.forEach((a) => {
+                      const b = normalizeBranchName(a.branch) || "Unknown";
+                      counts[b] = (counts[b] || 0) + 1;
+                    });
+                    const rows = Object.entries(counts).sort(
+                      (a, b) => b[1] - a[1],
+                    );
+                    if (rows.length === 0)
+                      return (
+                        <p style={{ fontSize: 12, color: "var(--muted)" }}>
+                          No data yet
+                        </p>
+                      );
+                    const max = rows[0][1];
+                    return rows.map(([branch, count]) => (
+                      <div key={branch} style={{ marginBottom: 8 }}>
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            fontSize: 12,
+                            color: "var(--text)",
+                            marginBottom: 3,
+                          }}
+                        >
+                          <span>{branch}</span>
+                          <strong>{count}</strong>
+                        </div>
+                        <div
+                          style={{
+                            background: "#e0e7ff",
+                            borderRadius: 99,
+                            height: 6,
+                            overflow: "hidden",
+                          }}
+                        >
+                          <div
+                            style={{
+                              height: "100%",
+                              background: "#6366f1",
+                              borderRadius: 99,
+                              width: `${(count / max) * 100}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ));
+                  })()}
+                </div>
+                <div>
+                  <p
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "var(--muted)",
+                      textTransform: "uppercase",
+                      letterSpacing: 0.5,
+                      margin: "0 0 10px",
+                    }}
+                  >
+                    Resolution Status
+                  </p>
+                  <div
+                    style={{ display: "flex", flexDirection: "column", gap: 8 }}
+                  >
+                    {[
+                      {
+                        label: "Pending",
+                        value: visibleAlerts.filter(
+                          (a) => (a.status || "pending") === "pending",
+                        ).length,
+                        color: "#dc2626",
+                      },
+                      {
+                        label: "Responding",
+                        value: responding.length,
+                        color: "#1d4ed8",
+                      },
+                      {
+                        label: "Resolved",
+                        value: resolved.length,
+                        color: "#16a34a",
+                      },
+                    ].map((row) => (
+                      <div
+                        key={row.label}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "space-between",
+                          fontSize: 12,
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 6,
+                            color: "var(--text)",
+                          }}
+                        >
+                          <span
+                            style={{
+                              width: 7,
+                              height: 7,
+                              borderRadius: "50%",
+                              background: row.color,
+                              display: "inline-block",
+                            }}
+                          />
+                          {row.label}
+                        </span>
+                        <strong style={{ color: row.color }}>
+                          {row.value}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className="emg-panels-grid"
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+                gap: 16,
+                marginBottom: 24,
+              }}
+            >
+              {/* ── Pending panel ── */}
+              <div
+                className="emg-panel"
+                style={{
+                  background: "var(--card)",
+                  borderRadius: "var(--radius-lg)",
+                  border: "1px solid var(--border)",
+                  padding: 24,
+                  boxShadow: "var(--shadow)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 16,
+                  }}
+                >
+                  <h3
+                    style={{
+                      fontSize: 15,
+                      fontWeight: 700,
+                      color: "#dc2626",
+                      margin: 0,
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                    }}
+                  >
+                    <img
+                      src="/icon/warning.png"
+                      alt=""
+                      style={{
+                        width: 16,
+                        height: 16,
+                        filter:
+                          "brightness(0) saturate(100%) invert(20%) sepia(80%) saturate(2000%) hue-rotate(350deg)",
+                        flexShrink: 0,
+                      }}
+                    />
+                    Pending Alerts
+                    {pending.length > 0 && (
+                      <span
+                        style={{
+                          marginLeft: 8,
+                          background: "#dc2626",
+                          color: "#fff",
+                          borderRadius: 20,
+                          fontSize: 11,
+                          padding: "1px 8px",
+                          fontWeight: 800,
+                        }}
+                      >
+                        {pending.length}
+                      </span>
+                    )}
+                  </h3>
+                </div>
+                <hr
+                  style={{
+                    border: "none",
+                    borderTop: "1px solid var(--border)",
+                    marginBottom: 16,
+                  }}
+                />
+                {loading ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    {[1, 2, 3].map((i) => (
+                      <div
+                        key={i}
+                        style={{
+                          background: "#fef9c3",
+                          border: "1px solid #fde047",
+                          borderRadius: 10,
+                          padding: "12px 16px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            marginBottom: 8,
+                          }}
+                        >
+                          <Skel w="40%" h={13} />
+                          <Skel w="20%" h={13} />
+                        </div>
+                        <Skel w="90%" h={12} style={{ marginBottom: 6 }} />
+                        <Skel w="60%" h={11} />
+                      </div>
+                    ))}
+                  </div>
+                ) : pending.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "30px 0" }}>
                     <div
                       style={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: "50%",
+                        background: "#f0fdf4",
+                        border: "1.5px solid #86efac",
                         display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: 8,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        margin: "0 auto 10px",
                       }}
                     >
-                      <Skel w="35%" h={13} />
-                      <Skel w="18%" h={13} />
+                      <svg
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#16a34a"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
                     </div>
-                    <Skel w="85%" h={12} style={{ marginBottom: 6 }} />
-                    <Skel w="55%" h={11} />
+                    <p
+                      style={{
+                        color: "var(--muted)",
+                        fontSize: 13,
+                        fontWeight: 600,
+                      }}
+                    >
+                      All clear — no pending alerts
+                    </p>
                   </div>
-                ))}
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                      maxHeight: 420,
+                      overflowY: "auto",
+                    }}
+                  >
+                    {pending.map((a) => (
+                      <AlertCard
+                        key={a.id + a.status}
+                        a={a}
+                        showActions={true}
+                        onUpdateStatus={onUpdateStatus}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : filteredHistoryAlerts.length === 0 ? (
-              <p
-                style={{
-                  color: "var(--muted)",
-                  fontSize: 13,
-                  textAlign: "center",
-                  padding: 20,
-                }}
-              >
-                {historyAlerts.length === 0
-                  ? "No alerts yet"
-                  : "No alerts match these filters"}
-              </p>
-            ) : (
+
+              {/* ── History panel ── */}
               <div
+                className="emg-panel"
                 style={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 12,
-                  maxHeight: 420,
-                  overflowY: "auto",
+                  background: "var(--card)",
+                  borderRadius: "var(--radius-lg)",
+                  border: "1px solid var(--border)",
+                  padding: 24,
+                  boxShadow: "var(--shadow)",
                 }}
               >
-                {filteredHistoryAlerts.map((a) => (
-                  <AlertCard
-                    key={a.id + a.status}
-                    a={a}
-                    showActions={true}
-                    onUpdateStatus={onUpdateStatus}
-                  />
-                ))}
+                <h3
+                  style={{
+                    fontSize: 15,
+                    fontWeight: 700,
+                    color: "var(--royal)",
+                    margin: "0 0 12px",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <svg
+                    width="15"
+                    height="15"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                  </svg>
+                  Alert History ({filteredHistoryAlerts.length}
+                  {filteredHistoryAlerts.length !== historyAlerts.length
+                    ? ` of ${historyAlerts.length}`
+                    : ""}
+                  )
+                </h3>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 8,
+                    marginBottom: 12,
+                    flexWrap: "wrap",
+                    alignItems: "center",
+                  }}
+                >
+                  <div style={{ width: 160 }}>
+                    <CustomSelect
+                      value={historyStatusFilter}
+                      onChange={setHistoryStatusFilter}
+                      placeholder="All Statuses"
+                      accent="#dc2626"
+                      options={[
+                        { value: "responding", label: "Responding" },
+                        { value: "resolved", label: "Resolved" },
+                      ]}
+                    />
+                  </div>
+                  <div style={{ width: 200 }}>
+                    <CustomSelect
+                      value={historyTypeFilter}
+                      onChange={setHistoryTypeFilter}
+                      placeholder="All Types"
+                      accent="#dc2626"
+                      options={historyTypeOptions.map((t) => ({
+                        value: t,
+                        label: t,
+                      }))}
+                    />
+                  </div>
+                  {(historyStatusFilter || historyTypeFilter) && (
+                    <button
+                      onClick={() => {
+                        setHistoryStatusFilter("");
+                        setHistoryTypeFilter("");
+                      }}
+                      style={{
+                        fontSize: 11,
+                        fontWeight: 700,
+                        color: "var(--royal)",
+                        background: "none",
+                        border: "1px solid var(--royal)",
+                        borderRadius: 20,
+                        padding: "3px 10px",
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        flexShrink: 0,
+                      }}
+                    >
+                      ✕ Clear filters
+                    </button>
+                  )}
+                </div>
+                <hr
+                  style={{
+                    border: "none",
+                    borderTop: "1px solid var(--border)",
+                    marginBottom: 16,
+                  }}
+                />
+                {loading ? (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 10,
+                    }}
+                  >
+                    {[1, 2, 3, 4].map((i) => (
+                      <div
+                        key={i}
+                        style={{
+                          background: "#f8fafc",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: 10,
+                          padding: "12px 16px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            justifyContent: "space-between",
+                            marginBottom: 8,
+                          }}
+                        >
+                          <Skel w="35%" h={13} />
+                          <Skel w="18%" h={13} />
+                        </div>
+                        <Skel w="85%" h={12} style={{ marginBottom: 6 }} />
+                        <Skel w="55%" h={11} />
+                      </div>
+                    ))}
+                  </div>
+                ) : filteredHistoryAlerts.length === 0 ? (
+                  <p
+                    style={{
+                      color: "var(--muted)",
+                      fontSize: 13,
+                      textAlign: "center",
+                      padding: 20,
+                    }}
+                  >
+                    {historyAlerts.length === 0
+                      ? "No alerts yet"
+                      : "No alerts match these filters"}
+                  </p>
+                ) : (
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 12,
+                      maxHeight: 420,
+                      overflowY: "auto",
+                    }}
+                  >
+                    {filteredHistoryAlerts.map((a) => (
+                      <AlertCard
+                        key={a.id + a.status}
+                        a={a}
+                        showActions={true}
+                        onUpdateStatus={onUpdateStatus}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -3973,6 +4157,57 @@ const StaffView = ({
         </button>
       </div>
       <div className="emg-content">
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            marginBottom: 18,
+          }}
+        >
+          <span
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "#94a3b8",
+              textTransform: "uppercase",
+              letterSpacing: 0.5,
+            }}
+          >
+            View:
+          </span>
+          <div
+            style={{
+              display: "flex",
+              border: "1.5px solid #fecaca",
+              borderRadius: 8,
+              overflow: "hidden",
+            }}
+          >
+            {[
+              { key: "table", label: "Table" },
+              { key: "ward", label: "Ward Board" },
+            ].map((v) => (
+              <button
+                key={v.key}
+                onClick={() => setAdminView(v.key)}
+                style={{
+                  padding: "6px 16px",
+                  border: "none",
+                  background: adminView === v.key ? "#dc2626" : "#fff5f5",
+                  color: adminView === v.key ? "#fff" : "#b91c1c",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  fontFamily: "inherit",
+                }}
+              >
+                {v.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div
           style={{
             borderRadius: 14,
