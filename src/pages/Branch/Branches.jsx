@@ -1429,7 +1429,8 @@ const Branches = () => {
   });
   const [formDirty, setFormDirty] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
-  const [accountDraft, setAccountDraft] = useState(null); // { first_name, last_name, email, password }
+  const [accountDrafts, setAccountDrafts] = useState([]); // [{ first_name, last_name, email, password, role, sex, phone_number }]
+  const [editingAccountIndex, setEditingAccountIndex] = useState(null); // index being edited, or null when adding new
   const [accountForm, setAccountForm] = useState({
     first_name: "",
     last_name: "",
@@ -1573,7 +1574,7 @@ const Branches = () => {
       lng: "",
       modules: emptyModules(),
     });
-    setAccountDraft(null);
+    setAccountDrafts([]);
     setEditBranch(null);
     setFormDirty(false);
     setShowModal(true);
@@ -1620,15 +1621,17 @@ const Branches = () => {
     }));
   };
 
-  const openAccountModal = () => {
+  const openAccountModal = (index = null) => {
+    const existing = index !== null ? accountDrafts[index] : null;
+    setEditingAccountIndex(index);
     setAccountForm({
-      first_name: accountDraft?.first_name || "",
-      last_name: accountDraft?.last_name || "",
-      sex: accountDraft?.sex || "",
-      phone_number: accountDraft?.phone_number || "",
-      email: accountDraft?.email || "",
-      password: accountDraft?.password || generatePassword(),
-      role: accountDraft?.role || "Manager",
+      first_name: existing?.first_name || "",
+      last_name: existing?.last_name || "",
+      sex: existing?.sex || "",
+      phone_number: existing?.phone_number || "",
+      email: existing?.email || "",
+      password: existing?.password || generatePassword(),
+      role: existing?.role || "Manager",
     });
     setAccountErrors({});
     setShowAccountPassword(false);
@@ -1667,16 +1670,29 @@ const Branches = () => {
       password: accountForm.password,
       role: accountForm.role,
     };
-    setAccountDraft(draft);
+    setAccountDrafts((prev) => {
+      if (editingAccountIndex !== null) {
+        const next = [...prev];
+        next[editingAccountIndex] = draft;
+        return next;
+      }
+      return [...prev, draft];
+    });
     setFormDirty(true);
     setForm((prev) => ({
       ...prev,
-      ...(draft.role === "Manager"
+      ...(draft.role === "Manager" && !prev.manager
         ? { manager: `${draft.first_name} ${draft.last_name}` }
         : {}),
-      email: draft.email,
+      ...(!prev.email ? { email: draft.email } : {}),
     }));
+    setEditingAccountIndex(null);
     setShowAccountModal(false);
+  };
+
+  const removeAccountDraft = (index) => {
+    setAccountDrafts((prev) => prev.filter((_, i) => i !== index));
+    setFormDirty(true);
   };
 
   // Determine if services section should be shown (any role has appointment or walkin)
@@ -1732,45 +1748,59 @@ const Branches = () => {
       }
 
       try {
-        const { data: authData, error: authError } =
-          await supabaseAdmin.auth.admin.createUser({
-            email: accountDraft.email,
-            password: accountDraft.password,
-            email_confirm: true,
-            user_metadata: {
-              first_name: accountDraft.first_name,
-              last_name: accountDraft.last_name,
-              role: accountDraft.role,
-              sex: accountDraft.sex,
-              phone_number: accountDraft.phone_number,
-              branch_id: inserted.id,
-            },
-          });
-        if (authError) throw new Error(authError.message);
+        const created = [];
+        for (const acct of accountDrafts) {
+          const { data: authData, error: authError } =
+            await supabaseAdmin.auth.admin.createUser({
+              email: acct.email,
+              password: acct.password,
+              email_confirm: true,
+              user_metadata: {
+                first_name: acct.first_name,
+                last_name: acct.last_name,
+                role: acct.role,
+                sex: acct.sex,
+                phone_number: acct.phone_number,
+                branch_id: inserted.id,
+              },
+            });
+          if (authError) throw new Error(authError.message);
 
-        const { error: profileError } = await supabaseAdmin
-          .from("profiles")
-          .insert([
-            {
-              id: authData.user.id,
-              first_name: accountDraft.first_name,
-              last_name: accountDraft.last_name,
-              sex: accountDraft.sex,
-              phone: accountDraft.phone_number,
-              email: accountDraft.email,
-              role: accountDraft.role,
-              status: "Active",
-              branch_id: inserted.id,
-            },
-          ]);
-        if (profileError) throw new Error(profileError.message);
+          const { error: profileError } = await supabaseAdmin
+            .from("profiles")
+            .insert([
+              {
+                id: authData.user.id,
+                first_name: acct.first_name,
+                last_name: acct.last_name,
+                sex: acct.sex,
+                phone: acct.phone_number,
+                email: acct.email,
+                role: acct.role,
+                status: "Active",
+                branch_id: inserted.id,
+              },
+            ]);
+          if (profileError) throw new Error(profileError.message);
+
+          created.push({
+            email: acct.email,
+            password: acct.password,
+            role: acct.role,
+            name: `${acct.first_name} ${acct.last_name}`,
+          });
+        }
 
         setCreatedAccount({
-          email: accountDraft.email,
-          password: accountDraft.password,
+          accounts: created,
           branchName: form.name,
         });
-        showToast("Branch added & manager account created", "success");
+        showToast(
+          created.length > 1
+            ? `Branch added & ${created.length} accounts created`
+            : "Branch added & account created",
+          "success",
+        );
       } catch (err) {
         showToast(
           `Branch saved! But account creation failed: ${err.message}`,
@@ -1778,7 +1808,7 @@ const Branches = () => {
         );
       }
 
-      setAccountDraft(null);
+      setAccountDrafts([]);
       setCreating(false);
       fetchBranches();
       setShowModal(false);
@@ -3938,105 +3968,168 @@ const Branches = () => {
                   />
                 </div>
                 {!editBranch && (
-                  <div className="form-group">
+                  <div className="form-group form-full">
                     <label>
-                      Manager Account{" "}
-                      <span style={{ color: "#dc2626" }}>*</span>
+                      Accounts <span style={{ color: "#dc2626" }}>*</span>
                     </label>
-                    {accountDraft ? (
+                    {accountDrafts.length > 0 && (
                       <div
                         style={{
                           display: "flex",
-                          alignItems: "center",
-                          justifyContent: "space-between",
-                          gap: 10,
-                          padding: "8px 12px",
-                          border: "1.5px solid #86efac",
-                          background: "#f0fdf4",
-                          borderRadius: 9,
+                          flexDirection: "column",
+                          gap: 8,
+                          marginBottom: 8,
                         }}
                       >
-                        <div style={{ minWidth: 0 }}>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: 13,
-                              fontWeight: 700,
-                              color: "#166534",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {accountDraft.first_name} {accountDraft.last_name}
-                          </p>
-                          <p
-                            style={{
-                              margin: 0,
-                              fontSize: 11,
-                              color: "#15803d",
-                              whiteSpace: "nowrap",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {accountDraft.email}
-                          </p>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={openAccountModal}
-                          style={{
-                            flexShrink: 0,
-                            fontSize: 11,
-                            fontWeight: 700,
-                            color: "#166534",
-                            background: "#fff",
-                            border: "1px solid #86efac",
-                            borderRadius: 7,
-                            padding: "5px 10px",
-                            cursor: "pointer",
-                          }}
-                        >
-                          Edit
-                        </button>
+                        {accountDrafts.map((acct, idx) => {
+                          const initials =
+                            `${acct.first_name?.[0] || ""}${acct.last_name?.[0] || ""}`.toUpperCase();
+                          return (
+                            <div
+                              key={idx}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "space-between",
+                                gap: 10,
+                                padding: "8px 12px",
+                                border: "1.5px solid #86efac",
+                                background: "#f0fdf4",
+                                borderRadius: 9,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 10,
+                                  minWidth: 0,
+                                }}
+                              >
+                                <div
+                                  style={{
+                                    width: 32,
+                                    height: 32,
+                                    borderRadius: "50%",
+                                    background: "#16a34a",
+                                    color: "#fff",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 12,
+                                    fontWeight: 800,
+                                    flexShrink: 0,
+                                  }}
+                                >
+                                  {initials || "?"}
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                  <p
+                                    style={{
+                                      margin: 0,
+                                      fontSize: 13,
+                                      fontWeight: 700,
+                                      color: "#166534",
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                    }}
+                                  >
+                                    {acct.first_name} {acct.last_name}
+                                  </p>
+                                  <p
+                                    style={{
+                                      margin: 0,
+                                      fontSize: 11,
+                                      color: "#15803d",
+                                      whiteSpace: "nowrap",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                    }}
+                                  >
+                                    {acct.role} · {acct.email}
+                                  </p>
+                                </div>
+                              </div>
+                              <div
+                                style={{
+                                  display: "flex",
+                                  gap: 6,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => openAccountModal(idx)}
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    color: "#166534",
+                                    background: "#fff",
+                                    border: "1px solid #86efac",
+                                    borderRadius: 7,
+                                    padding: "5px 10px",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => removeAccountDraft(idx)}
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    color: "#dc2626",
+                                    background: "#fff",
+                                    border: "1px solid #fca5a5",
+                                    borderRadius: 7,
+                                    padding: "5px 10px",
+                                    cursor: "pointer",
+                                  }}
+                                >
+                                  Remove
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
                       </div>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={openAccountModal}
-                        style={{
-                          width: "100%",
-                          padding: "9px 12px",
-                          border: "1.5px dashed #a5b4fc",
-                          borderRadius: 9,
-                          background: "#eef2ff",
-                          color: "#4338ca",
-                          fontSize: 13,
-                          fontWeight: 700,
-                          cursor: "pointer",
-                          fontFamily: "inherit",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: 6,
-                        }}
-                      >
-                        <svg
-                          width="14"
-                          height="14"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                        >
-                          <line x1="12" y1="5" x2="12" y2="19" />
-                          <line x1="5" y1="12" x2="19" y2="12" />
-                        </svg>
-                        Add Account
-                      </button>
                     )}
+                    <button
+                      type="button"
+                      onClick={() => openAccountModal(null)}
+                      style={{
+                        width: "100%",
+                        padding: "9px 12px",
+                        border: "1.5px dashed #a5b4fc",
+                        borderRadius: 9,
+                        background: "#eef2ff",
+                        color: "#4338ca",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: 6,
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
+                        <line x1="12" y1="5" x2="12" y2="19" />
+                        <line x1="5" y1="12" x2="19" y2="12" />
+                      </svg>
+                      Add Account
+                    </button>
                   </div>
                 )}
                 <div className="form-group">
@@ -4048,9 +4141,13 @@ const Branches = () => {
                       setFormDirty(true);
                       setForm({ ...form, manager: e.target.value });
                     }}
-                    disabled={!editBranch && !!accountDraft}
+                    disabled={
+                      !editBranch &&
+                      accountDrafts.some((a) => a.role === "Manager")
+                    }
                     style={
-                      !editBranch && accountDraft
+                      !editBranch &&
+                      accountDrafts.some((a) => a.role === "Manager")
                         ? { background: "#f8fafc", color: "#64748b" }
                         : undefined
                     }
@@ -4304,55 +4401,78 @@ const Branches = () => {
                   color: "var(--muted)",
                 }}
               >
-                A manager account has been created for{" "}
+                {createdAccount.accounts.length > 1
+                  ? `${createdAccount.accounts.length} accounts have been created for`
+                  : "An account has been created for"}{" "}
                 <strong>{createdAccount.branchName}</strong>.
               </p>
-              {[
-                ["Branch", createdAccount.branchName],
-                ["Email", createdAccount.email],
-                ["Password", createdAccount.password],
-              ].map(([label, value]) => (
-                <div key={label} style={{ marginBottom: 12 }}>
+              {createdAccount.accounts.map((acct, idx) => (
+                <div
+                  key={idx}
+                  style={{
+                    border: "1.5px solid var(--border)",
+                    borderRadius: 10,
+                    padding: "12px 14px",
+                    marginBottom: 14,
+                  }}
+                >
                   <p
                     style={{
-                      margin: "0 0 4px",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: "var(--muted)",
-                      textTransform: "uppercase",
+                      margin: "0 0 8px",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: "#14532d",
                     }}
                   >
-                    {label}
+                    {acct.name} · {acct.role}
                   </p>
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 8,
-                      background: "#f8fafc",
-                      border: "1.5px solid var(--border)",
-                      borderRadius: 8,
-                      padding: "9px 14px",
-                    }}
-                  >
-                    <span
-                      style={{
-                        flex: 1,
-                        fontSize: 13,
-                        fontWeight: 600,
-                        fontFamily:
-                          label === "Password" ? "monospace" : "inherit",
-                      }}
-                    >
-                      {value}
-                    </span>
-                    <button
-                      className="btn btn-ghost btn-sm branches-btn-auto"
-                      onClick={() => navigator.clipboard.writeText(value)}
-                    >
-                      Copy
-                    </button>
-                  </div>
+                  {[
+                    ["Email", acct.email],
+                    ["Password", acct.password],
+                  ].map(([label, value]) => (
+                    <div key={label} style={{ marginBottom: 10 }}>
+                      <p
+                        style={{
+                          margin: "0 0 4px",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "var(--muted)",
+                          textTransform: "uppercase",
+                        }}
+                      >
+                        {label}
+                      </p>
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          background: "#f8fafc",
+                          border: "1.5px solid var(--border)",
+                          borderRadius: 8,
+                          padding: "9px 14px",
+                        }}
+                      >
+                        <span
+                          style={{
+                            flex: 1,
+                            fontSize: 13,
+                            fontWeight: 600,
+                            fontFamily:
+                              label === "Password" ? "monospace" : "inherit",
+                          }}
+                        >
+                          {value}
+                        </span>
+                        <button
+                          className="btn btn-ghost btn-sm branches-btn-auto"
+                          onClick={() => navigator.clipboard.writeText(value)}
+                        >
+                          Copy
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               ))}
               <div
@@ -4402,8 +4522,14 @@ const Branches = () => {
               <button
                 className="btn btn-ghost branches-btn-auto"
                 onClick={() => {
+                  const text = createdAccount.accounts
+                    .map(
+                      (a) =>
+                        `Name: ${a.name}\nRole: ${a.role}\nEmail: ${a.email}\nPassword: ${a.password}`,
+                    )
+                    .join("\n\n");
                   navigator.clipboard.writeText(
-                    `Branch: ${createdAccount.branchName}\nEmail: ${createdAccount.email}\nPassword: ${createdAccount.password}`,
+                    `Branch: ${createdAccount.branchName}\n\n${text}`,
                   );
                 }}
               >
@@ -4446,13 +4572,15 @@ const Branches = () => {
             }}
           >
             <div className="modal-header">
-              <h3>New Account</h3>
+              <h3>
+                {editingAccountIndex !== null ? "Edit Account" : "New Account"}
+              </h3>
               <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                 <button
                   className="btn btn-primary branches-btn-auto"
                   onClick={saveAccountDraft}
                 >
-                  Create Account
+                  Add Account
                 </button>
                 <button
                   className="btn btn-ghost btn-icon branches-btn-auto"
@@ -4721,7 +4849,7 @@ const Branches = () => {
                 className="btn btn-primary branches-btn-auto"
                 onClick={saveAccountDraft}
               >
-                Save Account
+                Add Account
               </button>
             </div>
           </div>

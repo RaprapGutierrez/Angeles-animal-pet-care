@@ -1466,6 +1466,20 @@ const CustomerAppointment = () => {
     comment: "",
   });
   const [submittingReview, setSubmittingReview] = useState(false);
+  const [cancelModal, setCancelModal] = useState({
+    show: false,
+    id: null,
+    reason: "",
+    customReason: "",
+  });
+  const CANCEL_REASONS = [
+    "Change of plans",
+    "Found another vet",
+    "Booked wrong date/time",
+    "Pet feeling better",
+    "Emergency / Unavailable",
+    "Other",
+  ];
   const [appModal, setAppModal] = useState({
     show: false,
     title: "",
@@ -1857,18 +1871,33 @@ const CustomerAppointment = () => {
     }
   };
 
-  const cancelAppt = (id) => {
-    showConfirm(
-      "Cancel Appointment",
-      "Are you sure you want to cancel this appointment? This cannot be undone.",
-      async () => {
-        await supabase
-          .from("appointments")
-          .update({ status: "Cancelled" })
-          .eq("id", id);
-        fetchAppts();
-      },
-    );
+  const cancelAppt = (id) =>
+    setCancelModal({ show: true, id, reason: "", customReason: "" });
+
+  const confirmCancelAppt = async () => {
+    const { id, reason, customReason } = cancelModal;
+    if (!reason) {
+      showAlert(
+        "Reason Required",
+        "Please select a reason for cancelling this appointment.",
+      );
+      return;
+    }
+    if (reason === "Other" && !customReason.trim()) {
+      showAlert(
+        "Reason Required",
+        "Please describe the reason for cancellation.",
+      );
+      return;
+    }
+    const finalReason = reason === "Other" ? customReason.trim() : reason;
+    await supabase
+      .from("appointments")
+      .update({ status: "Cancelled", cancel_reason: finalReason })
+      .eq("id", id);
+    setCancelModal({ show: false, id: null, reason: "", customReason: "" });
+    setShowViewModal(false);
+    fetchAppts();
   };
 
   const today = new Date().toISOString().split("T")[0];
@@ -4928,8 +4957,6 @@ const CustomerAppointment = () => {
                     <button
                       onClick={() => {
                         cancelAppt(selectedAppt.id);
-                        setShowViewModal(false);
-                        setSelectedAppt(null);
                       }}
                       style={{
                         padding: "9px 16px",
@@ -4986,6 +5013,160 @@ const CustomerAppointment = () => {
             </div>
           );
         })()}
+      {/* ══ CANCEL REASON MODAL ══ */}
+      {cancelModal.show && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 100000,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--card)",
+              borderRadius: 14,
+              width: "100%",
+              maxWidth: 440,
+              boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                background: "linear-gradient(135deg,#7f1d1d,#dc2626)",
+                padding: "16px 20px",
+              }}
+            >
+              <h3
+                style={{
+                  margin: 0,
+                  fontSize: 15,
+                  fontWeight: 800,
+                  color: "#fff",
+                }}
+              >
+                Cancel Appointment
+              </h3>
+              <p
+                style={{
+                  margin: "4px 0 0",
+                  fontSize: 12,
+                  color: "rgba(255,255,255,0.85)",
+                }}
+              >
+                Please tell us why you're cancelling this appointment.
+              </p>
+            </div>
+            <div style={{ padding: "18px 20px" }}>
+              <div
+                style={{
+                  fontSize: 10,
+                  fontWeight: 700,
+                  color: "#94a3b8",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.8px",
+                  marginBottom: 6,
+                }}
+              >
+                Reason <span style={{ color: "#ef4444" }}>*</span>
+              </div>
+              <CustomSelect
+                value={cancelModal.reason}
+                onChange={(val) =>
+                  setCancelModal((m) => ({ ...m, reason: val }))
+                }
+                placeholder="— Select reason —"
+                accent="#dc2626"
+                options={CANCEL_REASONS}
+              />
+              {cancelModal.reason === "Other" && (
+                <div style={{ marginTop: 12 }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 700,
+                      color: "#94a3b8",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.8px",
+                      marginBottom: 6,
+                    }}
+                  >
+                    Please specify <span style={{ color: "#ef4444" }}>*</span>
+                  </div>
+                  <textarea
+                    value={cancelModal.customReason}
+                    onChange={(e) =>
+                      setCancelModal((m) => ({
+                        ...m,
+                        customReason: e.target.value,
+                      }))
+                    }
+                    placeholder="Describe the reason for cancellation..."
+                    style={{
+                      width: "100%",
+                      border: "1px solid var(--border)",
+                      borderRadius: 8,
+                      background: "transparent",
+                      fontSize: 13,
+                      color: "var(--text)",
+                      outline: "none",
+                      resize: "vertical",
+                      minHeight: 70,
+                      fontFamily: "inherit",
+                      lineHeight: 1.6,
+                      boxSizing: "border-box",
+                      padding: "8px 10px",
+                    }}
+                  />
+                </div>
+              )}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 10,
+                padding: "14px 20px",
+                borderTop: "1px solid var(--border)",
+              }}
+            >
+              <button
+                className="btn btn-ghost"
+                style={{ width: "auto" }}
+                onClick={() =>
+                  setCancelModal({
+                    show: false,
+                    id: null,
+                    reason: "",
+                    customReason: "",
+                  })
+                }
+              >
+                Back
+              </button>
+              <button
+                className="btn"
+                style={{
+                  width: "auto",
+                  background: "#dc2626",
+                  color: "#fff",
+                  border: "none",
+                }}
+                onClick={confirmCancelAppt}
+              >
+                Confirm Cancellation
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══ REVIEW MODAL ══ */}
       {reviewModal.show && reviewModal.appt && (
         <div

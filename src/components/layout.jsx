@@ -2251,6 +2251,9 @@ export const Layout = ({ children }) => {
     };
   }, []);
 
+  const photoInputRef = useRef(null);
+  const staffPhotoInputRef = useRef(null);
+
   const darkModeInitialized = useRef(false);
   if (!darkModeInitialized.current) {
     darkModeInitialized.current = true;
