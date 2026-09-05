@@ -6,11 +6,7 @@ import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
 import { logActivity } from "../../js/Utils/logActivity";
 import { withBranchId } from "../../js/hooks/Usebranchfilter";
 import * as XLSX from "xlsx";
-import "../../styless/PatientRecord.css";
-import { lazy } from "react";
-const PatientRecord = lazy(
-  () => import("./pages/Patient-Record/Patientrecord"),
-);
+import "../../styles/PatientRecord.css";
 
 const userIcon = "/icon/user.png";
 const checkIcon = "/icon/already-have-acc.png";
