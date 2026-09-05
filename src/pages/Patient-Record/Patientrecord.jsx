@@ -6,7 +6,11 @@ import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
 import { logActivity } from "../../js/Utils/logActivity";
 import { withBranchId } from "../../js/hooks/Usebranchfilter";
 import * as XLSX from "xlsx";
-import "../../styles/PatientRecord.css";
+import "../../styless/PatientRecord.css";
+import { lazy } from "react";
+const PatientRecord = lazy(
+  () => import("./pages/Patient-Record/Patientrecord"),
+);
 
 const userIcon = "/icon/user.png";
 const checkIcon = "/icon/already-have-acc.png";
@@ -9693,6 +9697,9 @@ const PatientRecord = () => {
                               <img
                                 src={f.url}
                                 alt={f.name}
+                                loading="lazy"
+                                width={200}
+                                height={120}
                                 onClick={() => {
                                   setPreviewZoom(1);
                                   setPreviewFile(f);
@@ -10735,7 +10742,6 @@ const PatientRecord = () => {
               >
                 ✕
               </button>
-
             </div>
             <div className="pr-modal-body">
               <div className="form-grid">

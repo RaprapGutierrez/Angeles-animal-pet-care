@@ -21,9 +21,10 @@
     <link rel="manifest" href="/site.webmanifest" />
     <meta name="theme-color" content="#1e3a8a" />
 
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta
-      name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      name="description"
+      content="Angeles Animal Pet Care Hospital's branch information system — manage patient records, appointments, walk-ins, and emergency alerts."
     />
     <title>Angeles Animal Pet Care</title>
 
@@ -274,9 +275,20 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
+      rel="preload"
+      as="style"
       href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Poetsen+One&display=swap"
-      rel="stylesheet"
+      onload="
+        this.onload = null;
+        this.rel = 'stylesheet';
+      "
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600;700;800&family=Poetsen+One&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
   </head>
   <body
     style="margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden"
