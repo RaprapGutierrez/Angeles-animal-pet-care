@@ -642,6 +642,17 @@ const RoomSelect = ({ value, onChange, rooms, accent = "#6366f1" }) => {
           <div
             ref={triggerRef}
             onClick={handleOpen}
+            role="button"
+            tabIndex={0}
+            aria-haspopup="listbox"
+            aria-expanded={open}
+            aria-label={label}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleOpen();
+              }
+            }}
             style={{
               width: "100%",
               padding: "8px 34px 8px 12px",
@@ -1306,6 +1317,17 @@ const CustomSelect = ({
       <div
         ref={triggerRef}
         onClick={handleOpen}
+        role="button"
+        tabIndex={0}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label={label}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleOpen();
+          }
+        }}
         style={{
           width: "100%",
           padding: "8px 34px 8px 12px",
@@ -1772,6 +1794,17 @@ const DatePicker = ({
       <div
         ref={triggerRef}
         onClick={handleOpen}
+        role="button"
+        tabIndex={0}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={displayValue}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleOpen();
+          }
+        }}
         style={{
           display: "flex",
           alignItems: "center",
@@ -6129,6 +6162,7 @@ const PatientRecord = () => {
             <button
               onClick={openAdd}
               className="fab-btn"
+              aria-label="Add new patient"
               style={{
                 width: 56,
                 height: 56,
@@ -7487,6 +7521,7 @@ const PatientRecord = () => {
                 >
                   <button
                     onClick={closeModal}
+                    aria-label="Close"
                     style={{
                       background: "none",
                       border: "none",
@@ -8745,6 +8780,7 @@ const PatientRecord = () => {
               </div>
               <button
                 onClick={closeModal}
+                aria-label="Close"
                 style={{
                   background: "none",
                   border: "none",
@@ -10273,6 +10309,7 @@ const PatientRecord = () => {
               </div>
               <button
                 onClick={() => setShowReportModal(false)}
+                aria-label="Close"
                 style={{
                   background: "none",
                   border: "none",
@@ -10521,6 +10558,7 @@ const PatientRecord = () => {
               </div>
               <button
                 onClick={() => setShowDeletedModal(false)}
+                aria-label="Close"
                 style={{
                   background: "none",
                   border: "none",
@@ -10684,6 +10722,7 @@ const PatientRecord = () => {
               </div>
               <button
                 onClick={attemptCloseEditPatient}
+                aria-label="Close"
                 style={{
                   background: "none",
                   border: "none",
@@ -10696,6 +10735,7 @@ const PatientRecord = () => {
               >
                 ✕
               </button>
+
             </div>
             <div className="pr-modal-body">
               <div className="form-grid">
@@ -11159,6 +11199,7 @@ const PatientRecord = () => {
                 </button>
                 <button
                   onClick={() => setPreviewFile(null)}
+                  aria-label="Close preview"
                   style={{
                     background: "none",
                     border: "none",
