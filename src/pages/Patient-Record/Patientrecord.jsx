@@ -5,7 +5,6 @@ import { supabase, sb } from "../../js/Utils/supabase";
 import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
 import { logActivity } from "../../js/Utils/logActivity";
 import { withBranchId } from "../../js/hooks/Usebranchfilter";
-import * as XLSX from "xlsx";
 import "../../styles/PatientRecord.css";
 
 const userIcon = "/icon/user.webp";
@@ -3695,7 +3694,7 @@ const PatientRecord = () => {
     };
   };
 
-  const generateReport = () => {
+  const generateReport = async () => {
     const { start, end, label } = getReportRange();
     const rows = patients.filter((p) => {
       if (!p.created_at) return false;
@@ -3738,6 +3737,7 @@ const PatientRecord = () => {
     ]);
 
     if (reportFormat === "excel") {
+      const XLSX = await import("xlsx");
       const ws = XLSX.utils.aoa_to_sheet([columns, ...dataRows]);
       ws["!cols"] = columns.map(() => ({ wch: 18 }));
       const wb = XLSX.utils.book_new();

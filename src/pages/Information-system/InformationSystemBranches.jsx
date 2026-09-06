@@ -1692,7 +1692,7 @@ function Header({ onFAQClick }) {
             }}
           >
             <img
-              src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
+              src="/image/446805041_881106557364617_1125518808684788316_n.webp"
               alt="Angeles Animal Care Logo"
               style={{
                 width: 38,
@@ -3981,7 +3981,7 @@ function Footer({ onRegionClick }) {
           {/* Brand */}
           <div className="slide-up" style={{ gridColumn: "span 1" }}>
             <img
-              src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
+              src="/image/446805041_881106557364617_1125518808684788316_n.webp"
               alt="Angeles Animal Care Logo"
               style={{
                 width: 48,

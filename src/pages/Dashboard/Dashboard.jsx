@@ -168,6 +168,7 @@ const DashCard = ({
   badge,
   viewAllTo,
   viewAllLabel = "View All →",
+  minBodyHeight,
   children,
 }) => (
   <div className="dash-card">
@@ -239,7 +240,12 @@ const DashCard = ({
         </Link>
       )}
     </div>
-    <div className="dash-card-body">{children}</div>
+    <div
+      className="dash-card-body"
+      style={minBodyHeight ? { minHeight: minBodyHeight } : undefined}
+    >
+      {children}
+    </div>
   </div>
 );
 
@@ -266,6 +272,7 @@ const TodayAppointments = ({ appts, loading, pendingCount }) => (
     subtitle={loading ? null : `${appts.length} scheduled`}
     badge={pendingCount}
     viewAllTo="/appointments"
+    minBodyHeight={300}
   >
     {loading ? (
       [0, 1, 2, 3].map((i) => <AppointmentRowSkeleton key={i} />)
@@ -382,6 +389,7 @@ const TodayWalkins = ({ walkins, loading }) => (
     title="Today's Walk-ins"
     subtitle={loading ? null : `${walkins.length} walk-ins today`}
     viewAllTo="/walk-in"
+    minBodyHeight={300}
   >
     {loading ? (
       [0, 1, 2, 3].map((i) => <WalkinRowSkeleton key={i} />)
@@ -475,25 +483,37 @@ const LiveGreeting = () => {
 };
 
 const LiveDateTime = () => {
-  const [time, setTime] = useState(new Date());
+  const dateRef = React.useRef(null);
+  const timeRef = React.useRef(null);
+
   useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 1000);
+    const update = () => {
+      const now = new Date();
+      if (dateRef.current) {
+        dateRef.current.textContent = now.toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      }
+      if (timeRef.current) {
+        timeRef.current.textContent = now.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        });
+      }
+    };
+    update();
+    const t = setInterval(update, 1000);
     return () => clearInterval(t);
   }, []);
-  const dateStr = time.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const timeStr = time.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
+
   return (
     <div style={{ textAlign: "right", position: "relative", zIndex: 1 }}>
       <strong
+        ref={dateRef}
         style={{
           display: "block",
           fontSize: 15,
@@ -501,10 +521,9 @@ const LiveDateTime = () => {
           fontWeight: 700,
           marginBottom: 4,
         }}
-      >
-        {dateStr}
-      </strong>
+      />
       <span
+        ref={timeRef}
         style={{
           fontSize: 22,
           fontWeight: 800,
@@ -514,9 +533,7 @@ const LiveDateTime = () => {
           WebkitTextFillColor: "transparent",
           letterSpacing: 1,
         }}
-      >
-        {timeStr}
-      </span>
+      />
     </div>
   );
 };
@@ -1315,42 +1332,38 @@ const Dashboard = () => {
           {/* ── Quick Access ──────────────────────────────────────────────── */}
           <p className="dash-section-label">Quick Access</p>
           <div className="dash-quick-grid">
-            {loading
-              ? Array.from({ length: 6 }).map((_, i) => (
-                  <QuickLinkSkeleton key={i} />
-                ))
-              : QUICK_LINKS.map((ql, i) => (
-                  <Link
-                    key={ql.to}
-                    to={ql.to}
-                    className="quick-link-v2 dash-fade-in"
-                    style={{ animationDelay: `${i * 0.05}s` }}
-                  >
-                    <div className="ql-icon-wrap">
-                      <img
-                        src={ql.icon}
-                        alt=""
-                        className="ql-icon-img"
-                        style={{
-                          width: 22,
-                          height: 22,
-                          filter:
-                            "brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)",
-                        }}
-                      />
-                    </div>
-                    <span
-                      style={{
-                        fontSize: 12,
-                        fontWeight: 600,
-                        color: "var(--muted)",
-                        lineHeight: 1.3,
-                      }}
-                    >
-                      {ql.label}
-                    </span>
-                  </Link>
-                ))}
+            {QUICK_LINKS.map((ql, i) => (
+              <Link
+                key={ql.to}
+                to={ql.to}
+                className="quick-link-v2 dash-fade-in"
+                style={{ animationDelay: `${i * 0.05}s` }}
+              >
+                <div className="ql-icon-wrap">
+                  <img
+                    src={ql.icon}
+                    alt=""
+                    className="ql-icon-img"
+                    style={{
+                      width: 22,
+                      height: 22,
+                      filter:
+                        "brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)",
+                    }}
+                  />
+                </div>
+                <span
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 600,
+                    color: "var(--muted)",
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {ql.label}
+                </span>
+              </Link>
+            ))}
           </div>
 
           {/* ── Two bottom cards ──────────────────────────────────────────── */}
