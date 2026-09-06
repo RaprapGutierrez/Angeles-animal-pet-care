@@ -2830,77 +2830,46 @@ export const Layout = ({ children }) => {
     // filter syntax doesn't reliably encode, so filtered subscriptions silently never fire.
     // We fetch every change and let fetchEmergencyAlerts/fetchMessages do the branch
     // matching client-side (already alias-normalized) instead.
-    const easSub = supabase
-      .channel("eas-layout")
+    // One WebSocket channel, 8 listeners — instead of 8 separate channels
+    // each paying their own subscription/handshake cost on mount. This is
+    // what was chewing up main-thread time on page load.
+    const layoutSub = supabase
+      .channel("layout-realtime")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "emergency_alerts",
-        },
+        { event: "*", schema: "public", table: "emergency_alerts" },
         () => fetchEmergencyAlerts(),
       )
-      .subscribe();
-    const msgSub = supabase
-      .channel("msg-layout")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "messages",
-        },
+        { event: "*", schema: "public", table: "messages" },
         () => fetchMessages(),
       )
-      .subscribe();
-    const crossMsgSub = supabase
-      .channel("cross-msg-layout")
       .on(
         "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "cross_branch_messages",
-        },
+        { event: "*", schema: "public", table: "cross_branch_messages" },
         () => fetchMessages(),
       )
-      .subscribe();
-    const invSub = supabase
-      .channel("inv-layout")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "inventory" },
         () => fetchStockAlerts(),
       )
-      .subscribe();
-    const patientSub = supabase
-      .channel("patient-layout")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "patients" },
         () => fetchNewPatients(),
       )
-      .subscribe();
-    const apptSub = supabase
-      .channel("appt-layout")
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "appointments" },
         () => fetchNewAppointments(),
       )
-      .subscribe();
-    const roomSub = supabase
-      .channel("room-layout")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "rooms" },
         () => fetchOccupiedRooms(),
       )
-      .subscribe();
-
-    const approvedSub = supabase
-      .channel("approved-layout")
       .on(
         "postgres_changes",
         { event: "UPDATE", schema: "public", table: "pending_users" },
@@ -2917,14 +2886,7 @@ export const Layout = ({ children }) => {
         clearTimeout(idleHandle);
       }
       clearInterval(msgPollInterval);
-      supabase.removeChannel(easSub);
-      supabase.removeChannel(msgSub);
-      supabase.removeChannel(crossMsgSub);
-      supabase.removeChannel(invSub);
-      supabase.removeChannel(approvedSub);
-      supabase.removeChannel(patientSub);
-      supabase.removeChannel(apptSub);
-      supabase.removeChannel(roomSub);
+      supabase.removeChannel(layoutSub);
     };
   }, [isCustomer]);
   /* ── Fetch customer notifications (their own appointments) ── */
