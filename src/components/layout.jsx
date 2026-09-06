@@ -3408,7 +3408,7 @@ export const Layout = ({ children }) => {
             }}
           >
             <img
-              src="/image/angeles-logo.webp"
+              src="/image/446805041_881106557364617_1125518808684788316_n.webp"
               alt="Logo"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />

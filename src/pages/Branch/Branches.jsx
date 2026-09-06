@@ -2756,17 +2756,19 @@ const Branches = () => {
                           marginBottom: 5,
                         }}
                       >
-                        <img
-                          src="/icon/location.png"
-                          alt=""
-                          style={{
-                            width: 13,
-                            height: 13,
-                            marginTop: 1,
-                            flexShrink: 0,
-                            filter: "brightness(0) saturate(100%) invert(40%)",
-                          }}
-                        />
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#64748b"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          style={{ marginTop: 1, flexShrink: 0 }}
+                        >
+                          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                          <circle cx="12" cy="10" r="3" />
+                        </svg>
                         <p
                           style={{
                             fontSize: 12,
@@ -2790,16 +2792,18 @@ const Branches = () => {
                           marginBottom: 5,
                         }}
                       >
-                        <img
-                          src="/icon/phone.png"
-                          alt=""
-                          style={{
-                            width: 13,
-                            height: 13,
-                            flexShrink: 0,
-                            filter: "brightness(0) saturate(100%) invert(40%)",
-                          }}
-                        />
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#64748b"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          style={{ flexShrink: 0 }}
+                        >
+                          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16z" />
+                        </svg>
                         <p
                           style={{
                             fontSize: 12,
@@ -2818,16 +2822,19 @@ const Branches = () => {
                           marginBottom: 10,
                         }}
                       >
-                        <img
-                          src="/icon/admin.webp"
-                          alt=""
-                          style={{
-                            width: 13,
-                            height: 13,
-                            flexShrink: 0,
-                            filter: "brightness(0) saturate(100%) invert(40%)",
-                          }}
-                        />
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#64748b"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          style={{ flexShrink: 0 }}
+                        >
+                          <circle cx="12" cy="8" r="4" />
+                          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                        </svg>
                         <p
                           style={{
                             fontSize: 12,
@@ -2888,6 +2895,7 @@ const Branches = () => {
                           gap: 6,
                           flexWrap: "wrap",
                           marginTop: "auto",
+                          justifyContent: canEdit ? "flex-start" : "flex-end",
                         }}
                       >
                         {canEdit && (
@@ -3009,7 +3017,7 @@ const Branches = () => {
                           title="View"
                           style={{
                             height: 28,
-                            padding: "0 10px",
+                            padding: canEdit ? "0 10px" : "0 16px",
                             gap: 5,
                             display: "inline-flex",
                             alignItems: "center",
@@ -3021,7 +3029,7 @@ const Branches = () => {
                             fontSize: 11,
                             fontWeight: 600,
                             cursor: "pointer",
-                            marginLeft: "auto",
+                            marginLeft: canEdit ? "auto" : 0,
                           }}
                           onClick={() => setViewBranch(b)}
                         >
