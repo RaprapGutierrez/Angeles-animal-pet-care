@@ -106,7 +106,7 @@ const getRole = () => {
 };
 const PrivateRoute = ({ children, allowedRoles }) => {
   const jwtRole = getRole();
-  const [liveRole, setLiveRole] = useState(jwtRole);
+  const [liveRole, setLiveRole] = useState(null);
   const [liveBranchId, setLiveBranchId] = useState(null);
   const [checked, setChecked] = useState(false);
   const location = useLocation();
@@ -148,19 +148,24 @@ const PrivateRoute = ({ children, allowedRoles }) => {
     };
   }, [jwtRole]);
 
+  // Render immediately off the trusted, signed JWT role instead of
+  // blocking first paint on a DB round-trip. Once the live check resolves
+  // (checked=true) and liveRole disagrees with the JWT role, `role` below
+  // switches to the live value on the very next render and the allowedRoles
+  // check re-runs against it — so a demoted/promoted user gets redirected
+  // the moment we know, they just aren't blocked on a blank screen waiting
+  // to find out. Actual data access is still enforced by Supabase RLS
+  // regardless of what this component renders client-side.
   const role = liveRole || jwtRole || "Employee";
   const isCustomer = role.toLowerCase() === "customer";
   // Customers aren't part of the module system (see Layout.jsx's same
   // reasoning) — only look up module access for staff roles.
   const { hasModule, loading: modulesLoading } = useModuleAccess(
-    !isCustomer && checked ? role : null,
-    !isCustomer && checked ? liveBranchId : null,
+    !isCustomer ? role : null,
+    !isCustomer ? liveBranchId : null,
   );
 
   if (!jwtRole) return <Navigate to="/login" replace />;
-  // Brief pause while the live role is confirmed — avoids a flash of the
-  // wrong page's content if the JWT role and DB role have diverged.
-  if (!checked) return null;
 
   const fallback = isCustomer ? "/customer/dashboard" : "/dashboard";
   if (
@@ -174,10 +179,13 @@ const PrivateRoute = ({ children, allowedRoles }) => {
   // Branches.jsx only hid the nav link but left the route itself open to
   // direct URL access. Only applies to staff roles and only to routes that
   // are actually in the module system (ROUTE_TO_MODULE) — anything not
-  // mapped (e.g. /profile) is unaffected.
+  // mapped (e.g. /profile) is unaffected. We still wait on `checked` and
+  // `modulesLoading` here specifically — not for the whole page, just for
+  // this one gate — since briefly showing a de-authorized module is worse
+  // than a moment's blank content in that slot.
   const moduleKey = ROUTE_TO_MODULE[location.pathname];
   if (!isCustomer && moduleKey) {
-    if (modulesLoading) return null;
+    if (!checked || modulesLoading) return null;
     if (!hasModule(moduleKey)) return <Navigate to={fallback} replace />;
   }
 
