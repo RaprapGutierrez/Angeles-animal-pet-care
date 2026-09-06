@@ -1826,21 +1826,33 @@ const AdminSecurity = () => {
       addForm.usePersonalEmail;
 
     try {
-      // Step 1: Create auth user
-      // If using a personal email, don't auto-confirm — Supabase will send a verification email
-      const { data: authData, error: authError } =
-        await supabaseAdmin.auth.admin.createUser({
+      // Create the auth user + profile via the secure backend function
+      // (service_role key lives server-side only — see admin-user-management.js)
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const res = await fetch("/.netlify/functions/admin-user-management", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          action: "create",
           email: addForm.email.trim().toLowerCase(),
           password: addForm.password,
-          email_confirm: !isPersonalEmail,
-          user_metadata: {
-            first_name: addForm.first_name.trim(),
-            last_name: addForm.last_name.trim(),
-            role: addForm.role,
-            branch_id: addForm.branch_id || currentUser?.branchId || null,
-            sex: addForm.sex || null,
-          },
-        });
+          first_name: addForm.first_name.trim(),
+          last_name: addForm.last_name.trim(),
+          role: addForm.role,
+          branch_id: addForm.branch_id || currentUser?.branchId || null,
+          sex: addForm.sex || null,
+          status: addForm.status,
+          phone_number: addForm.phone_number || null,
+        }),
+      });
+
+      const result = await res.json();
 
       await supabase.from("activity_logs").insert([
         {
@@ -1852,76 +1864,20 @@ const AdminSecurity = () => {
         },
       ]);
 
-      if (authError) {
-        // If user already exists in auth, try to find their profile
-        if (authError.message?.includes("already been registered")) {
+      if (!res.ok) {
+        if (result.error?.includes("already been registered")) {
           setAddErrors({
             email: "This email is already registered in the system.",
           });
           setSaving(false);
           return;
         }
-        alert("Auth Error: " + authError.message);
+        alert("Error: " + (result.error || "Failed to create user"));
         setSaving(false);
         return;
       }
 
-      const userId = authData.user.id;
-
-      // Step 2: Check if profile already exists (prevents pkey duplicate)
-      const { data: existingProfile } = await supabaseAdmin
-        .from("profiles")
-        .select("id")
-        .eq("id", userId)
-        .single();
-
-      if (existingProfile) {
-        // Profile exists — just update it instead of inserting
-        const { error: updateError } = await supabaseAdmin
-          .from("profiles")
-          .update({
-            first_name: addForm.first_name.trim(),
-            last_name: addForm.last_name.trim(),
-            email: addForm.email.trim().toLowerCase(),
-            role: addForm.role,
-            status: addForm.status,
-            sex: addForm.sex || null,
-            phone_number: addForm.phone_number || null,
-            branch_id: addForm.branch_id || currentUser?.branchId || null,
-          })
-          .eq("id", userId);
-
-        if (updateError) {
-          alert("Error updating existing profile: " + updateError.message);
-          setSaving(false);
-          return;
-        }
-      } else {
-        // Step 3: Insert fresh profile
-        const { error: insertError } = await supabaseAdmin
-          .from("profiles")
-          .insert([
-            {
-              id: userId,
-              first_name: addForm.first_name.trim(),
-              last_name: addForm.last_name.trim(),
-              email: addForm.email.trim().toLowerCase(),
-              role: addForm.role,
-              status: addForm.status,
-              sex: addForm.sex || null,
-              phone_number: addForm.phone_number || null,
-              branch_id: addForm.branch_id || currentUser?.branchId || null,
-            },
-          ]);
-
-        if (insertError) {
-          // Rollback: delete the auth user we just created
-          await supabaseAdmin.auth.admin.deleteUser(userId);
-          alert("Error creating profile: " + insertError.message);
-          setSaving(false);
-          return;
-        }
-      }
+      const userId = result.user.id;
 
       if (isPersonalEmail) {
         await sendVerificationCode(userId, addForm.email.trim().toLowerCase());
