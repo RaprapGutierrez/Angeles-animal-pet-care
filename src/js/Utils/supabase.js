@@ -1,28 +1,80 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-const SUPABASE_URL           = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON          = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+// ── bfcache fix ──
+// Supabase's GoTrueClient opens a BroadcastChannel internally to sync auth
+// state across tabs. An open BroadcastChannel is a documented bfcache
+// blocker in Chrome ("BroadcastChannel instance with registered listeners").
+// There's no public supabase-js option to disable this, so we intercept
+// BroadcastChannel globally, track every channel opened, and close them
+// right before the page is frozen into bfcache — same technique used to
+// fix this class of bug in other BroadcastChannel-based libraries.
+// Tradeoff: cross-tab auth sync won't fire after a bfcache-restored
+// navigation until the page fully reloads.
+if (
+  typeof window !== "undefined" &&
+  typeof window.BroadcastChannel === "function"
+) {
+  const NativeBroadcastChannel = window.BroadcastChannel;
+  const openChannels = new Set();
+
+  window.BroadcastChannel = class extends NativeBroadcastChannel {
+    constructor(name) {
+      super(name);
+      openChannels.add(this);
+    }
+    close() {
+      openChannels.delete(this);
+      super.close();
+    }
+  };
+
+  window.addEventListener("pagehide", () => {
+    openChannels.forEach((ch) => {
+      try {
+        ch.close();
+      } catch {
+        /* already closed */
+      }
+    });
+    openChannels.clear();
+  });
+}
 
 const memoryStore = new Map();
 
 const safeStorage = {
   getItem: (key) => {
-    try { return window.localStorage.getItem(key); }
-    catch {
-      try { return window.sessionStorage.getItem(key); }
-      catch { return memoryStore.get(key) ?? null; }
+    try {
+      return window.localStorage.getItem(key);
+    } catch {
+      try {
+        return window.sessionStorage.getItem(key);
+      } catch {
+        return memoryStore.get(key) ?? null;
+      }
     }
   },
   setItem: (key, value) => {
-    try { window.localStorage.setItem(key, value); return; }
-    catch {}
-    try { window.sessionStorage.setItem(key, value); return; }
-    catch {}
+    try {
+      window.localStorage.setItem(key, value);
+      return;
+    } catch {}
+    try {
+      window.sessionStorage.setItem(key, value);
+      return;
+    } catch {}
     memoryStore.set(key, value);
   },
   removeItem: (key) => {
-    try { window.localStorage.removeItem(key); } catch {}
-    try { window.sessionStorage.removeItem(key); } catch {}
+    try {
+      window.localStorage.removeItem(key);
+    } catch {}
+    try {
+      window.sessionStorage.removeItem(key);
+    } catch {}
     memoryStore.delete(key);
   },
 };
@@ -30,10 +82,10 @@ const safeStorage = {
 // Main client — uses anon key, respects RLS
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON, {
   auth: {
-    persistSession:     true,
-    autoRefreshToken:   true,
+    persistSession: true,
+    autoRefreshToken: true,
     detectSessionInUrl: true,
-    storage:            safeStorage,
+    storage: safeStorage,
   },
   realtime: {
     params: { eventsPerSecond: 0 },
@@ -53,20 +105,31 @@ export const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_ANON, {
 // ── Thin helper layer ──
 export const sb = {
   getUser() {
-    try { return JSON.parse(localStorage.getItem('sb_user')); }
-    catch { return null; }
+    try {
+      return JSON.parse(localStorage.getItem("sb_user"));
+    } catch {
+      return null;
+    }
   },
 
   async signIn(email, password) {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
       if (error) return { error };
       try {
-        localStorage.setItem('sb_token',         data.session?.access_token  ?? '');
-        localStorage.setItem('sb_refresh_token', data.session?.refresh_token ?? '');
-        localStorage.setItem('hospital_jwt',     data.session?.access_token  ?? '');
-        localStorage.setItem('sb_user',          JSON.stringify(data.user));
-      } catch { /* blocked */ }
+        localStorage.setItem("sb_token", data.session?.access_token ?? "");
+        localStorage.setItem(
+          "sb_refresh_token",
+          data.session?.refresh_token ?? "",
+        );
+        localStorage.setItem("hospital_jwt", data.session?.access_token ?? "");
+        localStorage.setItem("sb_user", JSON.stringify(data.user));
+      } catch {
+        /* blocked */
+      }
       return { data, user: data.user };
     } catch (err) {
       return { error: { message: err.message } };
@@ -75,25 +138,40 @@ export const sb = {
 
   async signOut() {
     try {
-      const stored = localStorage.getItem('sb_user');
+      const stored = localStorage.getItem("sb_user");
       const user = stored ? JSON.parse(stored) : null;
       if (user?.id) {
         await supabase
-          .from('profiles')
-          .update({ status: 'Inactive' })
-          .eq('id', user.id);
+          .from("profiles")
+          .update({ status: "Inactive" })
+          .eq("id", user.id);
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
 
     await supabase.auth.signOut();
-    ['sb_token', 'sb_refresh_token', 'hospital_jwt', 'sb_user', 'user_role'].forEach(k => {
-      try { localStorage.removeItem(k); } catch { /* ignore */ }
+    [
+      "sb_token",
+      "sb_refresh_token",
+      "hospital_jwt",
+      "sb_user",
+      "user_role",
+    ].forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch {
+        /* ignore */
+      }
     });
   },
 
   async insert(table, rowData) {
     try {
-      const { data, error } = await supabase.from(table).insert(rowData).select();
+      const { data, error } = await supabase
+        .from(table)
+        .insert(rowData)
+        .select();
       if (error) return { error };
       return { data };
     } catch (err) {
@@ -104,7 +182,9 @@ export const sb = {
   async update(table, match, rowData) {
     try {
       let query = supabase.from(table).update(rowData);
-      Object.entries(match).forEach(([k, v]) => { query = query.eq(k, v); });
+      Object.entries(match).forEach(([k, v]) => {
+        query = query.eq(k, v);
+      });
       const { data, error } = await query.select();
       if (error) return { error };
       return { data };
@@ -116,31 +196,48 @@ export const sb = {
   async delete(table, match) {
     try {
       let query = supabase.from(table).delete();
-      Object.entries(match).forEach(([k, v]) => { query = query.eq(k, v); });
+      Object.entries(match).forEach(([k, v]) => {
+        query = query.eq(k, v);
+      });
       const { error } = await query;
-      if (error) { console.error(`sb.delete(${table}):`, error); return false; }
+      if (error) {
+        console.error(`sb.delete(${table}):`, error);
+        return false;
+      }
       return true;
-    } catch { return false; }
+    } catch {
+      return false;
+    }
   },
 
-  async from(table, query = '*') {
+  async from(table, query = "*") {
     try {
       const { data, error } = await supabase.from(table).select(query);
-      if (error) { console.error(`sb.from(${table}):`, error); return []; }
+      if (error) {
+        console.error(`sb.from(${table}):`, error);
+        return [];
+      }
       return data ?? [];
-    } catch { return []; }
+    } catch {
+      return [];
+    }
   },
 };
 
-export const logActivity = async (supabase, { userId, userName, userRole, action, details = "", status = "Success" }) => {
-  await supabase.from("activity_logs").insert([{
-    user_id: userId,
-    user_name: userName,
-    user_role: userRole,
-    action,
-    details,
-    status,
-  }]);
+export const logActivity = async (
+  supabase,
+  { userId, userName, userRole, action, details = "", status = "Success" },
+) => {
+  await supabase.from("activity_logs").insert([
+    {
+      user_id: userId,
+      user_name: userName,
+      user_role: userRole,
+      action,
+      details,
+      status,
+    },
+  ]);
 };
 
 export default supabase;

@@ -1164,36 +1164,47 @@ const Dashboard = () => {
             <LiveDateTime />
           </div>
 
-          {/* ── Pending appointments banner ───────────────────────────────── */}
-          {showPendingBanner && (
-            <div
-              className="dash-fade-in"
-              style={{
-                background: "linear-gradient(135deg,#fffbeb,#fef3c7)",
-                border: "1.5px solid #fde68a",
-                borderRadius: 14,
-                padding: "14px 20px",
-                marginBottom: 24,
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-                boxShadow: "0 2px 12px rgba(217,119,6,0.10)",
-              }}
-            >
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <div
-                  style={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: 12,
-                    flexShrink: 0,
-                    background: "rgba(217,119,6,0.12)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
+          {/* ── Pending appointments banner (always rendered to prevent CLS) ── */}
+          <div
+            className="dash-fade-in"
+            style={{
+              background: showPendingBanner
+                ? "linear-gradient(135deg,#fffbeb,#fef3c7)"
+                : "linear-gradient(135deg,#f0fdf4,#dcfce7)",
+              border: showPendingBanner
+                ? "1.5px solid #fde68a"
+                : "1.5px solid #bbf7d0",
+              borderRadius: 14,
+              padding: "14px 20px",
+              marginBottom: 24,
+              minHeight: 74,
+              boxSizing: "border-box",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: 12,
+              flexWrap: "wrap",
+              boxShadow: showPendingBanner
+                ? "0 2px 12px rgba(217,119,6,0.10)"
+                : "0 2px 12px rgba(22,163,74,0.08)",
+            }}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div
+                style={{
+                  width: 42,
+                  height: 42,
+                  borderRadius: 12,
+                  flexShrink: 0,
+                  background: showPendingBanner
+                    ? "rgba(217,119,6,0.12)"
+                    : "rgba(22,163,74,0.12)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
+              >
+                {showPendingBanner ? (
                   <svg
                     width="22"
                     height="22"
@@ -1206,31 +1217,48 @@ const Dashboard = () => {
                     <circle cx="12" cy="12" r="10" />
                     <polyline points="12 6 12 12 16 14" />
                   </svg>
-                </div>
-                <div>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontWeight: 700,
-                      fontSize: 14,
-                      color: "#92400e",
-                    }}
+                ) : (
+                  <svg
+                    width="22"
+                    height="22"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="#16a34a"
+                    strokeWidth="2"
+                    strokeLinecap="round"
                   >
-                    {stats.pendingAppts} Appointment
-                    {stats.pendingAppts > 1 ? "s" : ""} Awaiting Approval
-                  </p>
-                  <p
-                    style={{
-                      margin: 0,
-                      fontSize: 12,
-                      color: "#b45309",
-                      marginTop: 2,
-                    }}
-                  >
-                    Review and approve pending appointment requests.
-                  </p>
-                </div>
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                )}
               </div>
+              <div>
+                <p
+                  style={{
+                    margin: 0,
+                    fontWeight: 700,
+                    fontSize: 14,
+                    color: showPendingBanner ? "#92400e" : "#166534",
+                  }}
+                >
+                  {showPendingBanner
+                    ? `${stats.pendingAppts} Appointment${stats.pendingAppts > 1 ? "s" : ""} Awaiting Approval`
+                    : "All Appointments Reviewed"}
+                </p>
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 12,
+                    color: showPendingBanner ? "#b45309" : "#16a34a",
+                    marginTop: 2,
+                  }}
+                >
+                  {showPendingBanner
+                    ? "Review and approve pending appointment requests."
+                    : "No pending appointment requests right now."}
+                </p>
+              </div>
+            </div>
+            {showPendingBanner && (
               <Link
                 to="/appointments"
                 style={{
@@ -1247,8 +1275,8 @@ const Dashboard = () => {
               >
                 Review Now →
               </Link>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* ── Overview ──────────────────────────────────────────────────── */}
           <p className="dash-section-label">Overview</p>
