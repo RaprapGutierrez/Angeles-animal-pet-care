@@ -563,7 +563,7 @@ const Login = () => {
   // Accounts created with placeholder emails (auto-generated
   // customer/manager/employee addresses) can't actually receive mail there.
   const FAKE_EMAIL_DOMAINS =
-    /@([a-z0-9-]+\.)*(customer|manager|employee)\.(com|local)$/i;
+    /@([a-z0-9-]+\.)*(customer|manager|employee|admin)\.(com|local)$/i;
 
   const showModal = useCallback(
     (type, title, message) => setModal({ type, title, message }),
