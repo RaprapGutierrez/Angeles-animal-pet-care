@@ -69,6 +69,8 @@ const StatCardSkeleton = () => (
       display: "flex",
       flexDirection: "column",
       gap: 14,
+      minHeight: 172,
+      boxSizing: "border-box",
     }}
   >
     <div
@@ -919,6 +921,8 @@ const Dashboard = () => {
                 display: "flex",
                 justifyContent: "space-between",
                 alignItems: "center",
+                minHeight: 132,
+                boxSizing: "border-box",
               }}
             >
               <div
@@ -1054,6 +1058,8 @@ const Dashboard = () => {
               position: "relative",
               overflow: "hidden",
               boxShadow: "0 8px 32px rgba(30,58,138,0.18)",
+              minHeight: 132,
+              boxSizing: "border-box",
             }}
           >
             {/* Decorative circles */}
@@ -1237,7 +1243,11 @@ const Dashboard = () => {
                     key={i}
                     to={sc.to}
                     className={`stat-card-v2 ${sc.color} dash-fade-in`}
-                    style={{ animationDelay: `${i * 0.06}s` }}
+                    style={{
+                      animationDelay: `${i * 0.06}s`,
+                      minHeight: 172,
+                      boxSizing: "border-box",
+                    }}
                   >
                     {/* Top row: icon only */}
                     <div style={{ display: "flex", alignItems: "flex-start" }}>
