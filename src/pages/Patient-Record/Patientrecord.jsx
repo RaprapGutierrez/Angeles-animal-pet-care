@@ -8,9 +8,9 @@ import { withBranchId } from "../../js/hooks/Usebranchfilter";
 import * as XLSX from "xlsx";
 import "../../styles/PatientRecord.css";
 
-const userIcon = "/icon/user.png";
-const checkIcon = "/icon/already-have-acc.png";
-const plusIcon = "/icon/new-acc.png";
+const userIcon = "/icon/user.webp";
+const checkIcon = "/icon/already-have-acc.webp";
+const plusIcon = "/icon/new-acc.webp";
 
 const Ic = ({ src, size = 14, style = {} }) => (
   <img
@@ -5949,7 +5949,7 @@ const PatientRecord = () => {
         }}
       >
         <div className="topbar-title">
-          <img className="icon-tint" src="/icon/patient_record.png" alt="" />
+          <img className="icon-tint" src="/icon/patient_record.webp" alt="" />
           <div>
             <h1>Patient Records</h1>
             <p>Manage all patient medical records</p>
@@ -5980,7 +5980,7 @@ const PatientRecord = () => {
             }}
           >
             <img
-              src="/icon/search.png"
+              src="/icon/search.webp"
               alt=""
               style={{
                 width: 16,
@@ -6218,7 +6218,7 @@ const PatientRecord = () => {
                 {
                   label: "Total Patients",
                   value: patients.length,
-                  icon: "/icon/attended.png",
+                  icon: "/icon/attended.webp",
                   color: "blue",
                   sub: "All registered patients",
                   filterValue: "all",
@@ -6226,7 +6226,7 @@ const PatientRecord = () => {
                 {
                   label: "Admitted",
                   value: patients.filter((p) => p.status === "Admitted").length,
-                  icon: "/icon/admitted.png",
+                  icon: "/icon/admitted.webp",
                   color: "green",
                   sub: "Currently admitted",
                   filterValue: "Admitted",
@@ -6235,7 +6235,7 @@ const PatientRecord = () => {
                   label: "Outpatient",
                   value: patients.filter((p) => p.status === "Outpatient")
                     .length,
-                  icon: "/icon/outpatient.png",
+                  icon: "/icon/outpatient.webp",
                   color: "yellow",
                   sub: "Outpatient visits",
                   filterValue: "Outpatient",
@@ -6243,7 +6243,7 @@ const PatientRecord = () => {
                 {
                   label: "Critical",
                   value: patients.filter((p) => p.health === "Critical").length,
-                  icon: "/icon/critical.png",
+                  icon: "/icon/critical.webp",
                   color: "red",
                   sub:
                     patients.filter((p) => p.health === "Critical").length > 0
@@ -7555,7 +7555,7 @@ const PatientRecord = () => {
                     }}
                   >
                     <img
-                      src="/icon/patient_record.png"
+                      src="/icon/patient_record.webp"
                       alt=""
                       style={{ width: 22, height: 22, objectFit: "contain" }}
                       onError={(e) => {

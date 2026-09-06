@@ -108,13 +108,13 @@ function AnimatedQty({ value, style = {} }) {
 }
 
 const ICONS = {
-  service: "/icon/service.png",
-  food: "/icon/pet-food.png",
-  medicine: "/icon/medicine.png",
-  grooming: "/icon/gromming.png",
-  consultation: "/icon/consultation.png",
-  other: "/icon/others.png",
-  cart: "/icon/cart.png",
+  service: "/icon/service.webp",
+  food: "/icon/pet-food.webp",
+  medicine: "/icon/medicine.webp",
+  grooming: "/icon/gromming.webp",
+  consultation: "/icon/consultation.webp",
+  other: "/icon/others.webp",
+  cart: "/icon/cart.webp",
 };
 
 const Toast = ({ message, show, type = "success" }) => {
@@ -1155,7 +1155,7 @@ const PointOfSale = () => {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img
-              src="/icon/point_of_sale.png"
+              src="/icon/point_of_sale.webp"
               alt=""
               className="pos-topbar-icon"
               style={{
@@ -1408,7 +1408,7 @@ const PointOfSale = () => {
                 }}
               >
                 <img
-                  src="/icon/search.png"
+                  src="/icon/search.webp"
                   alt=""
                   style={{
                     width: 16,

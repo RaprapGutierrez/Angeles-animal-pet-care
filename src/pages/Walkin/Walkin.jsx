@@ -2380,7 +2380,7 @@ const Walkin = () => {
         <div style={S.topbar} className="walkin-topbar">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img
-              src="/icon/walkin.png"
+              src="/icon/walkin.webp"
               alt=""
               className="walkin-topbar-icon"
               style={{
@@ -2658,7 +2658,7 @@ const Walkin = () => {
                   {
                     label: "Today's Walk-Ins",
                     value: todayWalkins.length,
-                    icon: "/icon/walkin.png",
+                    icon: "/icon/walkin.webp",
                     color: "blue",
                     sub: "Recorded today",
                     filter: "Today",
@@ -2667,7 +2667,7 @@ const Walkin = () => {
                     label: "Attended",
                     value: walkins.filter((w) => w.status === "Attended")
                       .length,
-                    icon: "/icon/attended.png",
+                    icon: "/icon/attended.webp",
                     color: "green",
                     sub: "Visits completed",
                     filter: "Attended",
@@ -2675,7 +2675,7 @@ const Walkin = () => {
                   {
                     label: "Waiting",
                     value: walkins.filter((w) => w.status === "Waiting").length,
-                    icon: "/icon/pending.png",
+                    icon: "/icon/pending.webp",
                     color: "yellow",
                     sub:
                       walkins.filter((w) => w.status === "Waiting").length > 0

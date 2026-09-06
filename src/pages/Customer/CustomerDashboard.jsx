@@ -133,7 +133,7 @@ const CustomerDashboard = () => {
     {
       label: "My Pets",
       value: loading ? "—" : pets.length,
-      icon: "/icon/paw.png",
+      icon: "/icon/paw.webp",
       color: "#dbeafe",
       filter:
         "invert(37%) sepia(90%) saturate(500%) hue-rotate(195deg) brightness(95%)",
@@ -144,7 +144,7 @@ const CustomerDashboard = () => {
     {
       label: "Upcoming Appts",
       value: loading ? "—" : appts.length,
-      icon: "/icon/appointment.png",
+      icon: "/icon/appointment.webp",
       color: "#dcfce7",
       filter:
         "invert(50%) sepia(60%) saturate(400%) hue-rotate(100deg) brightness(90%)",
@@ -166,7 +166,7 @@ const CustomerDashboard = () => {
     {
       label: "Pending Appts",
       value: loading ? "—" : appts.filter((a) => a.status === "Pending").length,
-      icon: "/icon/pending.png",
+      icon: "/icon/pending.webp",
       color: "#fee2e2",
       filter:
         "invert(30%) sepia(80%) saturate(500%) hue-rotate(330deg) brightness(95%)",
@@ -401,7 +401,7 @@ const CustomerDashboard = () => {
                 </span>
                 !{" "}
                 <img
-                  src="/icon/paw.png"
+                  src="/icon/paw.webp"
                   alt="paw"
                   width={isMobile ? 14 : 20}
                   height={isMobile ? 14 : 20}
@@ -744,7 +744,7 @@ const CustomerDashboard = () => {
                         }}
                       >
                         <img
-                          src="/icon/attended.png"
+                          src="/icon/attended.webp"
                           alt="appt"
                           width={15}
                           height={15}
@@ -890,12 +890,12 @@ const CustomerDashboard = () => {
                         <img
                           src={
                             p.species === "Dog"
-                              ? "/icon/dog.png"
+                              ? "/icon/dog.webp"
                               : p.species === "Cat"
-                                ? "/icon/cat.png"
+                                ? "/icon/cat.webp"
                                 : p.species === "Bird"
                                   ? "/icon/bird.png"
-                                  : "/icon/paw.png"
+                                  : "/icon/paw.webp"
                           }
                           alt={p.species}
                           width={16}

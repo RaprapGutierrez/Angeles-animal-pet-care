@@ -2239,7 +2239,7 @@ const CustomerAppointment = () => {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <img
-              src="/icon/attended.png"
+              src="/icon/attended.webp"
               alt="Appointments"
               className="ca-topbar-icon"
               width={isMobile ? 18 : 20}
@@ -2505,7 +2505,7 @@ const CustomerAppointment = () => {
               {
                 label: "Total",
                 value: appts.length,
-                icon: "/icon/attended.png",
+                icon: "/icon/attended.webp",
                 color: "#dbeafe",
                 filter:
                   "invert(37%) sepia(90%) saturate(500%) hue-rotate(195deg) brightness(95%)",
@@ -2519,7 +2519,7 @@ const CustomerAppointment = () => {
                 value: appts.filter(
                   (a) => a.status === "Confirmed" || a.status === "Pending",
                 ).length,
-                icon: "/icon/admitted.png",
+                icon: "/icon/admitted.webp",
                 color: "#dcfce7",
                 filter:
                   "invert(50%) sepia(60%) saturate(400%) hue-rotate(100deg) brightness(90%)",
@@ -2531,7 +2531,7 @@ const CustomerAppointment = () => {
               {
                 label: "Pending",
                 value: appts.filter((a) => a.status === "Pending").length,
-                icon: "/icon/chat_bubble.png",
+                icon: "/icon/chat_bubble.webp",
                 color: "#fef9c3",
                 filter:
                   "invert(70%) sepia(80%) saturate(500%) hue-rotate(5deg) brightness(95%)",
@@ -2549,7 +2549,7 @@ const CustomerAppointment = () => {
               {
                 label: "Cancelled",
                 value: appts.filter((a) => a.status === "Cancelled").length,
-                icon: "/icon/cancel.png",
+                icon: "/icon/cancel.webp",
                 color: "#fee2e2",
                 filter:
                   "invert(30%) sepia(80%) saturate(500%) hue-rotate(330deg) brightness(95%)",
@@ -3365,7 +3365,7 @@ const CustomerAppointment = () => {
                 }}
               >
                 <img
-                  src="/icon/appointment.png"
+                  src="/icon/appointment.webp"
                   alt=""
                   style={{ width: 22, height: 22, objectFit: "contain" }}
                   onError={(e) => {

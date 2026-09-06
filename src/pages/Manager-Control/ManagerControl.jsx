@@ -1615,7 +1615,7 @@ const ManagerControl = () => {
             }}
           >
             <img
-              src="/icon/manager.png"
+              src="/icon/manager.webp"
               alt=""
               style={{
                 width: 22,
@@ -1854,28 +1854,28 @@ const ManagerControl = () => {
               {
                 label: "Total Users",
                 value: counts.total,
-                icon: "/icon/total_user.png",
+                icon: "/icon/total_user.webp",
                 color: "blue",
                 sub: "All accounts",
               },
               {
                 label: "Active",
                 value: counts.active,
-                icon: "/icon/active_acc.png",
+                icon: "/icon/active_acc.webp",
                 color: "green",
                 sub: "Currently active",
               },
               {
                 label: "Pending Approval",
                 value: counts.pending,
-                icon: "/icon/pending.png",
+                icon: "/icon/pending.webp",
                 color: "yellow",
                 sub: counts.pending > 0 ? "Needs attention" : "All cleared",
               },
               {
                 label: "Staff",
                 value: counts.staff,
-                icon: "/icon/staff.png",
+                icon: "/icon/staff.webp",
                 color: "purple",
                 sub: "Non-customer users",
               },
@@ -2088,7 +2088,7 @@ const ManagerControl = () => {
                     }}
                   >
                     <img
-                      src="/icon/search.png"
+                      src="/icon/search.webp"
                       alt=""
                       style={{
                         width: 16,
@@ -2869,7 +2869,7 @@ const ManagerControl = () => {
                     }}
                   >
                     <img
-                      src="/icon/search.png"
+                      src="/icon/search.webp"
                       alt=""
                       style={{
                         width: 16,

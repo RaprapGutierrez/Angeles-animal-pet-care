@@ -4654,7 +4654,7 @@ const Appointment = () => {
         }}
       >
         <div className="topbar-title">
-          <img src="/icon/appointment.png" alt="" />
+          <img src="/icon/appointment.webp" alt="" />
           <div>
             <h1>Appointments</h1>
             <p>
@@ -5114,7 +5114,7 @@ const Appointment = () => {
                 {
                   label: "Today's Appointments",
                   value: counts.today,
-                  icon: "/icon/calendar.png",
+                  icon: "/icon/calendar.webp",
                   color: "blue",
                   filter: "",
                   sub: "Scheduled today",
@@ -5122,7 +5122,7 @@ const Appointment = () => {
                 {
                   label: "Pending Approval",
                   value: counts.pending,
-                  icon: "/icon/pending.png",
+                  icon: "/icon/pending.webp",
                   color: "yellow",
                   filter: "Pending",
                   sub: counts.pending > 0 ? "Needs attention" : "All cleared",
@@ -5131,7 +5131,7 @@ const Appointment = () => {
                 {
                   label: "Confirmed",
                   value: counts.confirmed,
-                  icon: "/icon/confirm.png",
+                  icon: "/icon/confirm.webp",
                   color: "green",
                   filter: "Confirmed",
                   sub: "Approved & locked",
@@ -5139,7 +5139,7 @@ const Appointment = () => {
                 {
                   label: "Cancelled",
                   value: counts.cancelled,
-                  icon: "/icon/cancel.png",
+                  icon: "/icon/cancel.webp",
                   color: "red",
                   filter: "Cancelled",
                   sub: "Cancelled visits",
@@ -5373,7 +5373,7 @@ const Appointment = () => {
                   }}
                 >
                   <img
-                    src="/icon/search.png"
+                    src="/icon/search.webp"
                     alt=""
                     style={{
                       width: 16,
@@ -6526,7 +6526,7 @@ const Appointment = () => {
                 }}
               >
                 <img
-                  src="/icon/search.png"
+                  src="/icon/search.webp"
                   alt=""
                   style={{
                     width: 16,
@@ -6746,7 +6746,7 @@ const Appointment = () => {
                   }}
                 >
                   <img
-                    src="/icon/appointment.png"
+                    src="/icon/appointment.webp"
                     alt=""
                     style={{ width: 22, height: 22, objectFit: "contain" }}
                     onError={(e) => {

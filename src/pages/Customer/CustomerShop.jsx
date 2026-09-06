@@ -408,7 +408,7 @@ const CustomerShop = () => {
     Medicine: (
       <img
         className="cshop-cat-icon"
-        src="/icon/medicine.png"
+        src="/icon/medicine.webp"
         alt="Medicine"
         width={40}
         height={40}
@@ -417,7 +417,7 @@ const CustomerShop = () => {
     Vaccine: (
       <img
         className="cshop-cat-icon"
-        src="/icon/vaccines.png"
+        src="/icon/vaccines.webp"
         alt="Vaccine"
         width={40}
         height={40}
@@ -426,7 +426,7 @@ const CustomerShop = () => {
     Supplies: (
       <img
         className="cshop-cat-icon"
-        src="/icon/pet-supplies.png"
+        src="/icon/pet-supplies.webp"
         alt="Supplies"
         width={40}
         height={40}
@@ -435,7 +435,7 @@ const CustomerShop = () => {
     Food: (
       <img
         className="cshop-cat-icon"
-        src="/icon/pet-food.png"
+        src="/icon/pet-food.webp"
         alt="Food"
         width={40}
         height={40}
@@ -444,7 +444,7 @@ const CustomerShop = () => {
     Equipment: (
       <img
         className="cshop-cat-icon"
-        src="/icon/equipments.png"
+        src="/icon/equipments.webp"
         alt="Equipment"
         width={40}
         height={40}
@@ -453,7 +453,7 @@ const CustomerShop = () => {
     Other: (
       <img
         className="cshop-cat-icon"
-        src="/icon/inventory_2.png"
+        src="/icon/inventory_2.webp"
         alt="Other"
         width={40}
         height={40}
@@ -602,7 +602,7 @@ const CustomerShop = () => {
           >
             <img
               className="cshop-cat-icon"
-              src="/icon/shopping_cart.png"
+              src="/icon/shopping_cart.webp"
               alt="Shop"
               width={22}
               height={22}
@@ -661,7 +661,7 @@ const CustomerShop = () => {
             >
               <img
                 className="cshop-cat-icon"
-                src="/icon/search.png"
+                src="/icon/search.webp"
                 alt="Search"
                 width={14}
                 height={14}
@@ -879,7 +879,7 @@ const CustomerShop = () => {
                     {ICONS[p.category] || (
                       <img
                         className="cshop-cat-icon"
-                        src="/icon/inventory_2.png"
+                        src="/icon/inventory_2.webp"
                         alt={p.category}
                         width={40}
                         height={40}
@@ -1664,7 +1664,7 @@ Payment  : ${tx.payment}
               {ICONS[selectedProduct.category] || (
                 <img
                   className="cshop-cat-icon"
-                  src="/icon/inventory_2.png"
+                  src="/icon/inventory_2.webp"
                   alt={selectedProduct.category}
                   width={isMobile ? 44 : 56}
                   height={isMobile ? 44 : 56}

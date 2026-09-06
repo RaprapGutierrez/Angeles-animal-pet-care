@@ -3361,7 +3361,7 @@ const Inventory = () => {
           }}
         >
           <img
-            src="/icon/inventory_2.png"
+            src="/icon/inventory_2.webp"
             alt=""
             style={{ width: 48, opacity: 0.3 }}
           />
@@ -3408,7 +3408,7 @@ const Inventory = () => {
         }}
       >
         <div className="topbar-title">
-          <img src="/icon/inventory_2.png" alt="" />
+          <img src="/icon/inventory_2.webp" alt="" />
           <div>
             <h1>Inventory</h1>
             <p>Manage all inventory items</p>
@@ -3840,7 +3840,7 @@ const Inventory = () => {
                 {
                   label: "Total Items",
                   value: itemsLite.length,
-                  icon: "/icon/inventory.png",
+                  icon: "/icon/inventory.webp",
                   color: "blue",
                   sub: "All inventory items",
                   active: !catFilter && !stockFilter && !expiryFilter,
@@ -3853,7 +3853,7 @@ const Inventory = () => {
                 {
                   label: "Low Stock",
                   value: lowStock.length,
-                  icon: "/icon/warning.png",
+                  icon: "/icon/warning.webp",
                   color: "red",
                   sub: lowStock.length > 0 ? "Reorder needed" : "All stocked",
                   active: stockFilter === "low",
@@ -3865,7 +3865,7 @@ const Inventory = () => {
                 {
                   label: "Expiring Soon",
                   value: expiringSoon.length,
-                  icon: "/icon/appointment.png",
+                  icon: "/icon/appointment.webp",
                   color: "yellow",
                   sub:
                     expiringSoon.length > 0
@@ -3880,7 +3880,7 @@ const Inventory = () => {
                 {
                   label: "Categories",
                   value: [...new Set(itemsLite.map((i) => i.category))].length,
-                  icon: "/icon/category.png",
+                  icon: "/icon/category.webp",
                   color: "green",
                   sub: "Distinct categories",
                   active: false,
@@ -4019,7 +4019,7 @@ const Inventory = () => {
               }}
             >
               <img
-                src="/icon/search.png"
+                src="/icon/search.webp"
                 alt=""
                 style={{
                   width: 16,

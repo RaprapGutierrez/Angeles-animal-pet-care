@@ -1885,7 +1885,7 @@ const Branches = () => {
         <div className="branches-topbar-pos branches-topbar">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img
-              src="/icon/branches.png"
+              src="/icon/branches.webp"
               alt=""
               style={{
                 width: 22,
@@ -2103,14 +2103,14 @@ const Branches = () => {
                   {
                     label: "Total Branches",
                     value: branches.length,
-                    icon: "/icon/branches.png",
+                    icon: "/icon/branches.webp",
                     color: "blue",
                     sub: "All registered branches",
                   },
                   {
                     label: "Active",
                     value: branches.filter((b) => b.status === "Active").length,
-                    icon: "/icon/available.png",
+                    icon: "/icon/available.webp",
                     color: "green",
                     sub: "Currently operating",
                   },
@@ -2812,7 +2812,7 @@ const Branches = () => {
                         }}
                       >
                         <img
-                          src="/icon/admin.png"
+                          src="/icon/admin.webp"
                           alt=""
                           style={{
                             width: 13,
@@ -3069,7 +3069,7 @@ const Branches = () => {
             <div className="modal-header">
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                 <img
-                  src="/icon/branches.png"
+                  src="/icon/branches.webp"
                   alt=""
                   style={{
                     width: 18,

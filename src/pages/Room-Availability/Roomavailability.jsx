@@ -2616,7 +2616,7 @@ const RoomAvailability = () => {
       >
         {" "}
         <div className="topbar-title">
-          <img src="/icon/room.png" alt="" />
+          <img src="/icon/room.webp" alt="" />
           <div>
             <h1>Room Availability</h1>
             <p>{branchLabel} — Monitor and manage room status</p>
@@ -2816,7 +2816,7 @@ const RoomAvailability = () => {
                 {
                   label: "Available",
                   value: counts.available,
-                  icon: "/icon/available.png",
+                  icon: "/icon/available.webp",
                   color: "green",
                   f: "Available",
                   sub:
@@ -2827,7 +2827,7 @@ const RoomAvailability = () => {
                 {
                   label: "Occupied",
                   value: counts.occupied,
-                  icon: "/icon/confirm.png",
+                  icon: "/icon/confirm.webp",
                   color: "blue",
                   f: "Occupied",
                   sub: "Currently in use",
@@ -2835,7 +2835,7 @@ const RoomAvailability = () => {
                 {
                   label: "Quarantine",
                   value: counts.quarantine,
-                  icon: "/icon/warning.png",
+                  icon: "/icon/warning.webp",
                   color: "red",
                   f: "Quarantine",
                   sub:
@@ -2844,7 +2844,7 @@ const RoomAvailability = () => {
                 {
                   label: "Cleaning",
                   value: counts.cleaning,
-                  icon: "/icon/cleaning.png",
+                  icon: "/icon/cleaning.webp",
                   color: "yellow",
                   f: "Cleaning",
                   sub: "Being sanitized",

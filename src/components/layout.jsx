@@ -199,6 +199,21 @@ const readUserInfo = () => {
   }
 };
 
+// Rewrites a Supabase Storage public avatar URL to request a small transformed
+// version instead of downloading the full-size original. Supabase serves
+// transforms from a separate /render/image/ path, so this only kicks in for
+// URLs shaped like the standard public object URL; anything else (e.g. an
+// external URL) passes through unchanged.
+const getResizedAvatarUrl = (url, size = 100) => {
+  if (!url || !url.includes("/storage/v1/object/public/")) return url;
+  const base = url.replace(
+    "/storage/v1/object/public/",
+    "/storage/v1/render/image/public/",
+  );
+  const sep = base.includes("?") ? "&" : "?";
+  return `${base}${sep}width=${size}&height=${size}&resize=cover&quality=75`;
+};
+
 // Quick check for whether a normalized role string represents a customer account.
 const roleIsCustomer = (role) => role === "Customer";
 
@@ -1091,7 +1106,7 @@ const SidebarItem = ({
       >
         {isAI ? (
           <img
-            src="/icon/artificial-intelligence.png?v=2"
+            src="/icon/artificial-intelligence.webp?v=2"
             alt="AI"
             width={18}
             height={18}
@@ -1104,7 +1119,7 @@ const SidebarItem = ({
           />
         ) : isEmergency ? (
           <img
-            src="/icon/siren.png"
+            src="/icon/siren.webp"
             alt="Emergency"
             width={18}
             height={18}
@@ -1117,7 +1132,7 @@ const SidebarItem = ({
           />
         ) : isBranch ? (
           <img
-            src="/icon/pin.png"
+            src="/icon/pin.webp"
             alt="Branches"
             width={18}
             height={18}
@@ -1130,7 +1145,7 @@ const SidebarItem = ({
           />
         ) : isPredictive ? (
           <img
-            src="/icon/predictive-analytics.png"
+            src="/icon/predictive-analytics.webp"
             alt="Predictive Analytics"
             width={18}
             height={18}
@@ -2435,7 +2450,8 @@ export const Layout = ({ children }) => {
       .eq("id", rawUser.id)
       .single()
       .then(({ data }) => {
-        if (data?.avatar_url) setLayoutAvatarUrl(data.avatar_url);
+        if (data?.avatar_url)
+          setLayoutAvatarUrl(getResizedAvatarUrl(data.avatar_url, 100));
         if (data?.first_name || data?.last_name)
           setLayoutFirstName(
             `${data.first_name || ""} ${data.last_name || ""}`.trim(),
@@ -2456,7 +2472,9 @@ export const Layout = ({ children }) => {
         },
         (payload) => {
           if (payload.new?.avatar_url)
-            setLayoutAvatarUrl(payload.new.avatar_url);
+            setLayoutAvatarUrl(
+              getResizedAvatarUrl(payload.new.avatar_url, 100),
+            );
           if (payload.new?.first_name || payload.new?.last_name)
             setLayoutFirstName(
               `${payload.new.first_name || ""} ${payload.new.last_name || ""}`.trim(),

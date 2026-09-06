@@ -734,7 +734,7 @@ const HistoryCard = ({ a }) => {
           }}
         >
           <img
-            src="/icon/warning.png"
+            src="/icon/warning.webp"
             alt=""
             style={{
               width: 14,
@@ -1318,7 +1318,7 @@ const ReportForm = memo(
           }}
         >
           <img
-            src="/icon/warning.png"
+            src="/icon/warning.webp"
             alt=""
             style={{
               width: 16,
@@ -2511,7 +2511,7 @@ const CustomerEmergency = () => {
             }}
           >
             <img
-              src="/icon/emergency_2.png"
+              src="/icon/emergency_2.webp"
               alt=""
               style={{
                 width: 18,

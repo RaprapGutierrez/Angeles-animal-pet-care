@@ -166,7 +166,7 @@ const CustomerBranches = () => {
         <div style={S.topbar} className="branches-topbar">
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <img
-              src="/icon/branches.png" alt=""
+              src="/icon/branches.webp" alt=""
               style={{ width: 22, height: 22, filter: 'brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)' }}
             />
             <div style={{ minWidth: 0 }}>
@@ -180,8 +180,8 @@ const CustomerBranches = () => {
           {/* Stat cards */}
           <div className="branches-stat-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 14, marginBottom: 24 }}>
             {[
-              { label: 'Total Branches', value: branches.length, icon: '/icon/branches.png', color: '#dbeafe', filter: 'invert(37%) sepia(90%) saturate(500%) hue-rotate(195deg) brightness(95%)', accent: '#3b82f6', sub: 'All branches', subColor: 'var(--muted)' },
-              { label: 'Active', value: branches.filter(b => b.status === 'Active').length, icon: '/icon/available.png', color: '#dcfce7', filter: 'invert(50%) sepia(60%) saturate(400%) hue-rotate(100deg) brightness(90%)', accent: '#16a34a', sub: 'Currently active', subColor: '#16a34a' },
+              { label: 'Total Branches', value: branches.length, icon: '/icon/branches.webp', color: '#dbeafe', filter: 'invert(37%) sepia(90%) saturate(500%) hue-rotate(195deg) brightness(95%)', accent: '#3b82f6', sub: 'All branches', subColor: 'var(--muted)' },
+              { label: 'Active', value: branches.filter(b => b.status === 'Active').length, icon: '/icon/available.webp', color: '#dcfce7', filter: 'invert(50%) sepia(60%) saturate(400%) hue-rotate(100deg) brightness(90%)', accent: '#16a34a', sub: 'Currently active', subColor: '#16a34a' },
             ].map((sc, i) => (
               <div key={i} className="fade-in" style={{
                 animationDelay: `${i * 0.08}s`,
@@ -273,7 +273,7 @@ const CustomerBranches = () => {
                   onMouseEnter={e => { e.currentTarget.style.boxShadow = '0 4px 24px rgba(30,58,138,0.13)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
                   onMouseLeave={e => { e.currentTarget.style.boxShadow = 'var(--shadow)'; e.currentTarget.style.transform = ''; }}>
                   <div style={{ height: 80, background: 'linear-gradient(135deg,var(--light-blue),#c7d7f5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <img src="/icon/branches.png" alt="" style={{ width: 40, height: 40, filter: 'brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)', opacity: 0.6 }} />
+                    <img src="/icon/branches.webp" alt="" style={{ width: 40, height: 40, filter: 'brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)', opacity: 0.6 }} />
                   </div>
                   <div style={{ padding: 16 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
@@ -293,7 +293,7 @@ const CustomerBranches = () => {
                       <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0, overflow: 'hidden', textoverflow: 'ellipsis', whitespace: 'nowrap', minwidth: 0 }}>{b.email}</p>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
-                      <img src="/icon/admin.png" alt="" style={{ width: 13, height: 13, flexShrink: 0, filter: 'brightness(0) saturate(100%) invert(40%)' }} />
+                      <img src="/icon/admin.webp" alt="" style={{ width: 13, height: 13, flexShrink: 0, filter: 'brightness(0) saturate(100%) invert(40%)' }} />
                       <p style={{ fontSize: 12, color: 'var(--muted)', margin: 0 }}>Manager: <strong>{b.manager}</strong></p>
                     </div>
                     {b.services && b.services.length > 0 && (

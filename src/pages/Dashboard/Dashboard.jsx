@@ -34,19 +34,19 @@ const STATUS_DOT = {
   Completed: "#1e3a8a",
 };
 const ROUTE_ICON_MAP = {
-  "/patient-records": "/icon/patient_record.png",
-  "/appointments": "/icon/appointment.png",
-  "/room-availability": "/icon/room.png",
-  "/inventory": "/icon/inventory_2.png",
-  "/point-of-sale": "/icon/point_of_sale.png",
-  "/walk-in": "/icon/walkin.png",
-  "/messages": "/icon/chat.png",
-  "/emergency": "/icon/emergency_dashboard.png",
-  "/reports": "/icon/reports.png",
-  "/branches": "/icon/branches.png",
-  "/admin-security": "/icon/admin_2.png",
-  "/manager-control": "/icon/manager.png",
-  "/predictive-analytics": "/icon/predictive-analytics.png",
+  "/patient-records": "/icon/patient_record.webp",
+  "/appointments": "/icon/appointment.webp",
+  "/room-availability": "/icon/room.webp",
+  "/inventory": "/icon/inventory_2.webp",
+  "/point-of-sale": "/icon/point_of_sale.webp",
+  "/walk-in": "/icon/walkin.webp",
+  "/messages": "/icon/chat.webp",
+  "/emergency": "/icon/emergency_dashboard.webp",
+  "/reports": "/icon/reports.webp",
+  "/branches": "/icon/branches.webp",
+  "/admin-security": "/icon/admin_2.webp",
+  "/manager-control": "/icon/manager.webp",
+  "/predictive-analytics": "/icon/predictive-analytics.webp",
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -715,7 +715,7 @@ const Dashboard = () => {
     const cardPatients = {
       label: "Active Patients",
       value: stats.patients,
-      icon: "/icon/active_acc.png",
+      icon: "/icon/active_acc.webp",
       color: "purple",
       sub: "Total registered",
       subColor: "var(--muted)",
@@ -725,7 +725,7 @@ const Dashboard = () => {
     const cardLowStock = {
       label: "Low Stock Items",
       value: stats.inventory,
-      icon: "/icon/warning.png",
+      icon: "/icon/warning.webp",
       color: "yellow",
       sub: stats.inventory > 0 ? "Reorder needed" : "All stocked",
       subColor: stats.inventory > 0 ? "#dc2626" : "#16a34a",
@@ -762,7 +762,7 @@ const Dashboard = () => {
     const cardMessages = {
       label: "Unread Messages",
       value: stats.messages,
-      icon: "/icon/chat_bubble.png",
+      icon: "/icon/chat_bubble.webp",
       color: "blue",
       sub: "From clients",
       subColor: "var(--muted)",
@@ -771,7 +771,7 @@ const Dashboard = () => {
     const cardAppointments = {
       label: "Today's Appointments",
       value: stats.appointments,
-      icon: "/icon/appointment.png",
+      icon: "/icon/appointment.webp",
       color: "blue",
       sub: `${stats.pendingAppts} pending approval`,
       subColor: stats.pendingAppts > 0 ? "#d97706" : "var(--muted)",
@@ -795,7 +795,7 @@ const Dashboard = () => {
     const cardPending = {
       label: "Pending Approvals",
       value: stats.pendingAppts,
-      icon: "/icon/pending.png",
+      icon: "/icon/pending.webp",
       color: "yellow",
       sub: stats.pendingAppts > 0 ? "Needs attention" : "All cleared",
       subColor: stats.pendingAppts > 0 ? "#dc2626" : "#16a34a",
@@ -832,7 +832,7 @@ const Dashboard = () => {
     const cardSales = {
       label: "Today's Sales",
       value: `₱${stats.sales.toLocaleString()}`,
-      icon: "/icon/money_bag.png",
+      icon: "/icon/money_bag.webp",
       color: "green",
       sub: "Revenue today",
       subColor: "#16a34a",
@@ -855,7 +855,7 @@ const Dashboard = () => {
     const cardWalkins = {
       label: "Today's Walk-ins",
       value: stats.walkins,
-      icon: "/icon/walkin.png",
+      icon: "/icon/walkin.webp",
       color: "blue",
       sub: "Walk-ins recorded",
       subColor: "var(--muted)",

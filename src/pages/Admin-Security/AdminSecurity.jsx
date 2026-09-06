@@ -443,7 +443,7 @@ const SYSTEM_ROLES = [
   {
     id: "admin",
     role: "Admin",
-    icon: "/icon/admin.png",
+    icon: "/icon/admin.webp",
     system: true,
     desc: "Full system access.",
     perms: ["all_modules", "user_management", "system_settings", "reports"],
@@ -451,7 +451,7 @@ const SYSTEM_ROLES = [
   {
     id: "manager",
     role: "Manager",
-    icon: "/icon/manager.png",
+    icon: "/icon/manager.webp",
     system: true,
     desc: "Manages daily operations.",
     perms: ["patient_records", "appointments", "inventory", "reports"],
@@ -459,7 +459,7 @@ const SYSTEM_ROLES = [
   {
     id: "employee",
     role: "Employee",
-    icon: "/icon/staff.png",
+    icon: "/icon/staff.webp",
     system: true,
     desc: "Access to patient care modules.",
     perms: ["patient_records", "appointments", "walk_in", "room_availability"],
@@ -467,7 +467,7 @@ const SYSTEM_ROLES = [
   {
     id: "customer",
     role: "Customer",
-    icon: "/icon/customer.png",
+    icon: "/icon/customer.webp",
     system: true,
     desc: "Customer portal only.",
     perms: ["view_own_pets", "book_appointments", "view_shop", "send_messages"],
@@ -2784,7 +2784,7 @@ const AdminSecurity = () => {
             }}
           >
             <img
-              src="/icon/admin.png"
+              src="/icon/admin.webp"
               alt=""
               style={{
                 width: 22,
@@ -2946,7 +2946,7 @@ const AdminSecurity = () => {
               {
                 label: "Total Users",
                 value: counts.total,
-                icon: "/icon/total_user.png",
+                icon: "/icon/total_user.webp",
                 color: "blue",
                 active: !statusFilter && !adminsOnlyFilter && tab === "users",
                 onClick: () => {
@@ -2958,7 +2958,7 @@ const AdminSecurity = () => {
               {
                 label: "Active",
                 value: counts.active,
-                icon: "/icon/active_acc.png",
+                icon: "/icon/active_acc.webp",
                 color: "green",
                 active: statusFilter === "Active",
                 onClick: () => {
@@ -2970,7 +2970,7 @@ const AdminSecurity = () => {
               {
                 label: "Admins",
                 value: counts.admins,
-                icon: "/icon/admin_2.png",
+                icon: "/icon/admin_2.webp",
                 color: "purple",
                 active: adminsOnlyFilter,
                 onClick: () => {
@@ -2982,7 +2982,7 @@ const AdminSecurity = () => {
               {
                 label: "Pending Approval",
                 value: counts.pending,
-                icon: "/icon/pending.png",
+                icon: "/icon/pending.webp",
                 color: "yellow",
                 active: tab === "pending",
                 onClick: () => setTab("pending"),
@@ -3168,7 +3168,7 @@ const AdminSecurity = () => {
                     }}
                   >
                     <img
-                      src="/icon/search.png"
+                      src="/icon/search.webp"
                       alt=""
                       style={{
                         width: 16,
@@ -4887,7 +4887,7 @@ const AdminSecurity = () => {
                     }}
                   >
                     <img
-                      src="/icon/search.png"
+                      src="/icon/search.webp"
                       alt=""
                       style={{
                         width: 16,

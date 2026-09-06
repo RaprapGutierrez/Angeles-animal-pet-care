@@ -1198,7 +1198,7 @@ const Report = () => {
       label: range === "Today" ? "Today's Appointments" : "Appointments",
       value: stats.appointments,
       display: <CountUp key={`${animKey}-a`} value={stats.appointments} />,
-      icon: "/icon/calendar.png",
+      icon: "/icon/calendar.webp",
       color: "blue",
       sub: `in ${range.toLowerCase()}`,
     },
@@ -1206,7 +1206,7 @@ const Report = () => {
       label: range === "Today" ? "Today's Sales" : "Total Sales",
       value: stats.sales,
       display: <CountUp key={`${animKey}-s`} value={stats.sales} prefix="₱" />,
-      icon: "/icon/money_bag.png",
+      icon: "/icon/money_bag.webp",
       color: "green",
       sub: `in ${range.toLowerCase()}`,
     },
@@ -1214,7 +1214,7 @@ const Report = () => {
       label: "Total Patients",
       value: stats.patients,
       display: <CountUp key={`${animKey}-p`} value={stats.patients} />,
-      icon: "/icon/attended.png",
+      icon: "/icon/attended.webp",
       color: "yellow",
       sub: "all time",
     },
@@ -1222,7 +1222,7 @@ const Report = () => {
       label: "Low Stock Items",
       value: stats.lowStock,
       display: <CountUp key={`${animKey}-l`} value={stats.lowStock} />,
-      icon: "/icon/warning.png",
+      icon: "/icon/warning.webp",
       color: "red",
       sub: "need restocking",
     },
@@ -1400,7 +1400,7 @@ const Report = () => {
         >
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <img
-              src="/icon/reports.png"
+              src="/icon/reports.webp"
               alt=""
               className="report-topbar-icon"
               style={{
@@ -1523,7 +1523,7 @@ const Report = () => {
               ) : (
                 <>
                   <img
-                    src="/icon/pdf-file.png"
+                    src="/icon/pdf-file.webp"
                     alt="PDF"
                     className="report-pdf-icon"
                     style={{ width: 16, height: 16, objectFit: "contain" }}
@@ -1554,7 +1554,7 @@ const Report = () => {
               ) : (
                 <>
                   <img
-                    src="/icon/excel.png"
+                    src="/icon/excel.webp"
                     alt="Excel"
                     style={{
                       width: 16,

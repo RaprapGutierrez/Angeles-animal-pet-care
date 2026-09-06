@@ -454,7 +454,7 @@ const CustomerPets = () => {
             }}
           >
             <img
-              src="/icon/paw.png"
+              src="/icon/paw.webp"
               alt="Paw"
               className="cp-topbar-icon"
               width={22}

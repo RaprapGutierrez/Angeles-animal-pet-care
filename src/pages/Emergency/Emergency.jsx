@@ -1287,7 +1287,7 @@ const GuestBanner = ({ onExit }) => (
         }}
       >
         <img
-          src="/icon/emergency_2.png"
+          src="/icon/emergency_2.webp"
           alt=""
           style={{ width: 15, height: 15, filter: "brightness(0) invert(1)" }}
         />
@@ -2870,7 +2870,7 @@ const EmergencyForm = memo(
             ) : (
               <>
                 <img
-                  src="/icon/emergency_2.png"
+                  src="/icon/emergency_2.webp"
                   alt=""
                   style={{
                     width: 15,
@@ -3043,7 +3043,7 @@ const AdminView = ({
       <div className="emergency-topbar emg-topbar-pos emg-topbar-card">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <img
-            src="/icon/emergency_2.png"
+            src="/icon/emergency_2.webp"
             alt=""
             className="emg-topbar-icon"
             style={{
@@ -3761,7 +3761,7 @@ const AdminView = ({
                     }}
                   >
                     <img
-                      src="/icon/warning.png"
+                      src="/icon/warning.webp"
                       alt=""
                       style={{
                         width: 16,
@@ -4101,7 +4101,7 @@ const StaffView = ({
       <div className="emergency-topbar emg-topbar-pos emg-topbar-card">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <img
-            src="/icon/emergency_2.png"
+            src="/icon/emergency_2.webp"
             alt=""
             className="emg-topbar-icon"
             style={{
@@ -4362,7 +4362,7 @@ const StaffView = ({
               }}
             >
               <img
-                src="/icon/warning.png"
+                src="/icon/warning.webp"
                 alt=""
                 style={{
                   width: 16,
@@ -4621,7 +4621,7 @@ const GuestView = ({ sending, onSend, onExit }) => (
         }}
       >
         <img
-          src="/icon/emergency_2.png"
+          src="/icon/emergency_2.webp"
           alt=""
           style={{
             width: 22,
