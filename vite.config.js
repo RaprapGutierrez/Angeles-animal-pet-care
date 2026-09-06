@@ -1,35 +1,25 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
-import { visualizer } from "rollup-plugin-visualizer";
 
 export default defineConfig({
-  plugins: [
-    react(),
-    // After `npm run build`, this opens dist/stats.html showing exactly
-    // what's inside each chunk and how big it is. Remove once you're done
-    // diagnosing, or leave it — it only runs at build time, not runtime.
-    visualizer({
-      filename: "dist/stats.html",
-      gzipSize: true,
-      brotliSize: true,
-      open: false,
-    }),
-  ],
+  plugins: [react()],
   server: {
     proxy: {
       "/api": "http://localhost:5000",
     },
   },
   build: {
-    // Helps verify whether a chunk is actually over a reasonable size
-    // instead of silently ballooning
     chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks(id) {
           if (!id.includes("node_modules")) return;
 
-          // React core — changes rarely, cache-friendly on its own
+          // Only pull out the two chunks we KNOW are shared by every
+          // route (React core + Supabase SDK). Everything else is left
+          // alone (return undefined) so Rollup keeps its automatic
+          // per-route splitting — a library only used by one lazy-loaded
+          // page stays out of the initial load for every other page.
           if (
             id.includes("/react/") ||
             id.includes("/react-dom/") ||
@@ -39,25 +29,11 @@ export default defineConfig({
             return "vendor-react";
           }
 
-          // Supabase SDK — separate chunk since it's sizeable and used
-          // everywhere, but shouldn't block parsing of route-specific code
           if (id.includes("@supabase")) {
             return "vendor-supabase";
           }
 
-          // Charting/visualization libs — only pull these in if a route
-          // actually renders a chart (Predictive Analytics, Reports, etc.)
-          if (
-            id.includes("recharts") ||
-            id.includes("chart.js") ||
-            id.includes("d3") ||
-            id.includes("three")
-          ) {
-            return "vendor-charts";
-          }
-
-          // Everything else third-party
-          return "vendor-misc";
+          // no return -> Rollup decides automatically per dynamic import
         },
       },
     },
