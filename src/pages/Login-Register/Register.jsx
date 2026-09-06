@@ -126,6 +126,7 @@ const CustomSelect = ({
   options,
   placeholder = "—",
   accent = "#05328A",
+  "aria-label": ariaLabel,
 }) => {
   const [open, setOpen] = React.useState(false);
   const [dropPos, setDropPos] = React.useState({ top: 0, left: 0, width: 0 });
@@ -288,6 +289,9 @@ const CustomSelect = ({
       <div
         ref={triggerRef}
         onClick={handleOpen}
+        role="button"
+        tabIndex={0}
+        aria-label={ariaLabel}
         style={{
           width: "100%",
           padding: "12px 34px 12px 12px",
@@ -743,7 +747,7 @@ const Register = () => {
           }}
         >
           <img
-            src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
+            src="/image/angeles-logo.webp"
             alt="Logo"
             className="auth-brand-logo"
           />
@@ -797,7 +801,7 @@ const Register = () => {
           >
             <div className="auth-logo-row" style={{ marginBottom: 24 }}>
               <img
-                src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
+                src="/image/angeles-logo.webp"
                 alt="Logo"
                 className="logo-img"
               />
@@ -871,6 +875,7 @@ const Register = () => {
                 >
                   <div className="float-group">
                     <input
+                      id="reg-firstName"
                       type="text"
                       placeholder=" "
                       value={form.firstName}
@@ -878,10 +883,11 @@ const Register = () => {
                       onKeyDown={(e) => e.key === "Enter" && handleNextStep()}
                       required
                     />
-                    <label>First name</label>
+                    <label htmlFor="reg-firstName">First name</label>
                   </div>
                   <div className="float-group">
                     <input
+                      id="reg-lastName"
                       type="text"
                       placeholder=" "
                       value={form.lastName}
@@ -889,12 +895,13 @@ const Register = () => {
                       onKeyDown={(e) => e.key === "Enter" && handleNextStep()}
                       required
                     />
-                    <label>Last name</label>
+                    <label htmlFor="reg-lastName">Last name</label>
                   </div>
                 </div>
 
                 <div className="float-group">
                   <input
+                    id="reg-phone"
                     type="tel"
                     placeholder=" "
                     value={form.phoneNumber}
@@ -904,7 +911,7 @@ const Register = () => {
                     inputMode="numeric"
                     required
                   />
-                  <label>Contact number</label>
+                  <label htmlFor="reg-phone">Contact number</label>
                 </div>
 
                 <div className="input-group" style={{ marginTop: 4 }}>
@@ -935,7 +942,7 @@ const Register = () => {
                         display: "block",
                         fontSize: 11,
                         fontWeight: 700,
-                        color: "#94a3b8",
+                        color: "#64748b",
                         marginBottom: 5,
                       }}
                     >
@@ -949,6 +956,7 @@ const Register = () => {
                       placeholder="Select sex"
                       accent="#05328A"
                       options={["Male", "Female"]}
+                      aria-label="Sex"
                     />
                   </div>
                   <div>
@@ -957,7 +965,7 @@ const Register = () => {
                         display: "block",
                         fontSize: 11,
                         fontWeight: 700,
-                        color: "#94a3b8",
+                        color: "#64748b",
                         marginBottom: 5,
                       }}
                     >
@@ -974,7 +982,8 @@ const Register = () => {
                         value: b.id,
                         label: b.name,
                       }))}
-                    />
+                      aria-label="Preferred branch"
+                    />{" "}
                   </div>
                 </div>
 
@@ -1012,6 +1021,7 @@ const Register = () => {
               <>
                 <div className="float-group">
                   <input
+                    id="reg-email"
                     type="text"
                     placeholder=" "
                     value={form.email}
@@ -1019,9 +1029,8 @@ const Register = () => {
                     onKeyDown={(e) => e.key === "Enter" && handleNextStep()}
                     required
                   />
-                  <label>Email address</label>
+                  <label htmlFor="reg-email">Email address</label>
                 </div>
-
                 <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
                   <button
                     type="button"
@@ -1056,6 +1065,7 @@ const Register = () => {
               <>
                 <div className="float-group">
                   <input
+                    id="reg-password"
                     type="password"
                     placeholder=" "
                     value={form.password}
@@ -1063,9 +1073,8 @@ const Register = () => {
                     onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                     required
                   />
-                  <label>Password</label>
+                  <label htmlFor="reg-password">Password</label>
                 </div>
-
                 {/* Password strength bar + requirements — only appears once the user starts typing */}
                 {strength && (
                   <div style={{ marginBottom: 10, marginTop: -6 }}>
@@ -1132,6 +1141,7 @@ const Register = () => {
 
                 <div className="float-group">
                   <input
+                    id="reg-confirmPassword"
                     type="password"
                     placeholder=" "
                     value={form.confirmPassword}
@@ -1139,7 +1149,7 @@ const Register = () => {
                     onKeyDown={(e) => e.key === "Enter" && handleRegister()}
                     required
                   />
-                  <label>Confirm password</label>
+                  <label htmlFor="reg-confirmPassword">Confirm password</label>{" "}
                   {form.confirmPassword && (
                     <div
                       style={{
@@ -1199,7 +1209,7 @@ const Register = () => {
             <p
               style={{
                 fontSize: 11,
-                color: "#94a3b8",
+                color: "#64748b",
                 textAlign: "center",
                 lineHeight: 1.5,
                 marginBottom: 8,

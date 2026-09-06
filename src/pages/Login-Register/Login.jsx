@@ -1820,7 +1820,7 @@ const Login = () => {
           }}
         >
           <img
-            src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
+            src="/image/angeles-logo.webp"
             alt="Logo"
             className="auth-brand-logo"
           />
@@ -1911,7 +1911,7 @@ const Login = () => {
 
             <div className="auth-logo-row" style={{ marginBottom: 28 }}>
               <img
-                src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
+                src="/image/angeles-logo.webp"
                 alt="Logo"
                 className="logo-img"
               />
