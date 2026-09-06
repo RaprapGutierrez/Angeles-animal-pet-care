@@ -1792,7 +1792,7 @@ const Login = () => {
             radial-gradient(circle at 18% 12%, rgba(99,102,241,0.10) 0%, transparent 45%),
             radial-gradient(circle at 88% 88%, rgba(30,58,138,0.10) 0%, transparent 50%),
             radial-gradient(circle, rgba(255,255,255,0.05) 1px, transparent 1px),
-            url('/image/bg.png')
+            url('/image/bg.webp')
           `,
             backgroundSize: "auto, auto, 28px 28px, cover",
             backgroundPosition: "center, center, center, center",
