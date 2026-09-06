@@ -3209,116 +3209,237 @@ const AdminView = ({
         {adminView === "ward" ? (
           <div
             style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-              gap: 16,
+              background: "var(--card)",
+              borderRadius: "var(--radius-lg)",
+              border: "1px solid var(--border)",
+              boxShadow: "var(--shadow)",
+              padding: 24,
+              marginBottom: 24,
             }}
           >
-            {[
-              {
-                key: "pending",
-                label: "Pending",
-                color: "#dc2626",
-                bg: "#fef2f2",
-                border: "#fecaca",
-                match: (a) => (a.status || "pending") === "pending",
-              },
-              {
-                key: "responding",
-                label: "Responding",
-                color: "#1d4ed8",
-                bg: "#dbeafe",
-                border: "#93c5fd",
-                match: (a) => a.status === "responding",
-              },
-              {
-                key: "resolved",
-                label: "Resolved",
-                color: "#16a34a",
-                bg: "#f0fdf4",
-                border: "#86efac",
-                match: (a) => a.status === "resolved",
-              },
-            ].map((col) => {
-              const colAlerts = visibleAlerts.filter(col.match);
-              return (
-                <div
-                  key={col.key}
-                  style={{
-                    background: "var(--card)",
-                    border: `1.5px solid ${col.border}`,
-                    borderRadius: 14,
-                    overflow: "hidden",
-                  }}
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 16,
+                flexWrap: "wrap",
+                gap: 10,
+              }}
+            >
+              <h3
+                style={{
+                  fontSize: 15,
+                  fontWeight: 700,
+                  color: "var(--text)",
+                  margin: 0,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 8,
+                }}
+              >
+                <svg
+                  width="15"
+                  height="15"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 >
+                  <rect x="3" y="4" width="7" height="16" rx="1" />
+                  <rect x="12" y="4" width="7" height="10" rx="1" />
+                  <rect x="3" y="4" width="7" height="16" rx="1" opacity="0" />
+                </svg>
+                Ward Board
+              </h3>
+              <span style={{ fontSize: 12, color: "var(--muted)" }}>
+                {visibleAlerts.length} alert
+                {visibleAlerts.length === 1 ? "" : "s"} total
+              </span>
+            </div>
+            <hr
+              style={{
+                border: "none",
+                borderTop: "1px solid var(--border)",
+                marginBottom: 20,
+              }}
+            />
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                gap: 20,
+              }}
+            >
+              {[
+                {
+                  key: "pending",
+                  label: "Pending",
+                  color: "#dc2626",
+                  bg: "#fef2f2",
+                  border: "#fecaca",
+                  icon: (
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01" />
+                  ),
+                  match: (a) => (a.status || "pending") === "pending",
+                },
+                {
+                  key: "responding",
+                  label: "Responding",
+                  color: "#1d4ed8",
+                  bg: "#dbeafe",
+                  border: "#93c5fd",
+                  icon: (
+                    <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
+                  ),
+                  match: (a) => a.status === "responding",
+                },
+                {
+                  key: "resolved",
+                  label: "Resolved",
+                  color: "#16a34a",
+                  bg: "#f0fdf4",
+                  border: "#86efac",
+                  icon: <polyline points="20 6 9 17 4 12" />,
+                  match: (a) => a.status === "resolved",
+                },
+              ].map((col) => {
+                const colAlerts = visibleAlerts.filter(col.match);
+                return (
                   <div
+                    key={col.key}
                     style={{
-                      background: col.bg,
-                      padding: "12px 16px",
-                      borderBottom: `1.5px solid ${col.border}`,
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 13,
-                        fontWeight: 800,
-                        color: col.color,
-                      }}
-                    >
-                      {col.label}
-                    </span>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: col.color,
-                        background: "rgba(255,255,255,0.6)",
-                        borderRadius: 20,
-                        padding: "2px 9px",
-                      }}
-                    >
-                      {colAlerts.length}
-                    </span>
-                  </div>
-                  <div
-                    style={{
-                      maxHeight: 520,
-                      overflowY: "auto",
-                      padding: colAlerts.length ? 12 : 0,
+                      background: "var(--card)",
+                      border: `1.5px solid ${col.border}`,
+                      borderRadius: 14,
+                      overflow: "hidden",
                       display: "flex",
                       flexDirection: "column",
-                      gap: 12,
                     }}
                   >
-                    {colAlerts.length === 0 ? (
-                      <p
+                    <div
+                      style={{
+                        background: col.bg,
+                        padding: "14px 16px",
+                        borderBottom: `1.5px solid ${col.border}`,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        position: "sticky",
+                        top: 0,
+                        zIndex: 1,
+                      }}
+                    >
+                      <span
                         style={{
-                          padding: 16,
-                          fontSize: 12,
-                          color: "var(--muted)",
-                          textAlign: "center",
-                          margin: 0,
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: col.color,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 7,
                         }}
                       >
-                        None
-                      </p>
-                    ) : (
-                      colAlerts.map((a) => (
-                        <AlertCard
-                          key={a.id + a.status}
-                          a={a}
-                          showActions={true}
-                          onUpdateStatus={onUpdateStatus}
-                        />
-                      ))
-                    )}
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke={col.color}
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        >
+                          {col.icon}
+                        </svg>
+                        {col.label}
+                      </span>
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: col.color,
+                          background: "rgba(255,255,255,0.7)",
+                          borderRadius: 20,
+                          padding: "2px 10px",
+                          minWidth: 22,
+                          textAlign: "center",
+                        }}
+                      >
+                        {colAlerts.length}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        maxHeight: 560,
+                        overflowY: "auto",
+                        padding: colAlerts.length ? 12 : 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 12,
+                        flex: 1,
+                      }}
+                    >
+                      {colAlerts.length === 0 ? (
+                        <div
+                          style={{
+                            textAlign: "center",
+                            padding: "36px 16px",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: 40,
+                              height: 40,
+                              borderRadius: "50%",
+                              background: col.bg,
+                              border: `1.5px solid ${col.border}`,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              margin: "0 auto 8px",
+                            }}
+                          >
+                            <svg
+                              width="18"
+                              height="18"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke={col.color}
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              {col.icon}
+                            </svg>
+                          </div>
+                          <p
+                            style={{
+                              fontSize: 12,
+                              color: "var(--muted)",
+                              margin: 0,
+                            }}
+                          >
+                            No {col.label.toLowerCase()} alerts
+                          </p>
+                        </div>
+                      ) : (
+                        colAlerts.map((a) => (
+                          <AlertCard
+                            key={a.id + a.status}
+                            a={a}
+                            showActions={true}
+                            onUpdateStatus={onUpdateStatus}
+                          />
+                        ))
+                      )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         ) : (
           <>
@@ -4157,57 +4278,6 @@ const StaffView = ({
         </button>
       </div>
       <div className="emg-content">
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
-            marginBottom: 18,
-          }}
-        >
-          <span
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "#94a3b8",
-              textTransform: "uppercase",
-              letterSpacing: 0.5,
-            }}
-          >
-            View:
-          </span>
-          <div
-            style={{
-              display: "flex",
-              border: "1.5px solid #fecaca",
-              borderRadius: 8,
-              overflow: "hidden",
-            }}
-          >
-            {[
-              { key: "table", label: "Table" },
-              { key: "ward", label: "Ward Board" },
-            ].map((v) => (
-              <button
-                key={v.key}
-                onClick={() => setAdminView(v.key)}
-                style={{
-                  padding: "6px 16px",
-                  border: "none",
-                  background: adminView === v.key ? "#dc2626" : "#fff5f5",
-                  color: adminView === v.key ? "#fff" : "#b91c1c",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                }}
-              >
-                {v.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
         <div
           style={{
             borderRadius: 14,
