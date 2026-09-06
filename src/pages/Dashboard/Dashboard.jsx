@@ -162,94 +162,98 @@ const WalkinRowSkeleton = () => (
 );
 
 // ─── DashCard ─────────────────────────────────────────────────────────────────
-const DashCard = ({
-  title,
-  subtitle,
-  badge,
-  viewAllTo,
-  viewAllLabel = "View All →",
-  minBodyHeight,
-  children,
-}) => (
-  <div className="dash-card">
-    <div
-      className="dash-card-header"
-      style={{
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "16px 20px",
-        borderBottom: "1px solid var(--border)",
-        flexShrink: 0,
-      }}
-    >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div>
-          <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>{title}</h3>
-          {subtitle && (
-            <p
+const DashCard = React.memo(
+  ({
+    title,
+    subtitle,
+    badge,
+    viewAllTo,
+    viewAllLabel = "View All →",
+    minBodyHeight,
+    children,
+  }) => (
+    <div className="dash-card">
+      <div
+        className="dash-card-header"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          padding: "16px 20px",
+          borderBottom: "1px solid var(--border)",
+          flexShrink: 0,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div>
+            <h3 style={{ fontSize: 14, fontWeight: 700, margin: 0 }}>
+              {title}
+            </h3>
+            {subtitle && (
+              <p
+                style={{
+                  margin: 0,
+                  fontSize: 11,
+                  color: "var(--muted)",
+                  marginTop: 2,
+                }}
+              >
+                {subtitle}
+              </p>
+            )}
+          </div>
+          {badge != null && badge > 0 && (
+            <span
               style={{
-                margin: 0,
-                fontSize: 11,
-                color: "var(--muted)",
-                marginTop: 2,
+                background: "#1e3a8a",
+                color: "#fff",
+                borderRadius: 20,
+                fontSize: 10,
+                fontWeight: 700,
+                padding: "2px 8px",
+                lineHeight: "16px",
               }}
             >
-              {subtitle}
-            </p>
+              {badge}
+            </span>
           )}
         </div>
-        {badge != null && badge > 0 && (
-          <span
+        {viewAllTo && (
+          <Link
+            to={viewAllTo}
             style={{
-              background: "#1e3a8a",
-              color: "#fff",
-              borderRadius: 20,
-              fontSize: 10,
+              fontSize: 12,
+              color: "#60a5fa",
+              textDecoration: "none",
               fontWeight: 700,
-              padding: "2px 8px",
-              lineHeight: "16px",
+              padding: "5px 10px",
+              borderRadius: 8,
+              background: "rgba(96,165,250,0.12)",
+              border: "1px solid rgba(96,165,250,0.3)",
+              transition: "background 0.15s, color 0.15s",
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = "rgba(96,165,250,0.22)";
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = "rgba(96,165,250,0.12)";
             }}
           >
-            {badge}
-          </span>
+            {viewAllLabel}
+          </Link>
         )}
       </div>
-      {viewAllTo && (
-        <Link
-          to={viewAllTo}
-          style={{
-            fontSize: 12,
-            color: "#60a5fa",
-            textDecoration: "none",
-            fontWeight: 700,
-            padding: "5px 10px",
-            borderRadius: 8,
-            background: "rgba(96,165,250,0.12)",
-            border: "1px solid rgba(96,165,250,0.3)",
-            transition: "background 0.15s, color 0.15s",
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = "rgba(96,165,250,0.22)";
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = "rgba(96,165,250,0.12)";
-          }}
-        >
-          {viewAllLabel}
-        </Link>
-      )}
+      <div
+        className="dash-card-body"
+        style={minBodyHeight ? { minHeight: minBodyHeight } : undefined}
+      >
+        {children}
+      </div>
     </div>
-    <div
-      className="dash-card-body"
-      style={minBodyHeight ? { minHeight: minBodyHeight } : undefined}
-    >
-      {children}
-    </div>
-  </div>
+  ),
 );
 
-const EmptySlate = ({ icon, text }) => (
+const EmptySlate = React.memo(({ icon, text }) => (
   <div className="dash-empty-slate">
     <div className="dash-empty-icon">{icon}</div>
     <p
@@ -263,10 +267,10 @@ const EmptySlate = ({ icon, text }) => (
       {text}
     </p>
   </div>
-);
+));
 
 // ─── Today's Appointments ─────────────────────────────────────────────────────
-const TodayAppointments = ({ appts, loading, pendingCount }) => (
+const TodayAppointments = React.memo(({ appts, loading, pendingCount }) => (
   <DashCard
     title="Today's Appointments"
     subtitle={loading ? null : `${appts.length} scheduled`}
@@ -381,10 +385,10 @@ const TodayAppointments = ({ appts, loading, pendingCount }) => (
       ))
     )}
   </DashCard>
-);
+));
 
 // ─── Today's Walk-ins ─────────────────────────────────────────────────────────
-const TodayWalkins = ({ walkins, loading }) => (
+const TodayWalkins = React.memo(({ walkins, loading }) => (
   <DashCard
     title="Today's Walk-ins"
     subtitle={loading ? null : `${walkins.length} walk-ins today`}
@@ -470,7 +474,7 @@ const TodayWalkins = ({ walkins, loading }) => (
       })
     )}
   </DashCard>
-);
+));
 
 // ─── Live clock — isolated so only this re-renders every second ─────────────
 const LiveGreeting = () => {
@@ -537,6 +541,13 @@ const LiveDateTime = () => {
     </div>
   );
 };
+
+// Number of stat cards per role — kept as a single source of truth so the
+// loading skeleton always renders the same count as the real cards. A
+// mismatch (e.g. 6 skeletons swapping to 5 real cards for Employees) shifts
+// the grid to one fewer row and moves everything below it — a real layout
+// shift Lighthouse penalizes.
+const STAT_CARD_COUNT = (isAdmin, isManager) => (isAdmin || isManager ? 6 : 5);
 
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 const Dashboard = () => {
@@ -1002,7 +1013,9 @@ const Dashboard = () => {
               }}
             />
             <div className="dash-stat-grid">
-              {Array.from({ length: 6 }).map((_, i) => (
+              {Array.from({
+                length: STAT_CARD_COUNT(isAdmin, isManager),
+              }).map((_, i) => (
                 <StatCardSkeleton key={i} />
               ))}
             </div>
