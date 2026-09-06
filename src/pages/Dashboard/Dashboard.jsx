@@ -462,6 +462,63 @@ const TodayWalkins = ({ walkins, loading }) => (
   </DashCard>
 );
 
+// ─── Live clock — isolated so only this re-renders every second ─────────────
+const LiveGreeting = () => {
+  const [hour, setHour] = useState(new Date().getHours());
+  useEffect(() => {
+    const t = setInterval(() => setHour(new Date().getHours()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  return hour < 12 ? "Good day" : "Good night";
+};
+
+const LiveDateTime = () => {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const t = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const dateStr = time.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  const timeStr = time.toLocaleTimeString("en-US", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+  return (
+    <div style={{ textAlign: "right", position: "relative", zIndex: 1 }}>
+      <strong
+        style={{
+          display: "block",
+          fontSize: 15,
+          color: "#fff",
+          fontWeight: 700,
+          marginBottom: 4,
+        }}
+      >
+        {dateStr}
+      </strong>
+      <span
+        style={{
+          fontSize: 22,
+          fontWeight: 800,
+          fontVariantNumeric: "tabular-nums",
+          background: "linear-gradient(90deg,#7dd3fc,#93c5fd)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          letterSpacing: 1,
+        }}
+      >
+        {timeStr}
+      </span>
+    </div>
+  );
+};
+
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 const Dashboard = () => {
   const {
@@ -487,15 +544,8 @@ const Dashboard = () => {
   const [todayAppts, setTodayAppts] = useState([]);
   const [todayWalkins, setTodayWalkins] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [time, setTime] = useState(new Date());
   const [branchFilter, setBranchFilter] = useState("");
   const [branches, setBranches] = useState([]);
-
-  // ── Clock ──────────────────────────────────────────────────────────────────
-  useEffect(() => {
-    const t = setInterval(() => setTime(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
 
   // ── Fetch branches ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -854,19 +904,6 @@ const Dashboard = () => {
 
   const showPendingBanner = stats.pendingAppts > 0;
 
-  const dateStr = time.toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-  const timeStr = time.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-  const greeting = time.getHours() < 12 ? "Good day" : "Good night";
-
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (userLoading) {
     return (
@@ -1079,7 +1116,7 @@ const Dashboard = () => {
                   lineHeight: 1.2,
                 }}
               >
-                {greeting},{" "}
+                <LiveGreeting />,{" "}
                 <span
                   style={{
                     background: "linear-gradient(90deg,#7dd3fc,#bae6fd)",
@@ -1101,34 +1138,7 @@ const Dashboard = () => {
               </p>
             </div>
 
-            <div
-              style={{ textAlign: "right", position: "relative", zIndex: 1 }}
-            >
-              <strong
-                style={{
-                  display: "block",
-                  fontSize: 15,
-                  color: "#fff",
-                  fontWeight: 700,
-                  marginBottom: 4,
-                }}
-              >
-                {dateStr}
-              </strong>
-              <span
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  fontVariantNumeric: "tabular-nums",
-                  background: "linear-gradient(90deg,#7dd3fc,#93c5fd)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                  letterSpacing: 1,
-                }}
-              >
-                {timeStr}
-              </span>
-            </div>
+            <LiveDateTime />
           </div>
 
           {/* ── Pending appointments banner ───────────────────────────────── */}
