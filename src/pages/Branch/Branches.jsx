@@ -1406,7 +1406,8 @@ const ConfirmDialog = ({
 };
 
 const Branches = () => {
-  const { isAdmin, isSuperAdmin, isEmployee } = useCurrentUser();
+  const { isAdmin, isSuperAdmin, isEmployee, isManager } = useCurrentUser();
+  const canEdit = isAdmin || isSuperAdmin;
   const [branches, setBranches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -1934,7 +1935,7 @@ const Branches = () => {
                   ? "Super Admin — Full Access"
                   : "Administrator View"}
               </span>
-            ) : isEmployee ? (
+            ) : isManager || isEmployee ? (
               <span
                 style={{
                   fontSize: 11,
@@ -1947,129 +1948,135 @@ const Branches = () => {
                   marginLeft: 10,
                 }}
               >
-                Staff View
+                View Only
               </span>
             ) : null}
           </div>
-          <div
-            style={{
-              position: "fixed",
-              bottom: 28,
-              right: 28,
-              zIndex: 999,
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.querySelector(".fab-tooltip").style.opacity = "1";
-              e.currentTarget.querySelector(".fab-tooltip").style.transform =
-                "translateX(0)";
-              e.currentTarget.querySelector(".fab-btn").style.transform =
-                "scale(1.1)";
-              e.currentTarget.querySelector(".fab-btn").style.boxShadow =
-                "0 6px 28px rgba(30,58,138,0.5)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.querySelector(".fab-tooltip").style.opacity = "0";
-              e.currentTarget.querySelector(".fab-tooltip").style.transform =
-                "translateX(8px)";
-              e.currentTarget.querySelector(".fab-btn").style.transform =
-                "scale(1)";
-              e.currentTarget.querySelector(".fab-btn").style.boxShadow =
-                "0 4px 20px rgba(30,58,138,0.4)";
-            }}
-          >
-            <span
-              className="fab-tooltip"
+          {canEdit && (
+            <div
               style={{
-                opacity: 0,
-                transform: "translateX(8px)",
-                transition: "opacity 0.2s ease, transform 0.2s ease",
-                background: "linear-gradient(135deg, #0f172a, #1e3a8a)",
-                color: "#fff",
-                fontSize: 12,
-                fontWeight: 700,
-                padding: "8px 14px",
-                borderRadius: 10,
-                whiteSpace: "nowrap",
-                pointerEvents: "none",
-                boxShadow:
-                  "0 8px 24px rgba(30,58,138,0.35), 0 2px 8px rgba(0,0,0,0.2)",
-                border: "1px solid rgba(255,255,255,0.12)",
+                position: "fixed",
+                bottom: 28,
+                right: 28,
+                zIndex: 999,
                 display: "flex",
                 alignItems: "center",
-                gap: 7,
-                letterSpacing: "0.2px",
-                position: "relative",
+                gap: 10,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.querySelector(".fab-tooltip").style.opacity =
+                  "1";
+                e.currentTarget.querySelector(".fab-tooltip").style.transform =
+                  "translateX(0)";
+                e.currentTarget.querySelector(".fab-btn").style.transform =
+                  "scale(1.1)";
+                e.currentTarget.querySelector(".fab-btn").style.boxShadow =
+                  "0 6px 28px rgba(30,58,138,0.5)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.querySelector(".fab-tooltip").style.opacity =
+                  "0";
+                e.currentTarget.querySelector(".fab-tooltip").style.transform =
+                  "translateX(8px)";
+                e.currentTarget.querySelector(".fab-btn").style.transform =
+                  "scale(1)";
+                e.currentTarget.querySelector(".fab-btn").style.boxShadow =
+                  "0 4px 20px rgba(30,58,138,0.4)";
               }}
             >
               <span
+                className="fab-tooltip"
                 style={{
+                  opacity: 0,
+                  transform: "translateX(8px)",
+                  transition: "opacity 0.2s ease, transform 0.2s ease",
+                  background: "linear-gradient(135deg, #0f172a, #1e3a8a)",
+                  color: "#fff",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  padding: "8px 14px",
+                  borderRadius: 10,
+                  whiteSpace: "nowrap",
+                  pointerEvents: "none",
+                  boxShadow:
+                    "0 8px 24px rgba(30,58,138,0.35), 0 2px 8px rgba(0,0,0,0.2)",
+                  border: "1px solid rgba(255,255,255,0.12)",
                   display: "flex",
-                  flexDirection: "column",
-                  lineHeight: 1.2,
+                  alignItems: "center",
+                  gap: 7,
+                  letterSpacing: "0.2px",
+                  position: "relative",
                 }}
               >
-                <span style={{ fontSize: 12, fontWeight: 800, color: "#fff" }}>
-                  Add Branch
+                <span
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  <span
+                    style={{ fontSize: 12, fontWeight: 800, color: "#fff" }}
+                  >
+                    Add Branch
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 10,
+                      fontWeight: 500,
+                      color: "rgba(255,255,255,0.55)",
+                    }}
+                  >
+                    Register a new location
+                  </span>
                 </span>
                 <span
                   style={{
-                    fontSize: 10,
-                    fontWeight: 500,
-                    color: "rgba(255,255,255,0.55)",
+                    position: "absolute",
+                    right: -6,
+                    top: "50%",
+                    transform: "translateY(-50%)",
+                    width: 0,
+                    height: 0,
+                    borderTop: "6px solid transparent",
+                    borderBottom: "6px solid transparent",
+                    borderLeft: "6px solid #1e3a8a",
                   }}
-                >
-                  Register a new location
-                </span>
+                />
               </span>
-              <span
+              <button
+                onClick={openAdd}
+                className="fab-btn"
                 style={{
-                  position: "absolute",
-                  right: -6,
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  width: 0,
-                  height: 0,
-                  borderTop: "6px solid transparent",
-                  borderBottom: "6px solid transparent",
-                  borderLeft: "6px solid #1e3a8a",
+                  width: 56,
+                  height: 56,
+                  borderRadius: "50%",
+                  background: "linear-gradient(135deg,#1e3a8a,#3b82f6)",
+                  border: "none",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 4px 20px rgba(30,58,138,0.4)",
+                  transition: "transform 0.2s, box-shadow 0.2s",
+                  flexShrink: 0,
                 }}
-              />
-            </span>
-            <button
-              onClick={openAdd}
-              className="fab-btn"
-              style={{
-                width: 56,
-                height: 56,
-                borderRadius: "50%",
-                background: "linear-gradient(135deg,#1e3a8a,#3b82f6)",
-                border: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 20px rgba(30,58,138,0.4)",
-                transition: "transform 0.2s, box-shadow 0.2s",
-                flexShrink: 0,
-              }}
-            >
-              <svg
-                width="24"
-                height="24"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#fff"
-                strokeWidth="2.5"
-                strokeLinecap="round"
               >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
-          </div>
+                <svg
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#fff"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <line x1="12" y1="5" x2="12" y2="19" />
+                  <line x1="5" y1="12" x2="19" y2="12" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="branches-content">
@@ -2883,76 +2890,80 @@ const Branches = () => {
                           marginTop: "auto",
                         }}
                       >
-                        <button
-                          title="Edit"
-                          style={{
-                            height: 28,
-                            padding: "0 10px",
-                            gap: 5,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            background: "#f8fafc",
-                            border: "1.5px solid #e2e8f0",
-                            color: "#475569",
-                            borderRadius: 20,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
-                          onClick={() => openEdit(b)}
-                        >
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
+                        {canEdit && (
+                          <button
+                            title="Edit"
+                            style={{
+                              height: 28,
+                              padding: "0 10px",
+                              gap: 5,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "#f8fafc",
+                              border: "1.5px solid #e2e8f0",
+                              color: "#475569",
+                              borderRadius: 20,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                            onClick={() => openEdit(b)}
                           >
-                            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-                            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                          </svg>
-                          Edit
-                        </button>
-                        <button
-                          title="Delete"
-                          style={{
-                            height: 28,
-                            padding: "0 10px",
-                            gap: 5,
-                            display: "inline-flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            background: "#fef2f2",
-                            border: "1.5px solid #fca5a5",
-                            color: "#dc2626",
-                            borderRadius: 20,
-                            fontSize: 11,
-                            fontWeight: 600,
-                            cursor: "pointer",
-                          }}
-                          onClick={() => handleDeleteClick(b.id)}
-                        >
-                          <svg
-                            width="12"
-                            height="12"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="2.5"
-                            strokeLinecap="round"
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                            </svg>
+                            Edit
+                          </button>
+                        )}
+                        {canEdit && (
+                          <button
+                            title="Delete"
+                            style={{
+                              height: 28,
+                              padding: "0 10px",
+                              gap: 5,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              background: "#fef2f2",
+                              border: "1.5px solid #fca5a5",
+                              color: "#dc2626",
+                              borderRadius: 20,
+                              fontSize: 11,
+                              fontWeight: 600,
+                              cursor: "pointer",
+                            }}
+                            onClick={() => handleDeleteClick(b.id)}
                           >
-                            <polyline points="3 6 5 6 21 6" />
-                            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-                            <path d="M10 11v6M14 11v6" />
-                            <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-                          </svg>
-                          Delete
-                        </button>
-                        {b.email && (
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.5"
+                              strokeLinecap="round"
+                            >
+                              <polyline points="3 6 5 6 21 6" />
+                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                              <path d="M10 11v6M14 11v6" />
+                              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+                            </svg>
+                            Delete
+                          </button>
+                        )}
+                        {canEdit && b.email && (
                           <button
                             title="Create manager account"
                             disabled={provisioningId === b.id}
@@ -3466,7 +3477,7 @@ const Branches = () => {
       )}
 
       {/* ── ADD/EDIT MODAL ── */}
-      {showModal && (
+      {showModal && canEdit && (
         <div
           className="branch-modal-overlay"
           style={{

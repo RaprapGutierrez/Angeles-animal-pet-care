@@ -381,7 +381,9 @@ const App = () => {
           <Route
             path="/branches"
             element={
-              <PrivateRoute allowedRoles={["super_admin", "Admin"]}>
+              <PrivateRoute
+                allowedRoles={["super_admin", "Admin", "Manager", "Employee"]}
+              >
                 <Branches />
               </PrivateRoute>
             }
