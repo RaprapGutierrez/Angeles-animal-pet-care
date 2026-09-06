@@ -801,7 +801,7 @@ const Register = () => {
           >
             <div className="auth-logo-row" style={{ marginBottom: 24 }}>
               <img
-                src="/image/angeles-logo.webp"
+                src="/image/446805041_881106557364617_1125518808684788316_n.webp"
                 alt="Logo"
                 className="logo-img"
               />
