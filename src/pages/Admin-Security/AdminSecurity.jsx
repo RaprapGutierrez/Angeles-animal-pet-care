@@ -1869,10 +1869,27 @@ const AdminSecurity = () => {
           setAddErrors({
             email: "This email is already registered in the system.",
           });
+          setConfirm({
+            title: "Email Already Registered",
+            message: `An account with "${addForm.email.trim().toLowerCase()}" already exists in the system. Please use a different email address, or check if this user already has an account.`,
+            type: "danger",
+            confirmLabel: "Got it",
+            onConfirm: () => setConfirm(null),
+            onCancel: () => setConfirm(null),
+          });
           setSaving(false);
           return;
         }
-        alert("Error: " + (result.error || "Failed to create user"));
+        setConfirm({
+          title: "Couldn't Create User",
+          message:
+            result.error ||
+            "Something went wrong while creating the user. Please try again.",
+          type: "danger",
+          confirmLabel: "Got it",
+          onConfirm: () => setConfirm(null),
+          onCancel: () => setConfirm(null),
+        });
         setSaving(false);
         return;
       }
@@ -2082,7 +2099,7 @@ const AdminSecurity = () => {
         last_name: editForm.last_name,
         branch_id: editForm.branch_id || null,
         sex: editForm.sex || null,
-        phone_number: editForm.phone_number || null,
+        phone: editForm.phone_number || null,
       };
 
       // SuperAdmin can also update email via admin API
