@@ -2805,12 +2805,21 @@ export const Layout = ({ children }) => {
       }
     };
 
+    // Fire immediately: emergency alerts (safety-critical, shouldn't wait)
+    // and unread messages (drives the header badge users check first).
     fetchEmergencyAlerts();
     fetchMessages();
-    fetchStockAlerts();
-    fetchNewPatients();
-    fetchNewAppointments();
-    fetchOccupiedRooms();
+
+    // Defer the rest until the browser is idle / after first paint, so
+    // they don't compete with the page's own critical rendering work.
+    // (These four are "nice to have soon", not "must have instantly".)
+    const idle = window.requestIdleCallback || ((cb) => setTimeout(cb, 200));
+    const idleHandle = idle(() => {
+      fetchStockAlerts();
+      fetchNewPatients();
+      fetchNewAppointments();
+      fetchOccupiedRooms();
+    });
 
     // Fallback poll — realtime channels can silently miss events (tab
     // backgrounding, dropped websocket, etc). This guarantees the unread
@@ -2902,6 +2911,11 @@ export const Layout = ({ children }) => {
     fetchApprovedAccounts();
 
     return () => {
+      if (window.cancelIdleCallback && typeof idleHandle === "number") {
+        window.cancelIdleCallback(idleHandle);
+      } else {
+        clearTimeout(idleHandle);
+      }
       clearInterval(msgPollInterval);
       supabase.removeChannel(easSub);
       supabase.removeChannel(msgSub);
