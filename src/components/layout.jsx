@@ -3414,7 +3414,7 @@ export const Layout = ({ children }) => {
             }}
           >
             <img
-              src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
+              src="/image/angeles-logo.webp"
               alt="Logo"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
@@ -3599,7 +3599,7 @@ export const Layout = ({ children }) => {
               }}
             >
               <img
-                src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
+                src="/image/angeles-logo.webp"
                 alt="Logo"
                 style={{
                   width: 38,
@@ -4270,7 +4270,7 @@ export const Layout = ({ children }) => {
                 </svg>
               </button>
               <img
-                src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
+                src="/image/angeles-logo.webp"
                 alt="APC Logo"
                 style={{
                   width: 32,
