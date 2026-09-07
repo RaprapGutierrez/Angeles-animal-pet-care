@@ -922,7 +922,10 @@ const CustomerShop = () => {
                         justifyContent: "space-between",
                       }}
                     >
-                      <strong style={{ fontSize: 15, color: "var(--royal)" }}>
+                      <strong
+                        className="cshop-price"
+                        style={{ fontSize: 15, color: "var(--royal)" }}
+                      >
                         ₱{Number(p.price).toFixed(2)}
                       </strong>
                       <span
@@ -1777,6 +1780,7 @@ Payment  : ${tx.payment}
                     Price
                   </p>
                   <p
+                    className="cshop-price"
                     style={{
                       margin: "3px 0 0",
                       fontSize: 16,

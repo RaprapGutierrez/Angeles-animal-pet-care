@@ -2085,7 +2085,8 @@ const CustomerMessages = () => {
                       transition: "background 0.12s",
                     }}
                     onMouseEnter={(e) =>
-                      (e.currentTarget.style.background = "#f4f6fb")
+                      (e.currentTarget.style.background =
+                        "var(--hover-bg, #f4f6fb)")
                     }
                     onMouseLeave={(e) =>
                       (e.currentTarget.style.background = "transparent")

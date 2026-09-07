@@ -34,6 +34,13 @@ html.dark .cs-select-option:hover {
 html.dark .ca-topbar-icon {
   filter: brightness(0) invert(1);
 }
+
+html.dark .cd-view-icon {
+  stroke: #7dd3fc !important;
+}
+html.dark .cd-view-icon[fill]:not([fill="none"]) {
+  fill: #7dd3fc !important;
+}
 @media (max-width: 768px) {
   .branches-topbar {
     left: 0 !important;

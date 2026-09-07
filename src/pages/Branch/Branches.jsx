@@ -1148,8 +1148,9 @@ const BranchViewPanel = ({ branch }) => {
                   fontWeight: 600,
                   padding: "3px 10px",
                   borderRadius: 99,
-                  background: "var(--light-blue)",
-                  color: "var(--royal)",
+                  background: "rgba(99,102,241,0.18)",
+                  color: "#a5b4fc",
+                  border: "1px solid rgba(99,102,241,0.35)",
                 }}
               >
                 {svc}
@@ -2871,8 +2872,9 @@ const Branches = () => {
                                   fontWeight: 600,
                                   padding: "3px 10px",
                                   borderRadius: 99,
-                                  background: "var(--light-blue)",
-                                  color: "var(--royal)",
+                                  background: "rgba(99,102,241,0.18)",
+                                  color: "#a5b4fc",
+                                  border: "1px solid rgba(99,102,241,0.35)",
                                 }}
                               >
                                 {svc}
@@ -3356,8 +3358,9 @@ const Branches = () => {
                           fontWeight: 600,
                           padding: "4px 12px",
                           borderRadius: 99,
-                          background: "var(--light-blue)",
-                          color: "var(--royal)",
+                          background: "rgba(99,102,241,0.18)",
+                          color: "#a5b4fc",
+                          border: "1px solid rgba(99,102,241,0.35)",
                         }}
                       >
                         {svc}

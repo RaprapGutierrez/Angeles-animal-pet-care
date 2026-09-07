@@ -748,6 +748,7 @@ const CustomerDashboard = () => {
                           alt="appt"
                           width={15}
                           height={15}
+                          className="cd-icon"
                         />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -900,6 +901,7 @@ const CustomerDashboard = () => {
                           alt={p.species}
                           width={16}
                           height={16}
+                          className="cd-icon"
                         />
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>

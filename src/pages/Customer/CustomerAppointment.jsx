@@ -4533,6 +4533,7 @@ const CustomerAppointment = () => {
               <svg
                 viewBox="0 0 20 20"
                 fill="#1e3a8a"
+                className="cd-view-icon"
                 style={{ width: 13, height: 13 }}
               >
                 <path d="M11.9 8.4c1.3 0 2.1-1.9 2.1-3.1 0-1-.5-2.2-1.5-2.2-1.3 0-2.1 1.9-2.1 3.1 0 1 .5 2.2 1.5 2.2zm-3.8 0c1 0 1.5-1.2 1.5-2.2C9.6 4.9 8.8 3 7.5 3 6.5 3 6 4.2 6 5.2c-.1 1.3.7 3.2 2.1 3.2zm7.4-1c-1.3 0-2.2 1.8-2.2 3.1 0 .9.4 1.8 1.3 1.8 1.3 0 2.2-1.8 2.2-3.1 0-.9-.5-1.8-1.3-1.8zm-8.7 3.1c0-1.3-1-3.1-2.2-3.1-.9 0-1.3.9-1.3 1.8 0 1.3 1 3.1 2.2 3.1.9 0 1.3-.9 1.3-1.8zm3.2-.2c-2 0-4.7 3.2-4.7 5.4 0 1 .7 1.3 1.5 1.3 1.2 0 2.1-.8 3.2-.8 1 0 1.9.8 3 .8.8 0 1.7-.2 1.7-1.3 0-2.2-2.7-5.4-4.7-5.4z" />
@@ -4545,6 +4546,7 @@ const CustomerAppointment = () => {
                 stroke="#1e3a8a"
                 strokeWidth="2"
                 strokeLinecap="round"
+                className="cd-view-icon"
                 style={{ width: 13, height: 13 }}
               >
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -4558,6 +4560,7 @@ const CustomerAppointment = () => {
                 stroke="#1e3a8a"
                 strokeWidth="2"
                 strokeLinecap="round"
+                className="cd-view-icon"
                 style={{ width: 13, height: 13 }}
               >
                 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -4571,6 +4574,7 @@ const CustomerAppointment = () => {
                 stroke="#1e3a8a"
                 strokeWidth="2"
                 strokeLinecap="round"
+                className="cd-view-icon"
                 style={{ width: 13, height: 13 }}
               >
                 <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -4584,6 +4588,7 @@ const CustomerAppointment = () => {
                 stroke="#1e3a8a"
                 strokeWidth="2"
                 strokeLinecap="round"
+                className="cd-view-icon"
                 style={{ width: 13, height: 13 }}
               >
                 <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -4599,6 +4604,7 @@ const CustomerAppointment = () => {
                 stroke="#1e3a8a"
                 strokeWidth="2"
                 strokeLinecap="round"
+                className="cd-view-icon"
                 style={{ width: 13, height: 13 }}
               >
                 <circle cx="12" cy="12" r="10" />
@@ -4612,6 +4618,7 @@ const CustomerAppointment = () => {
                 stroke="#1e3a8a"
                 strokeWidth="2"
                 strokeLinecap="round"
+                className="cd-view-icon"
                 style={{ width: 13, height: 13 }}
               >
                 <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.59 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z" />
@@ -4624,6 +4631,7 @@ const CustomerAppointment = () => {
                 stroke="#1e3a8a"
                 strokeWidth="2"
                 strokeLinecap="round"
+                className="cd-view-icon"
                 style={{ width: 13, height: 13 }}
               >
                 <line x1="8" y1="6" x2="21" y2="6" />
