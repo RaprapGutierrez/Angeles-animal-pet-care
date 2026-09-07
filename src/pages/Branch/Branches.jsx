@@ -1632,7 +1632,7 @@ const Branches = () => {
       phone_number: existing?.phone_number || "",
       email: existing?.email || "",
       password: existing?.password || generatePassword(),
-      role: existing?.role || "Manager",
+      role: existing?.role || "",
     });
     setAccountErrors({});
     setShowAccountPassword(false);
@@ -4594,22 +4594,30 @@ const Branches = () => {
               <h3>
                 {editingAccountIndex !== null ? "Edit Account" : "New Account"}
               </h3>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <button
-                  className="btn btn-primary branches-btn-auto"
-                  onClick={saveAccountDraft}
-                >
-                  Add Account
-                </button>
-                <button
-                  className="btn btn-ghost btn-icon branches-btn-auto"
-                  onClick={() => setShowAccountModal(false)}
-                >
-                  ✕
-                </button>
-              </div>
+              <button
+                className="btn btn-ghost btn-icon branches-btn-auto"
+                onClick={() => setShowAccountModal(false)}
+              >
+                ✕
+              </button>
             </div>
             <div className="modal-body">
+              <div
+                style={{
+                  background: "#eef2ff",
+                  border: "1px solid #c7d2fe",
+                  borderRadius: 8,
+                  padding: "8px 12px",
+                  fontSize: 11,
+                  fontWeight: 600,
+                  color: "#4338ca",
+                  marginBottom: 14,
+                }}
+              >
+                No need to pick a branch here — this account will be linked to{" "}
+                {form.name ? `"${form.name}"` : "this branch"} automatically
+                once you save it.
+              </div>
               <div className="form-grid">
                 <div className="form-group">
                   <label>
@@ -4868,7 +4876,7 @@ const Branches = () => {
                 className="btn btn-primary branches-btn-auto"
                 onClick={saveAccountDraft}
               >
-                Add Account
+                {editingAccountIndex !== null ? "Save Changes" : "Add Account"}
               </button>
             </div>
           </div>
