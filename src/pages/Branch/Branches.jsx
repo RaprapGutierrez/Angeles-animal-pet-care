@@ -1430,6 +1430,7 @@ const Branches = () => {
   });
   const [formDirty, setFormDirty] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const [accountModalMode, setAccountModalMode] = useState("list"); // "list" | "form"
   const [accountDrafts, setAccountDrafts] = useState([]); // [{ first_name, last_name, email, password, role, sex, phone_number }]
   const [editingAccountIndex, setEditingAccountIndex] = useState(null); // index being edited, or null when adding new
   const [accountForm, setAccountForm] = useState({
@@ -1636,6 +1637,12 @@ const Branches = () => {
     });
     setAccountErrors({});
     setShowAccountPassword(false);
+    setAccountModalMode("form");
+    setShowAccountModal(true);
+  };
+
+  const openAccountList = () => {
+    setAccountModalMode("list");
     setShowAccountModal(true);
   };
 
@@ -1688,7 +1695,7 @@ const Branches = () => {
       ...(!prev.email ? { email: draft.email } : {}),
     }));
     setEditingAccountIndex(null);
-    setShowAccountModal(false);
+    setAccountModalMode("list");
   };
 
   const removeAccountDraft = (index) => {
@@ -3987,137 +3994,13 @@ const Branches = () => {
                   />
                 </div>
                 {!editBranch && (
-                  <div className="form-group form-full">
+                  <div className="form-group">
                     <label>
                       Accounts <span style={{ color: "#dc2626" }}>*</span>
                     </label>
-                    {accountDrafts.length > 0 && (
-                      <div
-                        style={{
-                          display: "flex",
-                          flexDirection: "column",
-                          gap: 8,
-                          marginBottom: 8,
-                        }}
-                      >
-                        {accountDrafts.map((acct, idx) => {
-                          const initials =
-                            `${acct.first_name?.[0] || ""}${acct.last_name?.[0] || ""}`.toUpperCase();
-                          return (
-                            <div
-                              key={idx}
-                              style={{
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "space-between",
-                                gap: 10,
-                                padding: "8px 12px",
-                                border: "1.5px solid #86efac",
-                                background: "#f0fdf4",
-                                borderRadius: 9,
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 10,
-                                  minWidth: 0,
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    width: 32,
-                                    height: 32,
-                                    borderRadius: "50%",
-                                    background: "#16a34a",
-                                    color: "#fff",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: 12,
-                                    fontWeight: 800,
-                                    flexShrink: 0,
-                                  }}
-                                >
-                                  {initials || "?"}
-                                </div>
-                                <div style={{ minWidth: 0 }}>
-                                  <p
-                                    style={{
-                                      margin: 0,
-                                      fontSize: 13,
-                                      fontWeight: 700,
-                                      color: "#166534",
-                                      whiteSpace: "nowrap",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                    }}
-                                  >
-                                    {acct.first_name} {acct.last_name}
-                                  </p>
-                                  <p
-                                    style={{
-                                      margin: 0,
-                                      fontSize: 11,
-                                      color: "#15803d",
-                                      whiteSpace: "nowrap",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                    }}
-                                  >
-                                    {acct.role} · {acct.email}
-                                  </p>
-                                </div>
-                              </div>
-                              <div
-                                style={{
-                                  display: "flex",
-                                  gap: 6,
-                                  flexShrink: 0,
-                                }}
-                              >
-                                <button
-                                  type="button"
-                                  onClick={() => openAccountModal(idx)}
-                                  style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color: "#166534",
-                                    background: "#fff",
-                                    border: "1px solid #86efac",
-                                    borderRadius: 7,
-                                    padding: "5px 10px",
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  Edit
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => removeAccountDraft(idx)}
-                                  style={{
-                                    fontSize: 11,
-                                    fontWeight: 700,
-                                    color: "#dc2626",
-                                    background: "#fff",
-                                    border: "1px solid #fca5a5",
-                                    borderRadius: 7,
-                                    padding: "5px 10px",
-                                    cursor: "pointer",
-                                  }}
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
                     <button
                       type="button"
-                      onClick={() => openAccountModal(null)}
+                      onClick={openAccountList}
                       style={{
                         width: "100%",
                         padding: "9px 12px",
@@ -4144,13 +4027,27 @@ const Branches = () => {
                         strokeWidth="2.5"
                         strokeLinecap="round"
                       >
-                        <line x1="12" y1="5" x2="12" y2="19" />
-                        <line x1="5" y1="12" x2="19" y2="12" />
+                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                        <circle cx="12" cy="12" r="3" />
                       </svg>
-                      Add Account
+                      View Account
+                      {accountDrafts.length > 0 && (
+                        <span
+                          style={{
+                            fontSize: 11,
+                            fontWeight: 800,
+                            background: "#4338ca",
+                            color: "#fff",
+                            borderRadius: 99,
+                            padding: "1px 7px",
+                          }}
+                        >
+                          {accountDrafts.length}
+                        </span>
+                      )}
                     </button>
                   </div>
-                )}
+                )}{" "}
                 <div className="form-group">
                   <label>Manager Name</label>
                   <input
@@ -4227,7 +4124,6 @@ const Branches = () => {
                       </p>
                     )}
                 </div>
-
                 {/* ── MODULE SELECTOR ── */}
                 <div className="form-group form-full">
                   <label style={{ marginBottom: 8, display: "block" }}>
@@ -4241,7 +4137,6 @@ const Branches = () => {
                     }}
                   />
                 </div>
-
                 {/* ── SERVICES — only when any role has appointment or walk-in ── */}
                 {anyRoleHasServiceTrigger && (
                   <div className="form-group form-full">
@@ -4592,7 +4487,11 @@ const Branches = () => {
           >
             <div className="modal-header">
               <h3>
-                {editingAccountIndex !== null ? "Edit Account" : "New Account"}
+                {accountModalMode === "list"
+                  ? "Accounts"
+                  : editingAccountIndex !== null
+                    ? "Edit Account"
+                    : "New Account"}
               </h3>
               <button
                 className="btn btn-ghost btn-icon branches-btn-auto"
@@ -4602,282 +4501,477 @@ const Branches = () => {
               </button>
             </div>
             <div className="modal-body">
-              <div
-                style={{
-                  background: "#eef2ff",
-                  border: "1px solid #c7d2fe",
-                  borderRadius: 8,
-                  padding: "8px 12px",
-                  fontSize: 11,
-                  fontWeight: 600,
-                  color: "#4338ca",
-                  marginBottom: 14,
-                }}
-              >
-                No need to pick a branch here — this account will be linked to{" "}
-                {form.name ? `"${form.name}"` : "this branch"} automatically
-                once you save it.
-              </div>
-              <div className="form-grid">
-                <div className="form-group">
-                  <label>
-                    First Name <span style={{ color: "#dc2626" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={accountForm.first_name}
-                    onChange={(e) => {
-                      setAccountForm((f) => ({
-                        ...f,
-                        first_name: e.target.value,
-                      }));
-                      setAccountErrors((er) => ({ ...er, first_name: "" }));
-                    }}
-                    placeholder="e.g. Mia"
-                  />
-                  {accountErrors.first_name && (
-                    <p
+              {accountModalMode === "list" ? (
+                <div>
+                  {accountDrafts.length > 0 ? (
+                    <div
                       style={{
-                        fontSize: 11,
-                        color: "#dc2626",
-                        margin: "4px 0 0",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                        marginBottom: 12,
                       }}
                     >
-                      {accountErrors.first_name}
-                    </p>
-                  )}
-                </div>
-                <div className="form-group">
-                  <label>
-                    Last Name <span style={{ color: "#dc2626" }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={accountForm.last_name}
-                    onChange={(e) => {
-                      setAccountForm((f) => ({
-                        ...f,
-                        last_name: e.target.value,
-                      }));
-                      setAccountErrors((er) => ({ ...er, last_name: "" }));
-                    }}
-                    placeholder="e.g. Dela Cruz"
-                  />
-                  {accountErrors.last_name && (
+                      {accountDrafts.map((acct, idx) => {
+                        const initials =
+                          `${acct.first_name?.[0] || ""}${acct.last_name?.[0] || ""}`.toUpperCase();
+                        return (
+                          <div
+                            key={idx}
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                              gap: 10,
+                              padding: "8px 12px",
+                              border: "1.5px solid #86efac",
+                              background: "#f0fdf4",
+                              borderRadius: 9,
+                            }}
+                          >
+                            <div
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                minWidth: 0,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: "50%",
+                                  background: "#16a34a",
+                                  color: "#fff",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {initials || "?"}
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    color: "#166534",
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
+                                  {acct.first_name} {acct.last_name}
+                                </p>
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 11,
+                                    color: "#15803d",
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
+                                  {acct.role} · {acct.email}
+                                </p>
+                              </div>
+                            </div>
+                            <div
+                              style={{
+                                display: "flex",
+                                gap: 6,
+                                flexShrink: 0,
+                              }}
+                            >
+                              <button
+                                type="button"
+                                onClick={() => openAccountModal(idx)}
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: "#166534",
+                                  background: "#fff",
+                                  border: "1px solid #86efac",
+                                  borderRadius: 7,
+                                  padding: "5px 10px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => removeAccountDraft(idx)}
+                                style={{
+                                  fontSize: 11,
+                                  fontWeight: 700,
+                                  color: "#dc2626",
+                                  background: "#fff",
+                                  border: "1px solid #fca5a5",
+                                  borderRadius: 7,
+                                  padding: "5px 10px",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
                     <p
                       style={{
-                        fontSize: 11,
-                        color: "#dc2626",
-                        margin: "4px 0 0",
+                        fontSize: 12,
+                        color: "#94a3b8",
+                        margin: "0 0 14px",
+                        textAlign: "center",
                       }}
                     >
-                      {accountErrors.last_name}
+                      No accounts added yet.
                     </p>
                   )}
-                </div>
-                <div className="form-group">
-                  <label>Sex</label>
-                  <CustomSelect
-                    value={accountForm.sex}
-                    onChange={(val) =>
-                      setAccountForm((f) => ({ ...f, sex: val }))
-                    }
-                    placeholder="— Select —"
-                    options={["Male", "Female"]}
-                  />
-                </div>
-                <div className="form-group">
-                  <label>
-                    Phone Number{" "}
-                    <span style={{ fontWeight: 400, color: "#94a3b8" }}>
-                      (optional)
-                    </span>
-                  </label>
-                  <input
-                    type="tel"
-                    inputMode="numeric"
-                    placeholder="0917 000 0000"
-                    value={formatPhMobile(accountForm.phone_number)}
-                    onChange={(e) => {
-                      const digits = e.target.value
-                        .replace(/\D/g, "")
-                        .slice(0, 11);
-                      setAccountForm((f) => ({
-                        ...f,
-                        phone_number: digits,
-                      }));
-                      setAccountErrors((er) => ({ ...er, phone_number: "" }));
-                    }}
-                  />
-                  {accountErrors.phone_number && (
-                    <p
-                      style={{
-                        fontSize: 11,
-                        color: "#dc2626",
-                        margin: "4px 0 0",
-                      }}
-                    >
-                      {accountErrors.phone_number}
-                    </p>
-                  )}
-                </div>
-                <div className="form-group form-full">
-                  <label>
-                    Email <span style={{ color: "#dc2626" }}>*</span>
-                  </label>
-                  <input
-                    type="email"
-                    value={accountForm.email}
-                    onChange={(e) => {
-                      setAccountForm((f) => ({ ...f, email: e.target.value }));
-                      setAccountErrors((er) => ({ ...er, email: "" }));
-                    }}
-                    placeholder="manager@ach.com"
-                  />
-                  {accountErrors.email && (
-                    <p
-                      style={{
-                        fontSize: 11,
-                        color: "#dc2626",
-                        margin: "4px 0 0",
-                      }}
-                    >
-                      {accountErrors.email}
-                    </p>
-                  )}
-                </div>
-                <div className="form-group form-full">
-                  <label>
-                    Password <span style={{ color: "#dc2626" }}>*</span>
-                  </label>
-                  <div
+                  <button
+                    type="button"
+                    onClick={() => openAccountModal(null)}
                     style={{
-                      position: "relative",
+                      width: "100%",
+                      padding: "9px 12px",
+                      border: "1.5px dashed #a5b4fc",
+                      borderRadius: 9,
+                      background: "#eef2ff",
+                      color: "#4338ca",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
                       display: "flex",
                       alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
                     }}
                   >
-                    <input
-                      type={showAccountPassword ? "text" : "password"}
-                      value={accountForm.password}
-                      onChange={(e) => {
-                        setAccountForm((f) => ({
-                          ...f,
-                          password: e.target.value,
-                        }));
-                        setAccountErrors((er) => ({ ...er, password: "" }));
-                      }}
-                      style={{
-                        paddingRight: 64,
-                        fontFamily: showAccountPassword
-                          ? "monospace"
-                          : "inherit",
-                        width: "100%",
-                        boxSizing: "border-box",
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowAccountPassword((v) => !v)}
-                      style={{
-                        position: "absolute",
-                        right: 28,
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "#94a3b8",
-                        padding: 0,
-                        display: "flex",
-                      }}
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
                     >
-                      {showAccountPassword ? "🙈" : "👁"}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setAccountForm((f) => ({
-                          ...f,
-                          password: generatePassword(),
-                        }))
-                      }
-                      style={{
-                        position: "absolute",
-                        right: 0,
-                        background: "none",
-                        border: "none",
-                        cursor: "pointer",
-                        color: "#2563eb",
-                        padding: 0,
-                        display: "flex",
-                      }}
-                    >
-                      <svg
-                        width="15"
-                        height="15"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                      >
-                        <path d="M23 4v6h-6" />
-                        <path d="M1 20v-6h6" />
-                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                      </svg>
-                    </button>
-                  </div>
-                  {accountErrors.password && (
-                    <p
-                      style={{
-                        fontSize: 11,
-                        color: "#dc2626",
-                        margin: "4px 0 0",
-                      }}
-                    >
-                      {accountErrors.password}
-                    </p>
-                  )}
+                      <line x1="12" y1="5" x2="12" y2="19" />
+                      <line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Add Account
+                  </button>
                 </div>
-                <div className="form-group form-full">
-                  <label>
-                    Role <span style={{ color: "#dc2626" }}>*</span>
-                  </label>
-                  <CustomSelect
-                    value={accountForm.role}
-                    onChange={(val) => {
-                      setAccountForm((f) => ({ ...f, role: val }));
-                      setAccountErrors((er) => ({ ...er, role: "" }));
+              ) : (
+                <>
+                  <div
+                    style={{
+                      background: "#eef2ff",
+                      border: "1px solid #c7d2fe",
+                      borderRadius: 8,
+                      padding: "8px 12px",
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#4338ca",
+                      marginBottom: 14,
                     }}
-                    placeholder="— Select Role —"
-                    options={["Manager", "Employee", "Customer"]}
-                  />
-                  {accountErrors.role && (
-                    <p
-                      style={{
-                        fontSize: 11,
-                        color: "#dc2626",
-                        margin: "4px 0 0",
-                      }}
-                    >
-                      {accountErrors.role}
-                    </p>
-                  )}
-                </div>
-              </div>
+                  >
+                    No need to pick a branch here — this account will be linked
+                    to {form.name ? `"${form.name}"` : "this branch"}{" "}
+                    automatically once you save it.
+                  </div>
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label>
+                        First Name <span style={{ color: "#dc2626" }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={accountForm.first_name}
+                        onChange={(e) => {
+                          setAccountForm((f) => ({
+                            ...f,
+                            first_name: e.target.value,
+                          }));
+                          setAccountErrors((er) => ({ ...er, first_name: "" }));
+                        }}
+                        placeholder="e.g. Mia"
+                      />
+                      {accountErrors.first_name && (
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "#dc2626",
+                            margin: "4px 0 0",
+                          }}
+                        >
+                          {accountErrors.first_name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="form-group">
+                      <label>
+                        Last Name <span style={{ color: "#dc2626" }}>*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={accountForm.last_name}
+                        onChange={(e) => {
+                          setAccountForm((f) => ({
+                            ...f,
+                            last_name: e.target.value,
+                          }));
+                          setAccountErrors((er) => ({ ...er, last_name: "" }));
+                        }}
+                        placeholder="e.g. Dela Cruz"
+                      />
+                      {accountErrors.last_name && (
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "#dc2626",
+                            margin: "4px 0 0",
+                          }}
+                        >
+                          {accountErrors.last_name}
+                        </p>
+                      )}
+                    </div>
+                    <div className="form-group">
+                      <label>Sex</label>
+                      <CustomSelect
+                        value={accountForm.sex}
+                        onChange={(val) =>
+                          setAccountForm((f) => ({ ...f, sex: val }))
+                        }
+                        placeholder="— Select —"
+                        options={["Male", "Female"]}
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label>
+                        Phone Number{" "}
+                        <span style={{ fontWeight: 400, color: "#94a3b8" }}>
+                          (optional)
+                        </span>
+                      </label>
+                      <input
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="0917 000 0000"
+                        value={formatPhMobile(accountForm.phone_number)}
+                        onChange={(e) => {
+                          const digits = e.target.value
+                            .replace(/\D/g, "")
+                            .slice(0, 11);
+                          setAccountForm((f) => ({
+                            ...f,
+                            phone_number: digits,
+                          }));
+                          setAccountErrors((er) => ({
+                            ...er,
+                            phone_number: "",
+                          }));
+                        }}
+                      />
+                      {accountErrors.phone_number && (
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "#dc2626",
+                            margin: "4px 0 0",
+                          }}
+                        >
+                          {accountErrors.phone_number}
+                        </p>
+                      )}
+                    </div>
+                    <div className="form-group form-full">
+                      <label>
+                        Email <span style={{ color: "#dc2626" }}>*</span>
+                      </label>
+                      <input
+                        type="email"
+                        value={accountForm.email}
+                        onChange={(e) => {
+                          setAccountForm((f) => ({
+                            ...f,
+                            email: e.target.value,
+                          }));
+                          setAccountErrors((er) => ({ ...er, email: "" }));
+                        }}
+                        placeholder="manager@ach.com"
+                      />
+                      {accountErrors.email && (
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "#dc2626",
+                            margin: "4px 0 0",
+                          }}
+                        >
+                          {accountErrors.email}
+                        </p>
+                      )}
+                    </div>
+                    <div className="form-group form-full">
+                      <label>
+                        Password <span style={{ color: "#dc2626" }}>*</span>
+                      </label>
+                      <div
+                        style={{
+                          position: "relative",
+                          display: "flex",
+                          alignItems: "center",
+                        }}
+                      >
+                        <input
+                          type={showAccountPassword ? "text" : "password"}
+                          value={accountForm.password}
+                          onChange={(e) => {
+                            setAccountForm((f) => ({
+                              ...f,
+                              password: e.target.value,
+                            }));
+                            setAccountErrors((er) => ({ ...er, password: "" }));
+                          }}
+                          style={{
+                            paddingRight: 64,
+                            fontFamily: showAccountPassword
+                              ? "monospace"
+                              : "inherit",
+                            width: "100%",
+                            boxSizing: "border-box",
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAccountPassword((v) => !v)}
+                          style={{
+                            position: "absolute",
+                            right: 28,
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "#94a3b8",
+                            padding: 0,
+                            display: "flex",
+                          }}
+                        >
+                          {showAccountPassword ? "🙈" : "👁"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setAccountForm((f) => ({
+                              ...f,
+                              password: generatePassword(),
+                            }))
+                          }
+                          style={{
+                            position: "absolute",
+                            right: 0,
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            color: "#2563eb",
+                            padding: 0,
+                            display: "flex",
+                          }}
+                        >
+                          <svg
+                            width="15"
+                            height="15"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                          >
+                            <path d="M23 4v6h-6" />
+                            <path d="M1 20v-6h6" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                          </svg>
+                        </button>
+                      </div>
+                      {accountErrors.password && (
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "#dc2626",
+                            margin: "4px 0 0",
+                          }}
+                        >
+                          {accountErrors.password}
+                        </p>
+                      )}
+                    </div>
+                    <div className="form-group form-full">
+                      <label>
+                        Role <span style={{ color: "#dc2626" }}>*</span>
+                      </label>
+                      <CustomSelect
+                        value={accountForm.role}
+                        onChange={(val) => {
+                          setAccountForm((f) => ({ ...f, role: val }));
+                          setAccountErrors((er) => ({ ...er, role: "" }));
+                        }}
+                        placeholder="— Select Role —"
+                        options={["Manager", "Employee", "Customer"]}
+                      />
+                      {accountErrors.role && (
+                        <p
+                          style={{
+                            fontSize: 11,
+                            color: "#dc2626",
+                            margin: "4px 0 0",
+                          }}
+                        >
+                          {accountErrors.role}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             <div className="modal-footer">
-              <button
-                className="btn btn-ghost branches-btn-auto"
-                onClick={() => setShowAccountModal(false)}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary branches-btn-auto"
-                onClick={saveAccountDraft}
-              >
-                {editingAccountIndex !== null ? "Save Changes" : "Add Account"}
-              </button>
+              {accountModalMode === "list" ? (
+                <button
+                  className="btn btn-primary branches-btn-auto"
+                  onClick={() => setShowAccountModal(false)}
+                >
+                  Close
+                </button>
+              ) : (
+                <>
+                  <button
+                    className="btn btn-ghost branches-btn-auto"
+                    onClick={() => setAccountModalMode("list")}
+                  >
+                    Back
+                  </button>
+                  <button
+                    className="btn btn-primary branches-btn-auto"
+                    onClick={saveAccountDraft}
+                  >
+                    {editingAccountIndex !== null
+                      ? "Save Changes"
+                      : "Add Account"}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
