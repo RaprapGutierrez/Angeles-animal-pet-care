@@ -1318,7 +1318,12 @@ const GuestBanner = ({ onExit }) => (
 );
 
 // ─── Alert Card ───────────────────────────────────────────────────────────────
-const AlertCard = ({ a, showActions = false, onUpdateStatus }) => {
+const AlertCard = ({
+  a,
+  showActions = false,
+  onUpdateStatus,
+  compact = false,
+}) => {
   const status = a.status || "pending";
   const col = STATUS_COLORS[status] || STATUS_COLORS.pending;
   const [actionLock, setActionLock] = useState(false);
@@ -1329,6 +1334,34 @@ const AlertCard = ({ a, showActions = false, onUpdateStatus }) => {
     setActionLock(true);
     onUpdateStatus(id, nextStatus);
   };
+
+  if (compact) {
+    const status = a.status || "pending";
+    const col = STATUS_COLORS[status] || STATUS_COLORS.pending;
+    const name = a.guest_full_name || a.sent_by || "Unknown";
+    const phone = a.guest_contact || a.contact_number || "—";
+    return (
+      <div
+        style={{
+          background: col.bg,
+          border: `1px solid ${col.border}`,
+          borderRadius: 10,
+          padding: "10px 14px",
+          display: "flex",
+          flexDirection: "column",
+          gap: 3,
+        }}
+      >
+        <strong style={{ fontSize: 12, color: "#dc2626", lineHeight: 1.3 }}>
+          {a.type}
+        </strong>
+        <span style={{ fontSize: 12, color: "var(--text)", fontWeight: 600 }}>
+          {name}
+        </span>
+        <span style={{ fontSize: 11, color: "var(--muted)" }}>{phone}</span>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -3207,16 +3240,7 @@ const AdminView = ({
         </div>
 
         {adminView === "ward" ? (
-          <div
-            style={{
-              background: "var(--card)",
-              borderRadius: "var(--radius-lg)",
-              border: "1px solid var(--border)",
-              boxShadow: "var(--shadow)",
-              padding: 24,
-              marginBottom: 24,
-            }}
-          >
+          <div style={{ marginBottom: 24 }}>
             <div
               style={{
                 display: "flex",
@@ -3430,8 +3454,9 @@ const AdminView = ({
                           <AlertCard
                             key={a.id + a.status}
                             a={a}
-                            showActions={true}
+                            showActions={false}
                             onUpdateStatus={onUpdateStatus}
+                            compact={true}
                           />
                         ))
                       )}
