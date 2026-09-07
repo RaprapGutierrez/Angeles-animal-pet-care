@@ -2518,7 +2518,7 @@ const CustomerEmergency = () => {
                 height: 18,
                 flexShrink: 0,
                 filter:
-                  "brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg)",
+                  "var(--topbar-icon-filter, brightness(0) saturate(100%) invert(17%) sepia(82%) saturate(1200%) hue-rotate(210deg))",
               }}
             />
             <div style={{ minWidth: 0 }}>

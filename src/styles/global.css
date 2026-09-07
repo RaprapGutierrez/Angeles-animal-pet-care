@@ -38,6 +38,10 @@
   --bottom-nav-h: 64px;
 }
 
+.dark {
+  --topbar-icon-filter: brightness(0) invert(1);
+}
+
 body {
   min-height: 100vh;
   font-family: "Plus Jakarta Sans", sans-serif;
