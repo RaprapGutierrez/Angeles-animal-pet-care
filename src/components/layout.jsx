@@ -2986,12 +2986,17 @@ export const Layout = ({ children }) => {
 
     const fetchCustAlerts = async () => {
       try {
-        const { data } = await supabase
+        const branchName = BRANCH_DISPLAY_NAMES[user.branchId] || user.branch;
+        let custAlertQuery = supabase
           .from("emergency_alerts")
           .select("*")
           .eq("user_id", user.id)
           .order("created_at", { ascending: false })
           .limit(20);
+        if (branchName) {
+          custAlertQuery = custAlertQuery.eq("branch", branchName);
+        }
+        const { data } = await custAlertQuery;
         if (data) {
           setCustAlerts(data);
           setCustAlertCount(data.filter((a) => a.status !== "resolved").length);
@@ -3038,7 +3043,12 @@ export const Layout = ({ children }) => {
         { event: "*", schema: "public", table: "emergency_alerts" },
         (payload) => {
           const row = payload.new || payload.old;
-          if (row?.user_id === user.id) fetchCustAlerts();
+          const branchName = BRANCH_DISPLAY_NAMES[user.branchId] || user.branch;
+          const rowBranchMatches =
+            !branchName ||
+            normalizeBranchName(row?.branch) ===
+              normalizeBranchName(branchName);
+          if (row?.user_id === user.id && rowBranchMatches) fetchCustAlerts();
         },
       )
       .subscribe();

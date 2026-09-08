@@ -561,9 +561,10 @@ const CustomerMessages = () => {
       //    customers reaching out to staff (they can message any active staff)
       const { data } = await supabase
         .from(T_PROFILES)
-        .select("id, first_name, last_name, email, role")
+        .select("id, first_name, last_name, email, role, branch_id")
         .in("role", ["Admin", "Manager", "Employee"])
         .eq("status", "Active")
+        .eq("branch_id", user?.branchId ?? null)
         .order("first_name");
 
       const mapped = (data || []).map((p) => ({
@@ -581,8 +582,6 @@ const CustomerMessages = () => {
   /* ── Which staff already have a conversation with me ── */
   const [conversationIds, setConversationIds] = useState(new Set());
   const [lastMessageTimes, setLastMessageTimes] = useState({});
-  const [showNewConvo, setShowNewConvo] = useState(false);
-  const [newConvoSearch, setNewConvoSearch] = useState("");
 
   useEffect(() => {
     if (userLoading || !myId) return;
@@ -624,19 +623,6 @@ const CustomerMessages = () => {
       supabase.removeChannel(ch);
     };
   }, [userLoading, myId]);
-
-  const startConversation = (staffMember) => {
-    setConversationIds((prev) => new Set(prev).add(staffMember.id));
-    setLastMessageTimes((prev) => ({
-      ...prev,
-      [staffMember.id]: new Date().toISOString(),
-    }));
-    setSelected(staffMember);
-    setShowNewConvo(false);
-    setNewConvoSearch("");
-    setMobileView("chat");
-    setTimeout(() => inputRef.current?.focus(), 100);
-  };
 
   const fetchMessages = async (staffId) => {
     if (!myId || !staffId) return;
@@ -1011,7 +997,7 @@ const CustomerMessages = () => {
   }
 
   const conversationStaff = staff
-    .filter((d) => conversationIds.has(d.id))
+    .slice()
     .sort(
       (a, b) =>
         new Date(lastMessageTimes[b.id] || 0) -
@@ -1023,14 +1009,6 @@ const CustomerMessages = () => {
       (d.full_name || d.email || "")
         .toLowerCase()
         .includes(search.toLowerCase()),
-  );
-  const availableForNewConvo = staff.filter(
-    (d) =>
-      !conversationIds.has(d.id) &&
-      (!newConvoSearch ||
-        (d.full_name || d.email || "")
-          .toLowerCase()
-          .includes(newConvoSearch.toLowerCase())),
   );
   const grouped = groupByDate(messages);
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
@@ -1186,36 +1164,6 @@ const CustomerMessages = () => {
             >
               Conversations
             </span>
-            <button
-              onClick={() => setShowNewConvo(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 5,
-                background: "#eff0fe",
-                border: "1px solid #e0e2fb",
-                color: "#6366f1",
-                borderRadius: 20,
-                padding: "4px 10px",
-                fontSize: 11,
-                fontWeight: 700,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              <svg
-                width="11"
-                height="11"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.8"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              New
-            </button>
           </div>
 
           <div
@@ -1243,37 +1191,11 @@ const CustomerMessages = () => {
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
                   </svg>
                 </div>
-                <div
-                  style={{
-                    fontSize: 13,
-                    color: "#9ca3af",
-                    marginBottom: conversationStaff.length === 0 ? 12 : 0,
-                  }}
-                >
+                <div style={{ fontSize: 13, color: "#9ca3af" }}>
                   {search
                     ? "No matches found."
-                    : conversationStaff.length === 0
-                      ? "You haven't messaged anyone yet."
-                      : "No staff available"}
+                    : "No staff available in your branch."}
                 </div>
-                {conversationStaff.length === 0 && !search && (
-                  <button
-                    onClick={() => setShowNewConvo(true)}
-                    style={{
-                      background: "#6366f1",
-                      color: "#fff",
-                      border: "none",
-                      borderRadius: 10,
-                      padding: "8px 16px",
-                      fontSize: 12,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      fontFamily: "inherit",
-                    }}
-                  >
-                    Start a conversation
-                  </button>
-                )}
               </div>
             ) : (
               filteredStaff.map((c, i) => {
@@ -1940,189 +1862,6 @@ const CustomerMessages = () => {
           )}
         </div>
       </div>
-
-      {/* ══ New Conversation Modal ══ */}
-      {showNewConvo && (
-        <div
-          className="new-convo-overlay"
-          style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 99998,
-            background: "rgba(0,0,0,0.45)",
-            backdropFilter: "blur(4px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: 20,
-          }}
-        >
-          <div
-            style={{
-              background: "#fff",
-              borderRadius: 18,
-              width: "100%",
-              maxWidth: 420,
-              maxHeight: "80vh",
-              display: "flex",
-              flexDirection: "column",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                padding: "18px 20px 14px",
-                borderBottom: "1px solid #f0f2f8",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-              }}
-            >
-              <h3
-                style={{
-                  margin: 0,
-                  fontSize: 16,
-                  fontWeight: 700,
-                  color: "#111827",
-                }}
-              >
-                New Conversation
-              </h3>
-              <button
-                onClick={() => {
-                  setShowNewConvo(false);
-                  setNewConvoSearch("");
-                }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#9ca3af",
-                  display: "flex",
-                }}
-              >
-                <svg
-                  width="18"
-                  height="18"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18" />
-                  <line x1="6" y1="6" x2="18" y2="18" />
-                </svg>
-              </button>
-            </div>
-            <div style={{ padding: "14px 20px 10px" }}>
-              <div style={{ position: "relative" }}>
-                <svg
-                  style={{
-                    position: "absolute",
-                    left: 11,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    pointerEvents: "none",
-                  }}
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#9ca3af"
-                  strokeWidth="2.5"
-                >
-                  <circle cx="11" cy="11" r="8" />
-                  <path d="m21 21-4.35-4.35" />
-                </svg>
-                <input
-                  value={newConvoSearch}
-                  onChange={(e) => setNewConvoSearch(e.target.value)}
-                  placeholder="Search staff to message…"
-                  style={{
-                    width: "100%",
-                    padding: "9px 12px 9px 32px",
-                    borderRadius: 10,
-                    border: "1.5px solid var(--border-color, #eef0f6)",
-                    background: "var(--input-bg, #f8f9fc)",
-                    fontSize: 13,
-                    color: "var(--text-primary, #111827)",
-                    outline: "none",
-                    fontFamily: "inherit",
-                  }}
-                />
-              </div>
-            </div>
-            <div
-              style={{ flex: 1, overflowY: "auto", padding: "4px 8px 12px" }}
-            >
-              {availableForNewConvo.length === 0 ? (
-                <div
-                  style={{
-                    padding: "28px 16px",
-                    textAlign: "center",
-                    fontSize: 13,
-                    color: "#9ca3af",
-                  }}
-                >
-                  {newConvoSearch
-                    ? "No matches found."
-                    : "You already have conversations with all available staff."}
-                </div>
-              ) : (
-                availableForNewConvo.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => startConversation(c)}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 12,
-                      padding: "10px 12px",
-                      borderRadius: 12,
-                      cursor: "pointer",
-                      transition: "background 0.12s",
-                    }}
-                    onMouseEnter={(e) =>
-                      (e.currentTarget.style.background =
-                        "var(--hover-bg, #f4f6fb)")
-                    }
-                    onMouseLeave={(e) =>
-                      (e.currentTarget.style.background = "transparent")
-                    }
-                  >
-                    <Avatar name={c.full_name || c.email} size={38} />
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div
-                        style={{
-                          fontWeight: 600,
-                          fontSize: 13.5,
-                          color: "#111827",
-                          whiteSpace: "nowrap",
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                        }}
-                      >
-                        {c.full_name || c.email || "Unknown"}
-                      </div>
-                      <div
-                        style={{
-                          fontSize: 11.5,
-                          color: "#9ca3af",
-                          marginTop: 1,
-                        }}
-                      >
-                        {c.role || ""}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* File Preview Modal */}
       {previewFile && (

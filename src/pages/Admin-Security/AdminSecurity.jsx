@@ -548,6 +548,20 @@ const fmtTime = (d) => {
   return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 };
 
+// Normalizes action labels so variants like "Login", "Logged in", "User login",
+// "Log in" (and the logout equivalents) all display — and filter/export — as
+// one consistent label instead of showing as different-looking entries.
+const normalizeAction = (action = "") => {
+  const a = (action || "").trim().toLowerCase();
+  if (["login", "logged in", "user login", "log in", "signed in"].includes(a))
+    return "Logged In";
+  if (
+    ["logout", "logged out", "user logout", "log out", "signed out"].includes(a)
+  )
+    return "Logged Out";
+  return action || "—";
+};
+
 // ── Sub-components ─────────────────────────────────────────────────────────────
 const Avatar = ({ firstName, lastName, role, size = 36 }) => {
   const initials =
@@ -1136,6 +1150,8 @@ const AdminSecurity = () => {
   const [logs, setLogs] = useState([]);
   const [logSearch, setLogSearch] = useState("");
   const [logRole, setLogRole] = useState("");
+  const [logDateFilter, setLogDateFilter] = useState("");
+  const [exportingPdf, setExportingPdf] = useState(false);
 
   const [customRoles, setCustomRoles] = useState([]);
   const [rolesLoading, setRolesLoading] = useState(true);
@@ -1710,12 +1726,24 @@ const AdminSecurity = () => {
   }, [canSeeAllBranches, currentUser, fetchPending]); // eslint-disable-line
 
   const fetchLogs = useCallback(async () => {
-    const { data } = await supabase
-      .from("activity_logs")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(200);
-    setLogs(data || []);
+    // Show the full history instead of only the most recent 200 rows.
+    // Supabase caps a single request, so page through in batches until
+    // a page comes back short of a full page (i.e. we've reached the end).
+    let all = [];
+    let from = 0;
+    const PAGE_SIZE = 1000;
+    while (true) {
+      const { data, error } = await supabase
+        .from("activity_logs")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
+      if (error || !data) break;
+      all = all.concat(data);
+      if (data.length < PAGE_SIZE) break;
+      from += PAGE_SIZE;
+    }
+    setLogs(all);
   }, []);
 
   useEffect(() => {
@@ -1739,6 +1767,24 @@ const AdminSecurity = () => {
   const allRoles = [...SYSTEM_ROLES, ...customRoles];
   const fullName = (u) =>
     [u.first_name, u.last_name].filter(Boolean).join(" ") || u.name || "—";
+
+  // Some older log rows only stored an email as user_name (e.g. logged before
+  // the profile had a first/last name, or logActivity fell back to
+  // user.email). Resolve against the live profiles list so logs always show
+  // the person's actual name when one is known — falls back to whatever was
+  // originally stored if no matching profile is found.
+  const resolveLogUserName = (log) => {
+    const byId = log.user_id && users.find((u) => u.id === log.user_id);
+    if (byId) return fullName(byId);
+    const stored = log.user_name || "";
+    if (stored.includes("@")) {
+      const byEmail = users.find(
+        (u) => (u.email || "").toLowerCase() === stored.toLowerCase(),
+      );
+      if (byEmail) return fullName(byEmail);
+    }
+    return stored || "—";
+  };
 
   const openAdd = () => {
     const pwd = generatePassword();
@@ -2608,18 +2654,76 @@ const AdminSecurity = () => {
 
   const filteredLogs = logs.filter((l) => {
     const q = logSearch.toLowerCase();
-    const name = l.user
-      ? fullName(l.user).toLowerCase()
-      : (l.user_name || "").toLowerCase();
+    const name = resolveLogUserName(l).toLowerCase();
     const role = l.user?.role || l.user_role || "";
+    const matchesDate =
+      !logDateFilter ||
+      (l.created_at &&
+        new Date(l.created_at).toLocaleDateString("en-CA") === logDateFilter);
     return (
       (!logSearch ||
         name.includes(q) ||
-        (l.action || "").toLowerCase().includes(q) ||
+        normalizeAction(l.action).toLowerCase().includes(q) ||
         (l.details || "").toLowerCase().includes(q)) &&
-      (!logRole || role === logRole)
+      (!logRole || role === logRole) &&
+      matchesDate
     );
   });
+  const exportLogsToPdf = async () => {
+    if (exportingPdf || filteredLogs.length === 0) return;
+    setExportingPdf(true);
+    try {
+      const { jsPDF } = await import("jspdf");
+      const autoTable = (await import("jspdf-autotable")).default;
+      const doc = new jsPDF({ orientation: "landscape" });
+
+      doc.setFontSize(14);
+      doc.text("System Access History", 14, 16);
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      const scopeLine = logDateFilter
+        ? `Date: ${new Date(logDateFilter).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}`
+        : "All dates";
+      doc.text(
+        `${scopeLine}${logRole ? ` · Role: ${logRole}` : ""}${
+          logSearch ? ` · Search: "${logSearch}"` : ""
+        } · Exported ${new Date().toLocaleString()}`,
+        14,
+        22,
+      );
+
+      autoTable(doc, {
+        startY: 28,
+        head: [["User", "Role", "Action", "Details", "Time", "Status"]],
+        body: filteredLogs.map((l) => [
+          resolveLogUserName(l),
+          l.user_role || "—",
+          normalizeAction(l.action),
+          l.details || "",
+          l.created_at ? fmtTime(new Date(l.created_at)) : "—",
+          l.status || "—",
+        ]),
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [37, 99, 235] },
+        columnStyles: { 3: { cellWidth: 90 } },
+      });
+
+      const filenameDate =
+        logDateFilter || new Date().toISOString().slice(0, 10);
+      doc.save(`activity-logs-${filenameDate}.pdf`);
+    } catch (err) {
+      alert(
+        "Couldn't export PDF. Make sure the jspdf and jspdf-autotable packages are installed (npm install jspdf jspdf-autotable).",
+      );
+      console.error(err);
+    }
+    setExportingPdf(false);
+  };
+
   const logsTotalPages = Math.max(
     1,
     Math.ceil(filteredLogs.length / LOGS_PER_PAGE),
@@ -4846,7 +4950,14 @@ const AdminSecurity = () => {
                     performed.
                   </p>
                 </div>
-                <div style={{ display: "flex", gap: 10, marginBottom: 16 }}>
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    marginBottom: 16,
+                    flexWrap: "wrap",
+                  }}
+                >
                   <div
                     style={{
                       display: "flex",
@@ -4856,7 +4967,8 @@ const AdminSecurity = () => {
                       border: "1.5px solid var(--border)",
                       borderRadius: 8,
                       padding: "8px 14px",
-                      flex: 1,
+                      flex: "1 1 200px",
+                      minWidth: 0,
                     }}
                   >
                     <img
@@ -4884,7 +4996,7 @@ const AdminSecurity = () => {
                       }}
                     />
                   </div>
-                  <div style={{ width: 150 }}>
+                  <div style={{ width: 150, flex: "0 0 150px" }}>
                     <CustomSelect
                       value={logRole}
                       onChange={setLogRole}
@@ -4892,6 +5004,116 @@ const AdminSecurity = () => {
                       options={["Admin", "Manager", "Employee", "Customer"]}
                     />
                   </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      background: "var(--bg)",
+                      border: "1.5px solid var(--border)",
+                      borderRadius: 8,
+                      padding: "0 12px",
+                      flex: "0 0 170px",
+                    }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="#94a3b8"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    >
+                      <rect x="3" y="4" width="18" height="18" rx="2" />
+                      <line x1="16" y1="2" x2="16" y2="6" />
+                      <line x1="8" y1="2" x2="8" y2="6" />
+                      <line x1="3" y1="10" x2="21" y2="10" />
+                    </svg>
+                    <input
+                      type="date"
+                      value={logDateFilter}
+                      onChange={(e) => setLogDateFilter(e.target.value)}
+                      style={{
+                        border: "none",
+                        background: "transparent",
+                        fontSize: 13,
+                        color: "var(--text)",
+                        outline: "none",
+                        fontFamily: "inherit",
+                        padding: "8px 0",
+                        width: "100%",
+                      }}
+                    />
+                    {logDateFilter && (
+                      <button
+                        type="button"
+                        onClick={() => setLogDateFilter("")}
+                        title="Clear date filter"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "#94a3b8",
+                          padding: 0,
+                          display: "flex",
+                        }}
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={exportLogsToPdf}
+                    disabled={exportingPdf || filteredLogs.length === 0}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      background: "#eff6ff",
+                      border: "1.5px solid #bfdbfe",
+                      color: "#2563eb",
+                      borderRadius: 8,
+                      padding: "8px 14px",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor:
+                        exportingPdf || filteredLogs.length === 0
+                          ? "default"
+                          : "pointer",
+                      opacity:
+                        exportingPdf || filteredLogs.length === 0 ? 0.6 : 1,
+                      fontFamily: "inherit",
+                      flexShrink: 0,
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    <svg
+                      width="13"
+                      height="13"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    >
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    {exportingPdf ? "Exporting…" : "Export PDF"}
+                  </button>
                 </div>
                 <div style={{ overflowX: "auto" }}>
                   <table
@@ -4971,13 +5193,15 @@ const AdminSecurity = () => {
                                 }}
                               >
                                 <Avatar
-                                  firstName={l.user_name?.split(" ")[0]}
-                                  lastName={l.user_name?.split(" ")[1]}
+                                  firstName={
+                                    resolveLogUserName(l).split(" ")[0]
+                                  }
+                                  lastName={resolveLogUserName(l).split(" ")[1]}
                                   role={l.user_role}
                                   size={30}
                                 />
                                 <span style={{ fontWeight: 600 }}>
-                                  {l.user_name || "—"}
+                                  {resolveLogUserName(l)}
                                 </span>
                               </div>
                             </td>

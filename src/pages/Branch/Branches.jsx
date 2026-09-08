@@ -1445,6 +1445,9 @@ const Branches = () => {
   });
   const [accountErrors, setAccountErrors] = useState({});
   const [showAccountPassword, setShowAccountPassword] = useState(false);
+  const [branchAccounts, setBranchAccounts] = useState([]); // real accounts already linked to an existing branch being edited
+  const [loadingBranchAccounts, setLoadingBranchAccounts] = useState(false);
+  const [creatingBranchAccount, setCreatingBranchAccount] = useState(false);
 
   const showToast = (message, type = "success") => {
     const id = ++toastIdRef.current;
@@ -1516,6 +1519,24 @@ const Branches = () => {
     setLoading(false);
   }, []);
 
+  // Fetch the real staff/customer accounts already linked to an existing
+  // branch — used by the Accounts panel inside the Edit Branch modal.
+  const fetchBranchAccountsList = useCallback(async (branchId) => {
+    if (!branchId) {
+      setBranchAccounts([]);
+      return;
+    }
+    setLoadingBranchAccounts(true);
+    const { data, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id, first_name, last_name, email, role")
+      .eq("branch_id", branchId)
+      .is("deleted_at", null)
+      .order("created_at", { ascending: false });
+    if (!error) setBranchAccounts(data || []);
+    setLoadingBranchAccounts(false);
+  }, []);
+
   useEffect(() => {
     fetchBranches();
   }, [fetchBranches]);
@@ -1578,6 +1599,7 @@ const Branches = () => {
       modules: emptyModules(),
     });
     setAccountDrafts([]);
+    setBranchAccounts([]);
     setEditBranch(null);
     setFormDirty(false);
     setShowModal(true);
@@ -1643,6 +1665,7 @@ const Branches = () => {
   };
 
   const openAccountList = () => {
+    if (editBranch) fetchBranchAccountsList(editBranch.id);
     setAccountModalMode("list");
     setShowAccountModal(true);
   };
@@ -1664,12 +1687,79 @@ const Branches = () => {
     return errs;
   };
 
-  const saveAccountDraft = () => {
+  const saveAccountDraft = async () => {
     const errs = validateAccountForm();
     if (Object.keys(errs).length) {
       setAccountErrors(errs);
       return;
     }
+
+    // Editing an existing branch — create the account for real right away,
+    // instead of staging it as a draft that only applies once the branch
+    // form itself is saved.
+    if (editBranch) {
+      setCreatingBranchAccount(true);
+      try {
+        const { data: authData, error: authError } =
+          await supabaseAdmin.auth.admin.createUser({
+            email: accountForm.email.trim().toLowerCase(),
+            password: accountForm.password,
+            email_confirm: true,
+            user_metadata: {
+              first_name: accountForm.first_name.trim(),
+              last_name: accountForm.last_name.trim(),
+              role: accountForm.role,
+              sex: accountForm.sex || null,
+              phone_number: accountForm.phone_number || null,
+              branch_id: editBranch.id,
+            },
+          });
+        if (authError) throw new Error(authError.message);
+
+        const { error: profileError } = await supabaseAdmin
+          .from("profiles")
+          .insert([
+            {
+              id: authData.user.id,
+              first_name: accountForm.first_name.trim(),
+              last_name: accountForm.last_name.trim(),
+              sex: accountForm.sex || null,
+              phone: accountForm.phone_number || null,
+              email: accountForm.email.trim().toLowerCase(),
+              role: accountForm.role,
+              status: "Active",
+              branch_id: editBranch.id,
+            },
+          ]);
+        if (profileError) throw new Error(profileError.message);
+
+        showToast(
+          `Account created for ${accountForm.first_name} ${accountForm.last_name}`,
+          "success",
+        );
+        setCreatedAccount({
+          accounts: [
+            {
+              email: accountForm.email.trim().toLowerCase(),
+              password: accountForm.password,
+              role: accountForm.role,
+              name: `${accountForm.first_name} ${accountForm.last_name}`,
+            },
+          ],
+          branchName: editBranch.name,
+        });
+        await fetchBranchAccountsList(editBranch.id);
+        setEditingAccountIndex(null);
+        setAccountModalMode("list");
+      } catch (err) {
+        showToast(`Couldn't create account: ${err.message}`, "error");
+      }
+      setCreatingBranchAccount(false);
+      return;
+    }
+
+    // Adding a brand-new branch — stage the account as a draft; it's
+    // created once the branch itself is saved (see saveBranch).
     const draft = {
       first_name: accountForm.first_name.trim(),
       last_name: accountForm.last_name.trim(),
@@ -3996,61 +4086,64 @@ const Branches = () => {
                     placeholder="09XXXXXXXXX"
                   />
                 </div>
-                {!editBranch && (
-                  <div className="form-group">
-                    <label>
-                      Accounts <span style={{ color: "#dc2626" }}>*</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={openAccountList}
-                      style={{
-                        width: "100%",
-                        padding: "9px 12px",
-                        border: "1.5px dashed #a5b4fc",
-                        borderRadius: 9,
-                        background: "#eef2ff",
-                        color: "#4338ca",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 6,
-                      }}
+                <div className="form-group">
+                  <label>
+                    Accounts{" "}
+                    {!editBranch && <span style={{ color: "#dc2626" }}>*</span>}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={openAccountList}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      border: "1.5px dashed #a5b4fc",
+                      borderRadius: 9,
+                      background: "#eef2ff",
+                      color: "#4338ca",
+                      fontSize: 13,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      fontFamily: "inherit",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: 6,
+                    }}
+                  >
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
                     >
-                      <svg
-                        width="14"
-                        height="14"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
+                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                      <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    {editBranch ? "View Accounts" : "View Account"}
+                    {(editBranch
+                      ? branchAccounts.length
+                      : accountDrafts.length) > 0 && (
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 800,
+                          background: "#4338ca",
+                          color: "#fff",
+                          borderRadius: 99,
+                          padding: "1px 7px",
+                        }}
                       >
-                        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                        <circle cx="12" cy="12" r="3" />
-                      </svg>
-                      View Account
-                      {accountDrafts.length > 0 && (
-                        <span
-                          style={{
-                            fontSize: 11,
-                            fontWeight: 800,
-                            background: "#4338ca",
-                            color: "#fff",
-                            borderRadius: 99,
-                            padding: "1px 7px",
-                          }}
-                        >
-                          {accountDrafts.length}
-                        </span>
-                      )}
-                    </button>
-                  </div>
-                )}{" "}
+                        {editBranch
+                          ? branchAccounts.length
+                          : accountDrafts.length}
+                      </span>
+                    )}
+                  </button>
+                </div>{" "}
                 <div className="form-group">
                   <label>Manager Name</label>
                   <input
@@ -4506,7 +4599,104 @@ const Branches = () => {
             <div className="modal-body">
               {accountModalMode === "list" ? (
                 <div>
-                  {accountDrafts.length > 0 ? (
+                  {editBranch ? (
+                    loadingBranchAccounts ? (
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: "#94a3b8",
+                          margin: "0 0 14px",
+                          textAlign: "center",
+                        }}
+                      >
+                        Loading accounts…
+                      </p>
+                    ) : branchAccounts.length > 0 ? (
+                      <div
+                        style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 8,
+                          marginBottom: 12,
+                        }}
+                      >
+                        {branchAccounts.map((acct) => {
+                          const initials =
+                            `${acct.first_name?.[0] || ""}${acct.last_name?.[0] || ""}`.toUpperCase();
+                          return (
+                            <div
+                              key={acct.id}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                padding: "8px 12px",
+                                border: "1.5px solid var(--border)",
+                                background: "var(--bg)",
+                                borderRadius: 9,
+                              }}
+                            >
+                              <div
+                                style={{
+                                  width: 32,
+                                  height: 32,
+                                  borderRadius: "50%",
+                                  background: "#6366f1",
+                                  color: "#fff",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  fontSize: 12,
+                                  fontWeight: 800,
+                                  flexShrink: 0,
+                                }}
+                              >
+                                {initials || "?"}
+                              </div>
+                              <div style={{ minWidth: 0 }}>
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 13,
+                                    fontWeight: 700,
+                                    color: "var(--text)",
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
+                                  {acct.first_name} {acct.last_name}
+                                </p>
+                                <p
+                                  style={{
+                                    margin: 0,
+                                    fontSize: 11,
+                                    color: "var(--muted)",
+                                    whiteSpace: "nowrap",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                  }}
+                                >
+                                  {acct.role} · {acct.email}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <p
+                        style={{
+                          fontSize: 12,
+                          color: "#94a3b8",
+                          margin: "0 0 14px",
+                          textAlign: "center",
+                        }}
+                      >
+                        No accounts linked to this branch yet.
+                      </p>
+                    )
+                  ) : accountDrafts.length > 0 ? (
                     <div
                       style={{
                         display: "flex",

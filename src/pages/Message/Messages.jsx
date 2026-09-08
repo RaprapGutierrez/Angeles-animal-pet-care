@@ -67,6 +67,26 @@ const PROFILES_TABLE = "profiles";
 const MESSAGES_TABLE = "messages";
 const PATIENTS_TABLE = "patients";
 
+// ── Quick-reply templates for staff messaging customers about their pet ──────
+const PET_STATUS_SUGGESTIONS = [
+  {
+    label: "In checkup",
+    text: "Hi! Just letting you know your pet has arrived and is currently in checkup — they're in good hands. We'll update you as soon as we know more, please hang tight.",
+  },
+  {
+    label: "Still being observed",
+    text: "Your pet's checkup is still ongoing — the vet wants to keep observing them a little longer. We'll update you shortly, thank you for your patience.",
+  },
+  {
+    label: "Ready for pickup",
+    text: "Good news — the checkup is complete and your pet is doing well! They're ready to be picked up whenever it's convenient for you.",
+  },
+  {
+    label: "Needs to stay overnight",
+    text: "Your pet is stable and resting, but the vet recommends keeping them overnight for observation. We'll keep you posted on how they're doing.",
+  },
+];
+
 // ── Avatar ────────────────────────────────────────────────────────────────────
 const Avatar = ({ name, size = 38, me = false, online = null }) => {
   const initials = (name || "?")
@@ -329,7 +349,11 @@ const AddClientModal = ({
 
       // ── Build the role+branch filter based on who this user can message ──
       // getCrossBranchTargets returns [{role, branch}] — branch="" means any branch
-      const targets = getCrossBranchTargets(role, branch);
+      // PATCH: managers and employees may only message customers in their branch
+      const targets =
+        role === "manager" || role === "employee"
+          ? [{ role: "customer", branch: "same" }]
+          : getCrossBranchTargets(role, branch);
 
       // Build OR filter parts driven entirely by getCrossBranchTargets rules.
       // We no longer add a bare branch_id filter — that was too broad and pulled
@@ -385,6 +409,10 @@ const AddClientModal = ({
             normRole(p.role) === "super_admin"
           )
             return true;
+          // PATCH: managers and employees may only message customers
+          if (normRole(role) === "manager" || normRole(role) === "employee") {
+            return normRole(p.role) === "customer";
+          }
           return isMessageableTarget(
             { role: normRole(role), branch: normBranch(branch) },
             { role: normRole(p.role), branch: normBranch(p.branch_id || "") },
@@ -419,10 +447,8 @@ const AddClientModal = ({
     const r = normRole(currentUser?.role);
     if (r === "super_admin")
       return "You can message all managers across every branch.";
-    if (r === "manager")
-      return "You can message super admins, employees, and customers in your branch.";
-    if (r === "employee")
-      return "You can message managers and customers in your branch.";
+    if (r === "manager") return "You can message customers in your branch.";
+    if (r === "employee") return "You can message customers in your branch.";
     if (r === "customer")
       return "You can message managers and employees in your branch.";
     return "Search for a user to message.";
@@ -1117,7 +1143,12 @@ const Messages = () => {
   // ── Cross-branch / cross-role contacts ───────────────────────────────────
   const fetchCrossContacts = useCallback(async () => {
     if (!currentUser?.id) return;
-    const targets = getCrossBranchTargets(currentUser.role, currentUser.branch);
+    const role = normRole(currentUser.role);
+    // PATCH: managers and employees may only message customers
+    const targets =
+      role === "manager" || role === "employee"
+        ? [{ role: "customer", branch: "same" }]
+        : getCrossBranchTargets(currentUser.role, currentUser.branch);
     if (targets.length === 0) {
       setCrossContacts([]);
       return;
@@ -1437,10 +1468,13 @@ const Messages = () => {
     const allowed =
       senderRole === "super_admin" ||
       recipientRole === "super_admin" ||
-      isMessageableTarget(
-        { role: senderRole, branch: normBranch(currentUser.branch) },
-        { role: recipientRole, branch: normBranch(selected.branch || "") },
-      );
+      // PATCH: managers and employees may only message customers
+      (senderRole === "manager" || senderRole === "employee"
+        ? recipientRole === "customer"
+        : isMessageableTarget(
+            { role: senderRole, branch: normBranch(currentUser.branch) },
+            { role: recipientRole, branch: normBranch(selected.branch || "") },
+          ));
 
     if (!allowed) {
       showModal(
@@ -1657,6 +1691,11 @@ const Messages = () => {
     );
 
     if (currentUser?.id) {
+      const openingMessage =
+        normRole(profile.role) === "customer"
+          ? PET_STATUS_SUGGESTIONS[0].text
+          : `Hello ${profile.full_name || "there"}! 👋`;
+
       if (isCross) {
         await supabase.from(CROSS_BRANCH_TABLE).insert([
           {
@@ -1670,7 +1709,7 @@ const Messages = () => {
             recipient_branch:
               normBranch(profile.branch_id || profile.branch || "") ||
               "head_office",
-            content: `Hello ${profile.full_name || "there"}! 👋`,
+            content: openingMessage,
           },
         ]);
       } else {
@@ -1678,7 +1717,7 @@ const Messages = () => {
           {
             sender_id: currentUser.id,
             receiver_id: profile.id,
-            message: `Hello ${profile.full_name || "there"}! 👋`,
+            message: openingMessage,
             is_read: false,
             branch_id: user?.branchId ?? null,
           },
@@ -2635,6 +2674,45 @@ const Messages = () => {
                     </span>
                   </div>
                 )}
+                {(normRole(currentUser?.role) === "manager" ||
+                  normRole(currentUser?.role) === "employee") &&
+                  normRole(selected.role) === "customer" && (
+                    <div
+                      className="pet-status-suggestions"
+                      style={{
+                        display: "flex",
+                        gap: 8,
+                        overflowX: "auto",
+                        padding: "10px 18px 0",
+                      }}
+                    >
+                      {PET_STATUS_SUGGESTIONS.map((s) => (
+                        <button
+                          key={s.label}
+                          type="button"
+                          onClick={() => {
+                            setNewMsg(s.text);
+                            inputRef.current?.focus();
+                          }}
+                          style={{
+                            flexShrink: 0,
+                            padding: "6px 14px",
+                            borderRadius: 20,
+                            border: "1.5px solid #e0e2fb",
+                            background: "#eff0fe",
+                            color: "#4f46e5",
+                            fontSize: 12,
+                            fontWeight: 600,
+                            cursor: "pointer",
+                            whiteSpace: "nowrap",
+                            fontFamily: "inherit",
+                          }}
+                        >
+                          {s.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 <div
                   className="emoji-quick"
                   style={{ padding: "8px 18px 0", display: "flex", gap: 2 }}
