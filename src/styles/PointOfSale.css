@@ -207,6 +207,30 @@ html.dark .pos-total-price {
   color: #60a5fa !important;
 }
 
+@media (max-width: 1024px) {
+  .pos-content-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .pos-cart-panel {
+    position: static !important;
+    top: auto !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .pos-filter-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .pos-sort-select {
+    width: 100% !important;
+  }
+  .product-card {
+    padding: 10px !important;
+  }
+}
+
 @media (max-width: 768px) {
   .pos-topbar {
     position: static !important;

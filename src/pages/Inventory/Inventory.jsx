@@ -1287,6 +1287,7 @@ const ViewModal = ({ item, onClose, onEdit, onDelete }) => {
 
   return (
     <div
+      className="inv-modal-overlay"
       style={{
         position: "fixed",
         inset: 0,
@@ -1301,6 +1302,7 @@ const ViewModal = ({ item, onClose, onEdit, onDelete }) => {
       }}
     >
       <div
+        className="inv-modal-box"
         style={{
           background: "var(--card)",
           borderRadius: 14,
@@ -1855,6 +1857,7 @@ const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
 
   return (
     <div
+      className="inv-modal-overlay"
       style={{
         position: "fixed",
         inset: 0,
@@ -1868,6 +1871,7 @@ const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
       }}
     >
       <div
+        className="inv-modal-box"
         style={{
           background: "var(--card)",
           borderRadius: 14,
@@ -2429,6 +2433,7 @@ const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
           <div style={{ borderBottom: "1.5px solid #e2e8f0" }}>
             <div className="inv-section-label">Pricing &amp; Supply</div>
             <div
+              className="inv-pricing-row"
               style={{
                 display: "grid",
                 gridTemplateColumns: canEditPrice

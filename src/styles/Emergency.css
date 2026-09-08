@@ -132,7 +132,8 @@ html.dark .emg-select-option.hover {
      by .emg-content (sized for the desktop single-row topbar) must go —
      otherwise the Pending/History panels load hidden underneath the
      stacked topbar. */
-  .emg-content {
+  .emg-content,
+  .emg-guest-content {
     padding: 16px !important;
     padding-top: 16px !important;
   }
@@ -174,11 +175,33 @@ html.dark .emg-select-option.hover {
   }
 }
 
+@media (max-width: 1024px) {
+  .emg-panels-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .emg-form-row-2col {
+    grid-template-columns: 1fr !important;
+  }
+  .emg-address-2col {
+    grid-template-columns: 1fr !important;
+  }
+  .emg-lightbox-img {
+    max-width: 94vw !important;
+  }
+}
+
 @media (max-width: 480px) {
   .emg-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 6px !important;
   }
   .emg-stats-grid > div {
     padding: 12px !important;
+  }
+  .emg-topbar-pos {
+    padding: 10px 14px !important;
   }
 }

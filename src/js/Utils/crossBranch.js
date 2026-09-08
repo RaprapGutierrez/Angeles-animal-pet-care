@@ -1,10 +1,10 @@
 // ─── Cross-Branch & Role-Based Messaging Rules ───────────────────────────────
 //
 // Rules:
-//  • super_admin  → can message ALL managers AND employees in every branch
-//  • manager      → can message super admins + employees in their own branch
-//  • employee     → can message customers in their own branch
-//  • customer     → can only message employees in their own branch
+//  • super_admin  → can message EVERYONE (managers, employees, customers) in every branch
+//  • manager      → can only message customers in their own branch (pet/vet updates)
+//  • employee     → can only message customers in their own branch (pet/vet updates)
+//  • customer     → can message managers + employees in their own branch (replying to staff)
 //
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -43,26 +43,25 @@ export const getCrossBranchTargets = (role, branch) => {
 
   switch (r) {
     case "super_admin":
+      // Super admin can message everyone, in every branch
       return [
         { role: "manager", branch: "" },
+        { role: "employee", branch: "" },
+        { role: "customer", branch: "" },
       ];
 
     case "manager":
-      return [
-        { role: "super_admin", branch: "" },
-        { role: "employee",    branch: b  },
-        { role: "customer",    branch: b  },
-      ];
+      // Managers may only message customers in their own branch
+      return [{ role: "customer", branch: b }];
 
     case "employee":
-      return [
-        { role: "manager",  branch: b },
-        { role: "customer", branch: b },
-      ];
+      // Employees may only message customers in their own branch
+      return [{ role: "customer", branch: b }];
 
     case "customer":
+      // Customers may message the staff handling their branch
       return [
-        { role: "manager",  branch: b },
+        { role: "manager", branch: b },
         { role: "employee", branch: b },
       ];
 
@@ -72,23 +71,36 @@ export const getCrossBranchTargets = (role, branch) => {
 };
 
 export const canMessageCrossBranch = (sender, recipient) => {
-  const sRole   = normRole(sender.role);
-  const rRole   = normRole(recipient.role);
+  const sRole = normRole(sender.role);
+  const rRole = normRole(recipient.role);
   const sBranch = normBranch(sender.branch);
   const rBranch = normBranch(recipient.branch);
 
-  // Super admin → any manager (any branch)
-  if (sRole === "super_admin" && rRole === "manager") return true;
+  // Super admin → anyone (manager, employee, customer), any branch
+  if (
+    sRole === "super_admin" &&
+    (rRole === "manager" || rRole === "employee" || rRole === "customer")
+  )
+    return true;
 
-  // Manager → super admin (any branch), or employee/customer (same branch)
-  if (sRole === "manager" && rRole === "super_admin") return true;
-  if (sRole === "manager" && (rRole === "employee" || rRole === "customer") && sBranch === rBranch) return true;
+  // Anyone → super admin (always allowed to reach super admin), any branch
+  if (rRole === "super_admin") return true;
 
-  // Employee → manager or customer (same branch)
-  if (sRole === "employee" && (rRole === "manager" || rRole === "customer") && sBranch === rBranch) return true;
+  // Manager → customer only (same branch)
+  if (sRole === "manager" && rRole === "customer" && sBranch === rBranch)
+    return true;
+
+  // Employee → customer only (same branch)
+  if (sRole === "employee" && rRole === "customer" && sBranch === rBranch)
+    return true;
 
   // Customer → manager or employee (same branch)
-  if (sRole === "customer" && (rRole === "manager" || rRole === "employee") && sBranch === rBranch) return true;
+  if (
+    sRole === "customer" &&
+    (rRole === "manager" || rRole === "employee") &&
+    sBranch === rBranch
+  )
+    return true;
 
   return false;
 };
@@ -99,8 +111,14 @@ export const canMessageCrossBranch = (sender, recipient) => {
 // given the current user's role + branch.
 //
 export const isMessageableTarget = (currentUser, targetProfile) => {
-  const cu = { role: normRole(currentUser.role), branch: normBranch(currentUser.branch) };
-  const tp = { role: normRole(targetProfile.role), branch: normBranch(targetProfile.branch) };
+  const cu = {
+    role: normRole(currentUser.role),
+    branch: normBranch(currentUser.branch),
+  };
+  const tp = {
+    role: normRole(targetProfile.role),
+    branch: normBranch(targetProfile.branch),
+  };
 
   return canMessageCrossBranch(cu, tp);
 };

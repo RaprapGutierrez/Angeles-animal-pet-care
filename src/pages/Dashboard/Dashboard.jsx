@@ -515,7 +515,10 @@ const LiveDateTime = () => {
   }, []);
 
   return (
-    <div style={{ textAlign: "right", position: "relative", zIndex: 1 }}>
+    <div
+      className="dash-hero-datetime"
+      style={{ textAlign: "right", position: "relative", zIndex: 1 }}
+    >
       <strong
         ref={dateRef}
         style={{
@@ -1073,7 +1076,7 @@ const Dashboard = () => {
         <div className="dash-page-inner">
           {/* ── Hero header ───────────────────────────────────────────────── */}
           <div
-            className="dash-fade-in"
+            className="dash-fade-in dash-hero"
             style={{
               background:
                 "linear-gradient(135deg,#0f0c4a 0%,#1e3a8a 55%,#2d5fbf 100%)",
@@ -1130,8 +1133,12 @@ const Dashboard = () => {
               }}
             />
 
-            <div style={{ position: "relative", zIndex: 1 }}>
+            <div
+              className="dash-hero-content"
+              style={{ position: "relative", zIndex: 1 }}
+            >
               <p
+                className="dash-hero-eyebrow"
                 style={{
                   fontSize: 12,
                   fontWeight: 600,
@@ -1144,6 +1151,7 @@ const Dashboard = () => {
                 ANGELES ANIMAL CARE HOSPITAL
               </p>
               <h1
+                className="dash-hero-title"
                 style={{
                   fontSize: 24,
                   fontWeight: 800,
@@ -1179,7 +1187,7 @@ const Dashboard = () => {
 
           {/* ── Pending appointments banner (always rendered to prevent CLS) ── */}
           <div
-            className="dash-fade-in"
+            className="dash-fade-in dash-pending-banner"
             style={{
               background: showPendingBanner
                 ? "linear-gradient(135deg,#fffbeb,#fef3c7)"
@@ -1274,6 +1282,7 @@ const Dashboard = () => {
             {showPendingBanner && (
               <Link
                 to="/appointments"
+                className="dash-pending-cta"
                 style={{
                   padding: "9px 20px",
                   background: "linear-gradient(135deg,#d97706,#b45309)",

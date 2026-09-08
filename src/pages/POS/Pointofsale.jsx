@@ -593,7 +593,7 @@ const PointOfSale = () => {
   }, []);
 
   const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" && window.innerWidth <= 768,
+    typeof window !== "undefined" && window.innerWidth <= 1024,
   );
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
@@ -711,8 +711,9 @@ const PointOfSale = () => {
   };
 
   useEffect(() => {
-    const h = () => setIsMobile(window.innerWidth <= 768);
+    const h = () => setIsMobile(window.innerWidth <= 1024);
     window.addEventListener("resize", h);
+    h();
     return () => window.removeEventListener("resize", h);
   }, []);
 
@@ -1375,11 +1376,12 @@ const PointOfSale = () => {
 
         {/* ── Content grid (Products + Cart) ── */}
         <div
+          className="pos-content-grid"
           style={{
             ...S.cont,
             paddingTop: isAdmin || isSuperAdmin ? 0 : S.cont.paddingTop,
             display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "1fr 390px",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr minmax(320px, 390px)",
             gap: 20,
             minHeight: "calc(100vh - 160px)",
           }}
@@ -1387,6 +1389,7 @@ const PointOfSale = () => {
           {/* ══ Products Panel ══ */}
           <div>
             <div
+              className="pos-filter-row"
               style={{
                 display: "flex",
                 gap: 10,
@@ -1452,7 +1455,10 @@ const PointOfSale = () => {
                   </button>
                 ))}
               </div>
-              <div style={{ width: 190, flexShrink: 0 }}>
+              <div
+                className="pos-sort-select"
+                style={{ width: 190, minWidth: 160, flexShrink: 0 }}
+              >
                 <CustomSelect
                   value={sortBy}
                   onChange={setSortBy}
@@ -1471,7 +1477,8 @@ const PointOfSale = () => {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))",
+                  gridTemplateColumns:
+                    "repeat(auto-fill,minmax(min(150px,100%),1fr))",
                   gap: 12,
                 }}
               >
@@ -1559,7 +1566,8 @@ const PointOfSale = () => {
               <div
                 style={{
                   display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill,minmax(150px,1fr))",
+                  gridTemplateColumns:
+                    "repeat(auto-fill,minmax(min(150px,100%),1fr))",
                   gap: 12,
                 }}
               >
@@ -1674,6 +1682,7 @@ const PointOfSale = () => {
 
           {/* ══ Cart Panel ══ */}
           <div
+            className="pos-cart-panel"
             style={{
               background: "var(--card)",
               border: "1px solid var(--border)",
@@ -1685,6 +1694,8 @@ const PointOfSale = () => {
               height: "fit-content",
               position: isMobile ? "static" : "sticky",
               top: 140,
+              width: "100%",
+              minWidth: 0,
             }}
           >
             <div
@@ -2906,7 +2917,7 @@ const PointOfSale = () => {
               background: "var(--card)",
               borderRadius: 14,
               width: "100%",
-              maxWidth: 400,
+              maxWidth: "min(400px, 92vw)",
               maxHeight: "90vh",
               overflowY: "auto",
               display: "flex",
@@ -2977,7 +2988,7 @@ const PointOfSale = () => {
               background: "var(--card)",
               borderRadius: 14,
               width: "100%",
-              maxWidth: 380,
+              maxWidth: "min(380px, 90vw)",
               boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
               display: "flex",
               flexDirection: "column",
@@ -3085,7 +3096,7 @@ const PointOfSale = () => {
               background: "var(--card)",
               borderRadius: 14,
               width: "100%",
-              maxWidth: 750,
+              maxWidth: "min(750px, 94vw)",
               maxHeight: "90vh",
               overflowY: "auto",
               display: "flex",

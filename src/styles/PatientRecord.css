@@ -717,3 +717,104 @@ input.pr-search-input:-ms-input-placeholder {
     margin-top: 0 !important;
   }
 }
+
+/* ── New responsive rules ── */
+@media (max-width: 768px) {
+  /* Add-patient modal field rows */
+  .pr-info-row-3,
+  .pr-info-row-4a,
+  .pr-info-row-4b {
+    grid-template-columns: 1fr 1fr !important;
+  }
+  .pr-info-row-3 > div,
+  .pr-info-row-4a > div,
+  .pr-info-row-4b > div {
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  /* Owner step grids */
+  .pr-owner-ask-grid,
+  .pr-owner-name-grid,
+  .pr-contact-email-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .pr-owner-name-grid > div,
+  .pr-contact-email-grid > div {
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  /* Card grids */
+  .pr-vax-grid,
+  .pr-files-grid,
+  .pr-services-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Any vaccination/treatment/prescription form (form-grid is defined
+     elsewhere; this override is safe on top of it) */
+  .form-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .form-full {
+    grid-column: 1 / -1 !important;
+  }
+
+  /* Modal chrome */
+  .pr-modal-wrap {
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+  .pr-overlay {
+    padding: 0 !important;
+  }
+  .pr-modal-header,
+  .pr-modal-body,
+  .pr-modal-footer {
+    padding-left: 16px !important;
+    padding-right: 16px !important;
+  }
+  .pr-modal-footer {
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+  .pr-modal-footer > button {
+    flex: 1 1 auto;
+  }
+
+  /* Tab bar: let it scroll horizontally instead of squeezing */
+  .tab-bar {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap !important;
+  }
+  .tab-bar .tab {
+    flex-shrink: 0;
+  }
+
+  /* Admin ward board / insights: fall back to one column on narrow phones */
+  div[style*="repeat(auto-fit, minmax(280px, 1fr))"],
+  div[style*="repeat(auto-fit,minmax(160px,1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .pr-stat-grid {
+    grid-template-columns: 1fr !important;
+  }
+  .pr-info-row-3,
+  .pr-info-row-4a,
+  .pr-info-row-4b {
+    grid-template-columns: 1fr !important;
+  }
+  .pr-modal-body {
+    padding: 16px !important;
+  }
+  .btn.pr-btn-auto {
+    width: 100% !important;
+  }
+}

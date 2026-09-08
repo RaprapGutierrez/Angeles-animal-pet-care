@@ -6670,6 +6670,7 @@ const Appointment = () => {
         {/* ══ BOOK / EDIT MODAL ══ */}
         {showBook && (
           <div
+            className="appt-modal-overlay"
             style={{
               position: "fixed",
               inset: 0,
@@ -6684,6 +6685,7 @@ const Appointment = () => {
             }}
           >
             <div
+              className="appt-modal-box"
               style={{
                 background: "var(--card)",
                 borderRadius: 14,
@@ -8654,6 +8656,7 @@ const Appointment = () => {
 
             return (
               <div
+                className="appt-modal-overlay"
                 style={{
                   position: "fixed",
                   inset: 0,
@@ -8666,6 +8669,7 @@ const Appointment = () => {
                 }}
               >
                 <div
+                  className="appt-modal-box"
                   style={{
                     background: "var(--card)",
                     borderRadius: 16,

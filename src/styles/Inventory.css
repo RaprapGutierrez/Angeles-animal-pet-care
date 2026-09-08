@@ -322,3 +322,63 @@
     padding: 12px !important;
   }
 }
+
+/* ── New responsive rules ── */
+@media (max-width: 768px) {
+  /* View / Add-Edit item modals: edge-to-edge on phones */
+  .inv-modal-overlay {
+    padding: 0 !important;
+  }
+  .inv-modal-box {
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Pricing & Supply row: force single column on mobile */
+  .inv-pricing-row {
+    grid-template-columns: 1fr !important;
+  }
+  .inv-pricing-row > div {
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0;
+  }
+
+  /* Category board (admin view): fewer columns */
+  div[style*="repeat(auto-fit, minmax(260px, 1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Admin insights grid */
+  div[style*="repeat(auto-fit,minmax(160px,1fr))"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Item view modal fields grid: single column so labels/values aren't squeezed */
+  div[style*="repeat(auto-fit, minmax(130px, 1fr))"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Item table: allow horizontal scroll without breaking layout, tighten cells */
+  .inv-th,
+  .inv-td {
+    padding: 10px !important;
+  }
+
+  /* Actions column buttons: wrap instead of overflowing */
+  .inv-td div[style*="justify-content: flex-end"] {
+    flex-wrap: wrap !important;
+    justify-content: flex-start !important;
+  }
+}
+
+@media (max-width: 480px) {
+  div[style*="repeat(auto-fit,minmax(160px,1fr))"],
+  div[style*="repeat(auto-fit, minmax(130px, 1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
+  .inv-modal-box button.btn {
+    flex: 1 1 auto;
+  }
+}

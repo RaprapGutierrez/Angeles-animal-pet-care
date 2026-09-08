@@ -317,3 +317,50 @@
     background-position: 600px 0;
   }
 }
+
+/* ── New responsive rules: modals + form grids ── */
+@media (max-width: 768px) {
+  /* Book/Edit and View modals: edge-to-edge on phones */
+  .appt-modal-overlay {
+    padding: 0 !important;
+  }
+  .appt-modal-box {
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Collapse the many inline 2-column form rows (owner/contact, patient
+     name/species, service/vet, date/time, extra-pet blocks, export
+     format, etc.) to a single column on mobile. */
+  div[style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+  div[style*="grid-template-columns: 1fr 1fr"] > div {
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  div[style*="grid-template-columns: 1fr 1fr"] > div:last-child {
+    border-bottom: none;
+  }
+
+  /* Admin insights / export-period toggles stay usable */
+  div[style*="repeat(auto-fit,minmax(160px,1fr))"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Modal footers: wrap and let buttons breathe */
+  .appt-modal-box > div[style*="justify-content: space-between"] {
+    flex-wrap: wrap !important;
+  }
+}
+
+@media (max-width: 480px) {
+  div[style*="repeat(auto-fit,minmax(160px,1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
+  .appt-modal-box button.btn {
+    flex: 1 1 auto;
+  }
+}

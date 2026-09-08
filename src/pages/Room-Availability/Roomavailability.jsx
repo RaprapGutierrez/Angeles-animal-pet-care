@@ -320,6 +320,7 @@ const ViewModal = ({ room, onClose, onEdit, onDelete }) => {
 
   return (
     <div
+      className="room-modal-overlay"
       style={{
         position: "fixed",
         inset: 0,
@@ -332,6 +333,7 @@ const ViewModal = ({ room, onClose, onEdit, onDelete }) => {
       }}
     >
       <div
+        className="room-modal-box"
         style={{
           background: "var(--card)",
           borderRadius: 16,
@@ -1309,6 +1311,7 @@ const RoomFormModal = ({
 
   return (
     <div
+      className="room-modal-overlay"
       style={{
         position: "fixed",
         inset: 0,
@@ -1322,6 +1325,7 @@ const RoomFormModal = ({
       }}
     >
       <div
+        className="room-modal-box"
         style={{
           background: "var(--card)",
           borderRadius: 14,
@@ -1452,6 +1456,7 @@ const RoomFormModal = ({
 
             {/* Row: Number · Type */}
             <div
+              className="room-form-row"
               style={{
                 display: "grid",
                 gridTemplateColumns: isEdit ? "1fr" : "1fr 1fr",
@@ -1511,7 +1516,10 @@ const RoomFormModal = ({
             </div>
 
             {/* Row: Status · Isolation */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}>
+            <div
+              className="room-form-row"
+              style={{ display: "grid", gridTemplateColumns: "1fr 1fr" }}
+            >
               <div
                 style={{
                   padding: "10px 16px",
@@ -3005,7 +3013,10 @@ const RoomAvailability = () => {
                 No branch data available.
               </p>
             ) : (
-              <div style={{ overflowX: "auto" }}>
+              <div
+                className="room-branch-table-wrap"
+                style={{ overflowX: "auto" }}
+              >
                 <table
                   style={{
                     width: "100%",

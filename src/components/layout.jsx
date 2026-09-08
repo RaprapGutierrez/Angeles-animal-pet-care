@@ -1582,7 +1582,7 @@ const NotifDropdown = ({
             borderBottom: "1px solid #f1f5f9",
             cursor: "pointer",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg)")}
           onMouseLeave={(e) =>
             (e.currentTarget.style.background = "transparent")
           }
@@ -1656,7 +1656,7 @@ const NotifDropdown = ({
             borderBottom: "1px solid #f1f5f9",
             cursor: "pointer",
           }}
-          onMouseEnter={(e) => (e.currentTarget.style.background = "#f8fafc")}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg)")}
           onMouseLeave={(e) =>
             (e.currentTarget.style.background = "transparent")
           }
@@ -4274,7 +4274,7 @@ export const Layout = ({ children }) => {
                 </svg>
               </button>
               <img
-                src="/image/angeles-logo.webp"
+                src="/image/446805041_881106557364617_1125518808684788316_n.webp"
                 alt="APC Logo"
                 style={{
                   width: 32,
@@ -4637,7 +4637,7 @@ export const Layout = ({ children }) => {
                                   }}
                                   onMouseEnter={(e) =>
                                     (e.currentTarget.style.background =
-                                      "#f8fafc")
+                                      "var(--bg)")
                                   }
                                   onMouseLeave={(e) =>
                                     (e.currentTarget.style.background =
@@ -4724,7 +4724,7 @@ export const Layout = ({ children }) => {
                                 cursor: "pointer",
                               }}
                               onMouseEnter={(e) =>
-                                (e.currentTarget.style.background = "#f8fafc")
+                                (e.currentTarget.style.background = "var(--bg)")
                               }
                               onMouseLeave={(e) =>
                                 (e.currentTarget.style.background =

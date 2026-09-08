@@ -214,9 +214,51 @@
   display: inline-block;
 }
 
+/* ── Tablet ── */
+@media (max-width: 1024px) {
+  .dash-stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+  .dash-quick-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  }
+}
+
+/* ── Mobile ── */
 @media (max-width: 768px) {
-  .dash-fade-in[style] {
-    padding: 16px !important;
+  .dash-page-inner {
+    padding: 16px 12px;
+    padding-top: 56px;
+  }
+  .dash-hero {
+    padding: 20px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    min-height: unset !important;
+  }
+  .dash-hero-datetime {
+    text-align: left !important;
+    width: 100%;
+  }
+  .dash-hero-title {
+    font-size: 20px !important;
+  }
+  .dash-pending-banner {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 14px !important;
+  }
+  .dash-pending-cta {
+    width: 100%;
+    text-align: center;
+  }
+  .dash-stat-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 10px;
+  }
+  .dash-quick-grid {
+    grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+    gap: 10px;
   }
   .appt-row,
   .walkin-row {
@@ -233,9 +275,37 @@
     flex-direction: column !important;
     align-items: center !important;
   }
-  div[style*="repeat(auto-fit, minmax(280px, 1fr))"] {
+  .dash-bottom-grid {
     grid-template-columns: 1fr !important;
-    width: 100% !important;
+  }
+}
+
+/* ── Small phones ── */
+@media (max-width: 480px) {
+  .dash-hero {
+    padding: 16px !important;
+  }
+  .dash-hero-eyebrow {
+    font-size: 10px !important;
+  }
+  .dash-hero-title {
+    font-size: 18px !important;
+  }
+  .dash-stat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .dash-quick-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+  }
+  .stat-card-v2 {
+    padding: 14px !important;
+    min-height: 140px !important;
+  }
+  .stat-card-v2 h3 {
+    font-size: 20px !important;
+  }
+  .quick-link-v2 {
+    padding: 12px 8px !important;
   }
 }
 

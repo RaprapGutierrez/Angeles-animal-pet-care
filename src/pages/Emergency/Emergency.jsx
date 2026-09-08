@@ -70,6 +70,7 @@ const ImageLightbox = ({ src, onClose }) => {
       <img
         src={src}
         alt="Pet"
+        className="emg-lightbox-img"
         onClick={(e) => e.stopPropagation()}
         style={{
           maxWidth: "90vw",
@@ -2126,6 +2127,7 @@ const EmergencyForm = memo(
             <>
               {/* Row 1: Full Name + Contact */}
               <div
+                className="emg-form-row-2col"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
@@ -2175,6 +2177,7 @@ const EmergencyForm = memo(
               </div>
               {/* Row 2: Address + Patient Name */}
               <div
+                className="emg-form-row-2col"
                 style={{
                   display: "grid",
                   gridTemplateColumns: "1fr 1fr",
@@ -2244,6 +2247,7 @@ const EmergencyForm = memo(
                     </p>
                   )}
                   <div
+                    className="emg-address-2col"
                     style={{
                       display: "grid",
                       gridTemplateColumns: "1fr 1fr",
@@ -2708,6 +2712,7 @@ const EmergencyForm = memo(
                   </p>
                 )}
                 <div
+                  className="emg-address-2col"
                   style={{
                     display: "grid",
                     gridTemplateColumns: "1fr 1fr",
@@ -4743,6 +4748,7 @@ const GuestView = ({ sending, onSend, onExit }) => (
       </div>
     </div>
     <div
+      className="emg-guest-content"
       style={{
         padding: "24px 28px",
         paddingTop: 120,

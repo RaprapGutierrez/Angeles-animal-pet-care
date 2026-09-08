@@ -364,3 +364,65 @@
     padding: 12px !important;
   }
 }
+
+/* ── New responsive rules ── */
+@media (max-width: 768px) {
+  /* View / Add-Edit modals: edge-to-edge on phones */
+  .room-modal-overlay {
+    padding: 0 !important;
+  }
+  .room-modal-box {
+    max-width: 100% !important;
+    max-height: 100vh !important;
+    border-radius: 0 !important;
+    margin: 0 !important;
+  }
+
+  /* Room form 2-column rows (number/type, status/isolation) collapse */
+  .room-form-row {
+    grid-template-columns: 1fr !important;
+  }
+  .room-form-row > div {
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .room-form-row > div:last-child {
+    border-bottom: none;
+  }
+
+  /* Room card grids: fewer columns so cards don't shrink to unreadable */
+  div[style*="repeat(auto-fill,minmax(210px,1fr))"],
+  div[style*="repeat(auto-fill,minmax(200px,1fr))"] {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Room usage breakdown-by-type grid */
+  div[style*="repeat(auto-fit, minmax(160px, 1fr))"] {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  /* Branch comparison table: allow horizontal scroll, shrink padding */
+  .room-branch-table-wrap table th,
+  .room-branch-table-wrap table td {
+    padding: 8px !important;
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 480px) {
+  div[style*="repeat(auto-fill,minmax(210px,1fr))"],
+  div[style*="repeat(auto-fill,minmax(200px,1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
+  div[style*="repeat(auto-fit, minmax(160px, 1fr))"] {
+    grid-template-columns: 1fr !important;
+  }
+  .room-modal-box .view-field-row {
+    flex-direction: column;
+  }
+  .room-modal-box .view-field-label {
+    border-right: none;
+    border-bottom: 1px solid #f1f5f9;
+    min-width: 0;
+  }
+}

@@ -30,3 +30,7 @@ html.dark .cd-viewall {
 html.dark .ql-icon {
   stroke: #fff !important;
 }
+
+html.dark .cd-icon {
+  filter: brightness(0) invert(1);
+}

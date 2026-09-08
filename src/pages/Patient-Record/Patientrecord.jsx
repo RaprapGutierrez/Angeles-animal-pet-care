@@ -5020,6 +5020,7 @@ const PatientRecord = () => {
             </div>
           </div>
           <div
+            className="pr-owner-ask-grid"
             style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}
           >
             <button
@@ -7620,6 +7621,7 @@ const PatientRecord = () => {
                       </div>
                       {/* Row 1: Name · Gender · D.o.B / Species */}
                       <div
+                        className="pr-info-row-3"
                         style={{
                           display: "grid",
                           gridTemplateColumns: "2fr 1fr 1fr",
@@ -7753,6 +7755,7 @@ const PatientRecord = () => {
                       </div>
                       {/* Row 2: Breed · Status · Health · Room */}
                       <div
+                        className="pr-info-row-4a"
                         style={{
                           display: "grid",
                           gridTemplateColumns: "2fr 1fr 1fr 1fr",
@@ -7876,6 +7879,7 @@ const PatientRecord = () => {
                       </div>
                       {/* Row 3: Age · Temp · Heart Rate · Weight (all optional) */}
                       <div
+                        className="pr-info-row-4b"
                         style={{
                           display: "grid",
                           gridTemplateColumns: "1fr 1fr 1fr 1fr",
@@ -8080,6 +8084,7 @@ const PatientRecord = () => {
                       {ownerStep === OWNER_STEPS.FORM ? (
                         <>
                           <div
+                            className="pr-owner-name-grid"
                             style={{
                               display: "grid",
                               gridTemplateColumns: "1fr 1fr",
@@ -8262,6 +8267,7 @@ const PatientRecord = () => {
                         </div>
                       )}
                       <div
+                        className="pr-contact-email-grid"
                         style={{
                           display: "grid",
                           gridTemplateColumns: "1fr 1fr",
@@ -8998,6 +9004,7 @@ const PatientRecord = () => {
                     </div>
                   ) : (
                     <div
+                      className="pr-vax-grid"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1fr 1fr",
@@ -9297,6 +9304,7 @@ const PatientRecord = () => {
                     </div>
                   ) : (
                     <div
+                      className="pr-services-grid"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1fr 1fr",
@@ -9668,6 +9676,7 @@ const PatientRecord = () => {
                     </div>
                   ) : (
                     <div
+                      className="pr-files-grid"
                       style={{
                         display: "grid",
                         gridTemplateColumns: "1fr 1fr",
