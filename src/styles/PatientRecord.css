@@ -598,11 +598,23 @@ input.pr-search-input:-ms-input-placeholder {
   }
   .fab-wrap {
     position: fixed !important;
+    z-index: 99999 !important;
+    right: max(16px, calc(16px + env(safe-area-inset-right))) !important;
+    bottom: max(20px, calc(16px + env(safe-area-inset-bottom))) !important;
+    left: auto !important;
+    top: auto !important;
   }
   .patient-record-topbar .topbar-title,
   .patient-record-topbar .topbar-actions {
     flex-wrap: wrap !important;
     width: 100% !important;
+  }
+  .patient-record-topbar .topbar-actions .fab-wrap {
+    position: fixed !important;
+    inset: auto max(16px, calc(16px + env(safe-area-inset-right)))
+      max(20px, calc(16px + env(safe-area-inset-bottom))) auto !important;
+    width: auto !important;
+    flex-wrap: nowrap !important;
   }
   .patient-record-topbar .topbar-actions > div[style*="width: 220"],
   .patient-record-topbar .topbar-actions input {
@@ -621,6 +633,11 @@ input.pr-search-input:-ms-input-placeholder {
     overflow-x: hidden !important;
     width: 100% !important;
     box-sizing: border-box !important;
+  }
+  .patient-record-topbar,
+  .patient-record-topbar .topbar-actions {
+    overflow: visible !important;
+    transform: none !important;
   }
   .content > *:first-child,
   .pr-page-content > *:first-child {
