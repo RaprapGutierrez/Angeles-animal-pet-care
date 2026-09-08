@@ -1072,7 +1072,7 @@ const Dashboard = () => {
 
   return (
     <Layout>
-      <div className="dash-page-wrap">
+      <div className="dash-page-wrap" style={{ overflowY: "visible" }}>
         <div className="dash-page-inner">
           {/* ── Hero header ───────────────────────────────────────────────── */}
           <div
@@ -1425,6 +1425,7 @@ const Dashboard = () => {
             />
             <TodayWalkins walkins={todayWalkins} loading={loading} />
           </div>
+          <div style={{ height: 24 }} />
         </div>
       </div>
     </Layout>

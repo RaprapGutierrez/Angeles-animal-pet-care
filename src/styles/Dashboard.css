@@ -226,9 +226,24 @@
 
 /* ── Mobile ── */
 @media (max-width: 768px) {
+  html,
+  body {
+    height: auto !important;
+    overflow-y: auto !important;
+  }
+  .dash-page-wrap {
+    height: auto !important;
+    min-height: 100vh;
+    overflow: visible !important;
+  }
   .dash-page-inner {
     padding: 16px 12px;
     padding-top: 56px;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 90px);
+  }
+  .dash-card-body {
+    max-height: none !important;
+    overflow-y: visible !important;
   }
   .dash-hero {
     padding: 20px !important;
@@ -282,6 +297,9 @@
 
 /* ── Small phones ── */
 @media (max-width: 480px) {
+  .dash-page-inner {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 100px) !important;
+  }
   .dash-hero {
     padding: 16px !important;
   }
@@ -354,6 +372,7 @@ html.dark .stat-card-v2 p {
   flex: 1;
   overflow-y: auto;
   max-height: 360px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .dash-empty-slate {
@@ -376,11 +395,14 @@ html.dark .stat-card-v2 p {
 
 .dash-page-wrap {
   width: 100%;
+  min-height: 100vh;
+  overflow-y: visible;
 }
 
 .dash-page-inner {
   padding: 20px 16px;
   padding-top: 56px;
+  padding-bottom: 40px;
   width: 100%;
   box-sizing: border-box;
 }

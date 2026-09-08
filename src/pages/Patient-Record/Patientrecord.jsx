@@ -2134,7 +2134,10 @@ const PatientInfoTab = ({ patient, treatments = [] }) => {
       </div>
 
       {/* Fields grid */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+      <div
+        className="pr-info-field-grid"
+        style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}
+      >
         {[
           { label: "Patient Name", value: patient.name },
           { label: "Species", value: patient.species },
@@ -6075,12 +6078,13 @@ const PatientRecord = () => {
             className="fab-wrap"
             style={{
               position: "fixed",
-              bottom: 28,
-              right: 28,
+              bottom: "max(28px, calc(16px + env(safe-area-inset-bottom)))",
+              right: "max(28px, calc(16px + env(safe-area-inset-right)))",
               zIndex: 999,
               display: "flex",
               alignItems: "center",
               gap: 10,
+              maxWidth: "calc(100vw - 24px)",
             }}
             onMouseEnter={(e) => {
               e.currentTarget.querySelector(".fab-tooltip").style.opacity = "1";
@@ -7503,6 +7507,7 @@ const PatientRecord = () => {
             </button>
           </div>
         )}
+        <div style={{ height: 24 }} />
       </div>
       {/* ── ADD PATIENT MODAL ── */}
       {activeModal === "add" &&

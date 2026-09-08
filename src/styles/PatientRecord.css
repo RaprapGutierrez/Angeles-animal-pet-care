@@ -653,11 +653,19 @@ input.pr-search-input:-ms-input-placeholder {
   }
 
   .fab-wrap {
-    bottom: max(20px, env(safe-area-inset-bottom)) !important;
-    right: 16px !important;
+    bottom: max(20px, calc(16px + env(safe-area-inset-bottom))) !important;
+    right: max(16px, calc(16px + env(safe-area-inset-right))) !important;
+    left: auto !important;
+  }
+  .fab-wrap .fab-tooltip {
+    display: none !important;
   }
 }
 @media (max-width: 480px) {
+  .fab-wrap {
+    bottom: max(16px, calc(12px + env(safe-area-inset-bottom))) !important;
+    right: max(12px, calc(12px + env(safe-area-inset-right))) !important;
+  }
   .fab-wrap .fab-btn {
     width: 48px !important;
     height: 48px !important;
@@ -800,6 +808,80 @@ input.pr-search-input:-ms-input-placeholder {
   div[style*="repeat(auto-fit,minmax(160px,1fr))"] {
     grid-template-columns: 1fr !important;
   }
+
+  /* ── View modal: patient hero banner ── */
+  .patient-hero {
+    padding: 16px !important;
+  }
+  .patient-hero > div > div:first-child {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  .patient-hero h2 {
+    font-size: 17px !important;
+  }
+  .patient-hero > div > div:first-child > div[style*="margin-left: auto"] {
+    margin-left: 0 !important;
+    flex-direction: row !important;
+    flex-wrap: wrap !important;
+  }
+
+  /* ── View modal: info field grid ── */
+  .pr-info-field-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* ── View/Edit modal header: patient name + badges wrap cleanly ── */
+  .pr-modal-header {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  .pr-modal-header > div:first-child {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+  .pr-modal-header h3 {
+    font-size: 15px !important;
+    word-break: break-word;
+  }
+
+  /* ── Treatment paper: reduce the reserved left margin on phones ── */
+  .treat-paper {
+    padding: 16px 14px !important;
+  }
+  .treat-paper::before {
+    left: 26px !important;
+  }
+  .treat-paper > div[style*="padding-left: 50"],
+  .treat-paper > div[style*="paddingLeft: 50"] {
+    padding-left: 26px !important;
+  }
+
+  /* ── Prescription slip header: stack on narrow screens ── */
+  .rx-slip-header {
+    flex-wrap: wrap !important;
+    gap: 10px !important;
+  }
+  .rx-symbol {
+    display: none !important;
+  }
+
+  /* ── Edit patient form-grid already goes 1fr via .form-grid rule above ── */
+  .form-grid .form-group input,
+  .form-grid .form-group select {
+    font-size: 16px !important; /* prevents iOS zoom-on-focus */
+  }
+}
+
+@media (max-width: 480px) {
+  .patient-hero > div > div:first-child > div:nth-child(1) {
+    width: 44px !important;
+    height: 44px !important;
+  }
+  .rx-slip-header button {
+    font-size: 10px !important;
+    padding: 4px 8px !important;
+  }
 }
 
 @media (max-width: 480px) {
@@ -816,5 +898,37 @@ input.pr-search-input:-ms-input-placeholder {
   }
   .btn.pr-btn-auto {
     width: 100% !important;
+  }
+}
+
+@media (max-width: 768px) {
+  html,
+  body {
+    height: auto !important;
+    overflow-y: auto !important;
+  }
+  .content.pr-page-content,
+  .pr-page-content {
+    height: auto !important;
+    overflow: visible !important;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 100px) !important;
+  }
+  .pr-card {
+    margin-bottom: 20px !important;
+  }
+  .pr-modal-wrap {
+    height: 100vh !important;
+    max-height: 100vh !important;
+  }
+  .pr-modal-body {
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 90px) !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .content.pr-page-content,
+  .pr-page-content {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 110px) !important;
   }
 }
