@@ -1193,8 +1193,8 @@ const Report = () => {
           start = `${genMonth}-01`;
           end = `${genMonth}-${String(lastDay).padStart(2, "0")}`;
         } else {
-          start = new Date(y, m - 1, 1).toISOString();
-          end = new Date(y, m, 0, 23, 59, 59).toISOString();
+          start = `${genMonth}-01T00:00:00`;
+          end = `${genMonth}-${String(lastDay).padStart(2, "0")}T23:59:59`;
         }
       }
 
@@ -1211,6 +1211,14 @@ const Report = () => {
       const { data, error } = await q;
       if (error) throw error;
       const rows = data || [];
+      if (rows.length === 0) {
+        showToast(
+          `No records found for ${cfg.label} on ${periodLabel}.`,
+          "error",
+        );
+        setGenerating(false);
+        return;
+      }
       const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
 
       if (genFormat === "pdf") {
