@@ -637,6 +637,17 @@ const Report = () => {
   const [branchStats, setBranchStats] = useState([]);
   const [branchStatsLoading, setBranchStatsLoading] = useState(false);
 
+  // ── Generate Report modal ──────────────────────────────────────────────────
+  const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [genPeriodType, setGenPeriodType] = useState("day"); // "day" | "month"
+  const [genDate, setGenDate] = useState(new Date().toISOString().slice(0, 10));
+  const [genMonth, setGenMonth] = useState(
+    new Date().toISOString().slice(0, 7),
+  );
+  const [genDataType, setGenDataType] = useState(""); // appointments | walkins | patients | transactions
+  const [genFormat, setGenFormat] = useState(""); // pdf | excel
+  const [generating, setGenerating] = useState(false);
+
   const fetchBranchComparison = useCallback(async () => {
     if (!isAdminLevel || !seeAllBranches) return;
     setBranchStatsLoading(true);
@@ -1136,6 +1147,142 @@ const Report = () => {
     }
   };
 
+  // ── Generate Report (Appointments / Walk-Ins / Patients / Transactions) ────
+  const GEN_TYPES = {
+    appointments: {
+      table: "appointments",
+      label: "Appointments",
+      dateField: "date",
+      dateOnly: true,
+    },
+    walkins: {
+      table: "walkins",
+      label: "Walk-Ins",
+      dateField: "arrived_at",
+      dateOnly: false,
+    },
+    patients: {
+      table: "patients",
+      label: "Patient Records",
+      dateField: "created_at",
+      dateOnly: false,
+    },
+    transactions: {
+      table: "transactions",
+      label: "Transactions",
+      dateField: "created_at",
+      dateOnly: false,
+    },
+  };
+
+  const runGenerateReport = async () => {
+    if (!genDataType || !genFormat) return;
+    setGenerating(true);
+    try {
+      const cfg = GEN_TYPES[genDataType];
+      let start, end, periodLabel;
+      if (genPeriodType === "day") {
+        periodLabel = genDate;
+        start = cfg.dateOnly ? genDate : `${genDate}T00:00:00`;
+        end = cfg.dateOnly ? genDate : `${genDate}T23:59:59`;
+      } else {
+        periodLabel = genMonth;
+        const [y, m] = genMonth.split("-").map(Number);
+        const lastDay = new Date(y, m, 0).getDate();
+        if (cfg.dateOnly) {
+          start = `${genMonth}-01`;
+          end = `${genMonth}-${String(lastDay).padStart(2, "0")}`;
+        } else {
+          start = new Date(y, m - 1, 1).toISOString();
+          end = new Date(y, m, 0, 23, 59, 59).toISOString();
+        }
+      }
+
+      let q = supabase
+        .from(cfg.table)
+        .select("*")
+        .gte(cfg.dateField, start)
+        .lte(cfg.dateField, end);
+      if (cfg.table === "patients") q = q.is("deleted_at", null);
+      if (!seeAllBranches && user?.branchId)
+        q = q.eq("branch_id", user.branchId);
+      if (seeAllBranches && branchFilter) q = q.eq("branch_id", branchFilter);
+
+      const { data, error } = await q;
+      if (error) throw error;
+      const rows = data || [];
+      const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
+
+      if (genFormat === "pdf") {
+        const { default: jsPDF } = await import("jspdf");
+        const { default: autoTable } = await import("jspdf-autotable");
+        const doc = new jsPDF();
+        doc.setFontSize(16);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 58, 138);
+        doc.text("Angeles Animal Care Hospital", 105, 16, { align: "center" });
+        doc.setFontSize(11);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100, 116, 139);
+        doc.text(`${cfg.label} Report — ${branchLabel}`, 105, 23, {
+          align: "center",
+        });
+        doc.setFontSize(10);
+        doc.text(
+          `Period: ${periodLabel} | Generated: ${new Date().toLocaleDateString("en-PH")}`,
+          105,
+          29,
+          { align: "center" },
+        );
+        autoTable(doc, {
+          startY: 36,
+          head: [cols],
+          body: rows.map((r) =>
+            cols.map((c) => (r[c] == null ? "" : String(r[c]))),
+          ),
+          headStyles: {
+            fillColor: [30, 58, 138],
+            textColor: 255,
+            fontStyle: "bold",
+          },
+          styles: { fontSize: 8, cellPadding: 3 },
+          margin: { left: 10, right: 10 },
+        });
+        doc.save(`${cfg.label.replace(/\s/g, "")}_${periodLabel}.pdf`);
+      } else {
+        const XLSX = await import("xlsx");
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(
+          wb,
+          XLSX.utils.aoa_to_sheet([
+            cols,
+            ...rows.map((r) => cols.map((c) => r[c])),
+          ]),
+          cfg.label.slice(0, 30),
+        );
+        XLSX.writeFile(
+          wb,
+          `${cfg.label.replace(/\s/g, "")}_${periodLabel}.xlsx`,
+        );
+      }
+
+      logActivity(
+        user,
+        "Generated report",
+        `${cfg.label} — ${periodLabel} (${genFormat.toUpperCase()})`,
+      );
+      showToast(`${cfg.label} report downloaded successfully!`, "success");
+      setShowGenerateModal(false);
+      setGenDataType("");
+      setGenFormat("");
+    } catch (err) {
+      console.error(err);
+      showToast("Report generation failed. Please try again.", "error");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // ── Derived chart values ────────────────────────────────────────────────────
   const maxSales = Math.max(...salesData.map((d) => d.total), 1);
   const maxAppts = Math.max(...apptData.map((d) => d.count), 1);
@@ -1502,42 +1649,14 @@ const Report = () => {
               </button>
             )}
 
-            {/* ── PDF Export Button ── */}
-            <button
-              className="btn btn-outline export-btn report-outline-btn"
-              onClick={handleExportPDF}
-              disabled={loading || !!exporting}
-              style={{
-                width: "auto",
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-                opacity: loading ? 0.55 : 1,
-              }}
-            >
-              {exporting === "pdf" ? (
-                <>
-                  <span className="export-spin" />
-                  Exporting…
-                </>
-              ) : (
-                <>
-                  <img
-                    src="/icon/pdf-file.webp"
-                    alt="PDF"
-                    className="report-pdf-icon"
-                    style={{ width: 16, height: 16, objectFit: "contain" }}
-                  />
-                  PDF
-                </>
-              )}
-            </button>
-
-            {/* ── Excel Export Button ── */}
             <button
               className="btn btn-primary export-btn"
-              onClick={handleExportExcel}
-              disabled={loading || !!exporting}
+              onClick={() => {
+                setGenDataType("");
+                setGenFormat("");
+                setShowGenerateModal(true);
+              }}
+              disabled={loading}
               style={{
                 width: "auto",
                 display: "flex",
@@ -1546,26 +1665,19 @@ const Report = () => {
                 opacity: loading ? 0.55 : 1,
               }}
             >
-              {exporting === "excel" ? (
-                <>
-                  <span className="export-spin export-spin-light" />
-                  Exporting…
-                </>
-              ) : (
-                <>
-                  <img
-                    src="/icon/excel.webp"
-                    alt="Excel"
-                    style={{
-                      width: 16,
-                      height: 16,
-                      objectFit: "contain",
-                      filter: "brightness(0) invert(1)",
-                    }}
-                  />
-                  Excel
-                </>
-              )}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+              >
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              Generate Report
             </button>
           </div>
         </div>
@@ -2536,6 +2648,328 @@ const Report = () => {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ Generate Report Modal ══ */}
+      {showGenerateModal && (
+        <div
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.5)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 99999,
+            padding: 16,
+          }}
+        >
+          <div
+            style={{
+              background: "var(--card)",
+              borderRadius: 14,
+              width: "100%",
+              maxWidth: 440,
+              boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
+              overflow: "hidden",
+            }}
+          >
+            <div
+              style={{
+                padding: "18px 22px",
+                borderBottom: "1px solid var(--border)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+              }}
+            >
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                    fontSize: 16,
+                    fontWeight: 800,
+                    color: "var(--text)",
+                  }}
+                >
+                  Generate Report
+                </h3>
+                <p
+                  style={{
+                    margin: "4px 0 0",
+                    fontSize: 12,
+                    color: "var(--muted)",
+                  }}
+                >
+                  Choose a period, data source, and file format.
+                </p>
+              </div>
+              <button
+                className="btn btn-ghost btn-icon"
+                style={{ width: "auto" }}
+                onClick={() => setShowGenerateModal(false)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div
+              style={{
+                padding: "18px 22px",
+                display: "flex",
+                flexDirection: "column",
+                gap: 18,
+              }}
+            >
+              <div>
+                <label
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    display: "block",
+                    marginBottom: 8,
+                  }}
+                >
+                  1. Period
+                </label>
+                <div
+                  style={{
+                    display: "flex",
+                    border: "1.5px solid var(--border)",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    marginBottom: 10,
+                  }}
+                >
+                  {[
+                    { key: "day", label: "Specific Day" },
+                    { key: "month", label: "Specific Month" },
+                  ].map(({ key, label }) => (
+                    <button
+                      key={key}
+                      onClick={() => setGenPeriodType(key)}
+                      style={{
+                        flex: 1,
+                        padding: "8px 0",
+                        border: "none",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                        background:
+                          genPeriodType === key
+                            ? "var(--royal)"
+                            : "var(--card)",
+                        color: genPeriodType === key ? "#fff" : "var(--muted)",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {genPeriodType === "day" ? (
+                  <input
+                    type="date"
+                    value={genDate}
+                    onChange={(e) => setGenDate(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      border: "1.5px solid var(--border)",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontFamily: "inherit",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                ) : (
+                  <input
+                    type="month"
+                    value={genMonth}
+                    onChange={(e) => setGenMonth(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "9px 12px",
+                      border: "1.5px solid var(--border)",
+                      borderRadius: 8,
+                      fontSize: 13,
+                      fontFamily: "inherit",
+                      outline: "none",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                )}
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    display: "block",
+                    marginBottom: 8,
+                  }}
+                >
+                  2. Report Type
+                </label>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 8,
+                  }}
+                >
+                  {[
+                    { key: "appointments", label: "Appointments" },
+                    { key: "walkins", label: "Walk-Ins" },
+                    { key: "patients", label: "Patient Records" },
+                    { key: "transactions", label: "Transactions (POS)" },
+                  ].map((t) => (
+                    <button
+                      key={t.key}
+                      onClick={() => setGenDataType(t.key)}
+                      style={{
+                        padding: "10px 8px",
+                        borderRadius: 8,
+                        border: `2px solid ${genDataType === t.key ? "var(--royal)" : "var(--border)"}`,
+                        background:
+                          genDataType === t.key
+                            ? "var(--light-blue)"
+                            : "var(--card)",
+                        color:
+                          genDataType === t.key
+                            ? "var(--royal)"
+                            : "var(--text)",
+                        fontSize: 12,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "var(--muted)",
+                    textTransform: "uppercase",
+                    letterSpacing: 0.5,
+                    display: "block",
+                    marginBottom: 8,
+                  }}
+                >
+                  3. File Format
+                </label>
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: 10,
+                  }}
+                >
+                  {[
+                    {
+                      key: "pdf",
+                      label: "PDF",
+                      desc: "Printable document",
+                      color: "#dc2626",
+                      bg: "#fef2f2",
+                    },
+                    {
+                      key: "excel",
+                      label: "Excel",
+                      desc: "Spreadsheet (.xlsx)",
+                      color: "#16a34a",
+                      bg: "#f0fdf4",
+                    },
+                  ].map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setGenFormat(f.key)}
+                      style={{
+                        padding: "12px 10px",
+                        borderRadius: 10,
+                        border: `2px solid ${genFormat === f.key ? f.color : "var(--border)"}`,
+                        background: genFormat === f.key ? f.bg : "var(--card)",
+                        cursor: "pointer",
+                        textAlign: "left",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 800,
+                          color: genFormat === f.key ? f.color : "var(--text)",
+                        }}
+                      >
+                        {f.label}
+                      </div>
+                      <div
+                        style={{
+                          fontSize: 11,
+                          color: "var(--muted)",
+                          marginTop: 2,
+                        }}
+                      >
+                        {f.desc}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                gap: 8,
+                padding: "14px 22px",
+                borderTop: "1px solid var(--border)",
+                background: "var(--bg)",
+              }}
+            >
+              <button
+                className="btn btn-ghost"
+                style={{ width: "auto" }}
+                onClick={() => setShowGenerateModal(false)}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                style={{
+                  width: "auto",
+                  background: "#0f172a",
+                  borderColor: "#0f172a",
+                  opacity: !genDataType || !genFormat || generating ? 0.5 : 1,
+                  cursor:
+                    !genDataType || !genFormat || generating
+                      ? "not-allowed"
+                      : "pointer",
+                }}
+                disabled={!genDataType || !genFormat || generating}
+                onClick={runGenerateReport}
+              >
+                {generating ? "Generating..." : "Generate"}
+              </button>
             </div>
           </div>
         </div>

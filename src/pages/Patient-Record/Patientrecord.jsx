@@ -3202,16 +3202,6 @@ const PatientRecord = () => {
   const [deletedPatients, setDeletedPatients] = useState([]);
   const [showDeletedModal, setShowDeletedModal] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
-  const [showReportModal, setShowReportModal] = useState(false);
-  const [reportPeriodType, setReportPeriodType] = useState("month"); // "month" | "year"
-  const [reportMonth, setReportMonth] = useState(
-    new Date().toISOString().slice(0, 7), // "YYYY-MM"
-  );
-  const [reportYear, setReportYear] = useState(
-    String(new Date().getFullYear()),
-  );
-  const [reportFormat, setReportFormat] = useState("pdf"); // "pdf" | "excel"
-  const [generatingReport, setGeneratingReport] = useState(false);
   const toggleSort = (field) => {
     if (sortField === field) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -3674,132 +3664,6 @@ const PatientRecord = () => {
       </Layout>
     );
   }
-
-  const getReportRange = () => {
-    if (reportPeriodType === "month") {
-      const [y, m] = reportMonth.split("-").map(Number);
-      const start = new Date(y, m - 1, 1);
-      const end = new Date(y, m, 1);
-      return {
-        start,
-        end,
-        label: start.toLocaleDateString("en-US", {
-          month: "long",
-          year: "numeric",
-        }),
-      };
-    }
-    const y = Number(reportYear);
-    return {
-      start: new Date(y, 0, 1),
-      end: new Date(y + 1, 0, 1),
-      label: String(y),
-    };
-  };
-
-  const generateReport = async () => {
-    const { start, end, label } = getReportRange();
-    const rows = patients.filter((p) => {
-      if (!p.created_at) return false;
-      const d = new Date(p.created_at);
-      return d >= start && d < end;
-    });
-
-    if (rows.length === 0) {
-      showAlert("No Records", `No patients registered in ${label}.`);
-      return;
-    }
-
-    setGeneratingReport(true);
-
-    const columns = [
-      "Name",
-      "Species",
-      "Breed",
-      "Gender",
-      "Owner",
-      "Contact",
-      "Status",
-      "Health",
-      "Room",
-      "Condition",
-      "Registered",
-    ];
-    const dataRows = rows.map((p) => [
-      p.name || "",
-      p.species || "",
-      p.breed || "",
-      p.gender || "",
-      p.owner || "",
-      p.contact || "",
-      p.status || "",
-      p.health || "",
-      p.room || "",
-      p.condition || "",
-      p.created_at ? new Date(p.created_at).toLocaleDateString("en-US") : "",
-    ]);
-
-    if (reportFormat === "excel") {
-      const XLSX = await import("xlsx");
-      const ws = XLSX.utils.aoa_to_sheet([columns, ...dataRows]);
-      ws["!cols"] = columns.map(() => ({ wch: 18 }));
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Patients");
-      XLSX.writeFile(wb, `Patient_Report_${label.replace(/\s+/g, "_")}.xlsx`);
-      setGeneratingReport(false);
-      setShowReportModal(false);
-      showToast(`✓ Excel report generated (${rows.length} records)`);
-    } else {
-      const win = window.open("", "_blank", "width=1000,height=800");
-      if (!win) {
-        setGeneratingReport(false);
-        showAlert(
-          "Popup Blocked",
-          "Please allow popups to generate the PDF report.",
-        );
-        return;
-      }
-      const tableRows = dataRows
-        .map((r) => `<tr>${r.map((c) => `<td>${c || "—"}</td>`).join("")}</tr>`)
-        .join("");
-      win.document.write(`
-        <html>
-          <head>
-            <title>Patient Report - ${label}</title>
-            <style>
-              body { font-family: 'Segoe UI', Arial, sans-serif; padding: 30px; color: #1e293b; }
-              .header { text-align: center; border-bottom: 3px solid #1e3a8a; padding-bottom: 14px; margin-bottom: 20px; }
-              .header h1 { margin: 0; font-size: 18px; color: #0f172a; }
-              .header p { margin: 4px 0 0; font-size: 12px; color: #64748b; }
-              table { width: 100%; border-collapse: collapse; font-size: 11px; }
-              th, td { border: 1px solid #e2e8f0; padding: 6px 8px; text-align: left; }
-              th { background: #f1f5f9; font-weight: 700; text-transform: uppercase; font-size: 9.5px; color: #475569; }
-              tr:nth-child(even) { background: #f8fafc; }
-              .footer { margin-top: 20px; text-align: right; font-size: 10px; color: #94a3b8; font-style: italic; }
-              @media print { body { padding: 12px; } }
-            </style>
-          </head>
-          <body>
-            <div class="header">
-              <h1>Angeles Animal Care Hospital</h1>
-              <p>Patient Records Report — ${label} (${rows.length} record${rows.length !== 1 ? "s" : ""})</p>
-            </div>
-            <table>
-              <thead><tr>${columns.map((c) => `<th>${c}</th>`).join("")}</tr></thead>
-              <tbody>${tableRows}</tbody>
-            </table>
-            <p class="footer">Generated on ${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</p>
-          </body>
-        </html>
-      `);
-      win.document.close();
-      win.focus();
-      setTimeout(() => win.print(), 300);
-      setGeneratingReport(false);
-      setShowReportModal(false);
-      showToast(`✓ PDF report generated (${rows.length} records)`);
-    }
-  };
 
   const openAdd = () => {
     setForm({
@@ -6041,39 +5905,7 @@ const PatientRecord = () => {
             Recently Deleted{" "}
             {deletedPatients.length > 0 ? `(${deletedPatients.length})` : ""}
           </button>
-          <button
-            onClick={() => setShowReportModal(true)}
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 6,
-              background: "#eff6ff",
-              border: "1.5px solid #bfdbfe",
-              color: "#1d4ed8",
-              borderRadius: 8,
-              padding: "8px 14px",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              fontFamily: "inherit",
-            }}
-          >
-            <svg
-              width="13"
-              height="13"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-            >
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <polyline points="14 2 14 8 20 8" />
-              <line x1="16" y1="13" x2="8" y2="13" />
-              <line x1="16" y1="17" x2="8" y2="17" />
-            </svg>
-            Generate Report
-          </button>
+          {/* Export moved to Reports page */}{" "}
           <div
             className="fab-wrap"
             style={{

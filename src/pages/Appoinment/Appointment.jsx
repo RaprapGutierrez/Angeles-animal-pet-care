@@ -1422,16 +1422,6 @@ const Appointment = () => {
     "Other",
   ];
   const [toasts, setToasts] = useState([]);
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportPeriod, setExportPeriod] = useState("month");
-  const [exportMonth, setExportMonth] = useState(
-    String(new Date().getMonth() + 1).padStart(2, "0"),
-  );
-  const [exportYear, setExportYear] = useState(
-    String(new Date().getFullYear()),
-  );
-  const [exportFormat, setExportFormat] = useState("excel");
-  const [exporting, setExporting] = useState(false);
   const [selectedIds, setSelectedIds] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState("created_at");
@@ -2717,78 +2707,6 @@ const Appointment = () => {
       "Yes, Delete All",
       "#dc2626",
     );
-
-  const getExportData = () => {
-    return appts.filter((a) => {
-      if (!a.date) return false;
-      const [y, m] = a.date.split("-");
-      if (exportPeriod === "year") return y === exportYear;
-      return y === exportYear && m === exportMonth;
-    });
-  };
-
-  const runExport = async () => {
-    const data = getExportData();
-    if (data.length === 0) {
-      showAlert("No Data", "There are no appointments in the selected period.");
-      return;
-    }
-    setExporting(true);
-    const periodLabel =
-      exportPeriod === "year"
-        ? exportYear
-        : `${MONTH_NAMES[Number(exportMonth) - 1]} ${exportYear}`;
-    const rows = data.map((a) => ({
-      Patient: a.patient,
-      Owner: a.owner,
-      Contact: a.contact || "",
-      Veterinarian: a.vet,
-      Date: a.date,
-      Time: a.time,
-      Purpose: a.purpose,
-      Price: a.price || 0,
-      Status: a.status,
-      Room: a.room || "",
-      Notes: a.notes || "",
-    }));
-
-    try {
-      if (exportFormat === "excel") {
-        const XLSX = await import("xlsx");
-        const ws = XLSX.utils.json_to_sheet(rows);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Appointments");
-        XLSX.writeFile(
-          wb,
-          `Appointments_${periodLabel.replace(" ", "_")}.xlsx`,
-        );
-      } else {
-        const { default: jsPDF } = await import("jspdf");
-        const { default: autoTable } = await import("jspdf-autotable");
-        const doc = new jsPDF({ orientation: "landscape" });
-        doc.setFontSize(14);
-        doc.text(`Appointments Report — ${periodLabel}`, 14, 15);
-        autoTable(doc, {
-          startY: 20,
-          head: [Object.keys(rows[0])],
-          body: rows.map((r) => Object.values(r)),
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [30, 58, 138] },
-        });
-        doc.save(`Appointments_${periodLabel.replace(" ", "_")}.pdf`);
-      }
-      showToast(
-        `✓ Exported ${data.length} appointment(s) for ${periodLabel}`,
-        "success",
-      );
-    } catch (err) {
-      console.error(err);
-      showToast("Export failed. Please try again.", "error");
-    } finally {
-      setExporting(false);
-      setShowExportModal(false);
-    }
-  };
 
   const changeMonth = (dir) =>
     setCalMonth(
@@ -4861,41 +4779,7 @@ const Appointment = () => {
             </svg>
             Vet Schedules
           </button>{" "}
-          {(isAdmin || isSuperAdmin) && (
-            <button
-              className="appt-reviews-btn"
-              onClick={() => setShowExportModal(true)}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "7px 16px",
-                borderRadius: 8,
-                border: "1.5px solid #f59e0b",
-                background: "#fffbeb",
-                color: "#92400e",
-                fontSize: 13,
-                fontWeight: 600,
-                cursor: "pointer",
-                fontFamily: "inherit",
-              }}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              >
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                <polyline points="7 10 12 15 17 10" />
-                <line x1="12" y1="15" x2="12" y2="3" />
-              </svg>
-              Export Data
-            </button>
-          )}{" "}
+          {/* Export moved to Reports page */}
           <div
             className="fab-wrap"
             style={{
@@ -8963,73 +8847,77 @@ const Appointment = () => {
                           <div
                             style={{ display: "flex", gap: 8, flexShrink: 0 }}
                           >
-                            {selectedAppt.status === "Pending" && isAdmin && (
-                              <>
+                            {selectedAppt.status === "Pending" &&
+                              (isAdmin || isEmployee) && (
+                                <>
+                                  <button
+                                    className="btn btn-sm"
+                                    style={{
+                                      ...S.btn,
+                                      background: "#16a34a",
+                                      color: "#fff",
+                                      border: "none",
+                                      display: "inline-flex",
+                                      alignItems: "center",
+                                      gap: 5,
+                                      fontSize: 12,
+                                    }}
+                                    disabled={approving}
+                                    onClick={() =>
+                                      openApproveModal(selectedAppt)
+                                    }
+                                  >
+                                    {approving ? (
+                                      "Approving…"
+                                    ) : (
+                                      <>
+                                        <svg
+                                          width="11"
+                                          height="11"
+                                          viewBox="0 0 24 24"
+                                          fill="none"
+                                          stroke="currentColor"
+                                          strokeWidth="3"
+                                          strokeLinecap="round"
+                                        >
+                                          <polyline points="20 6 9 17 4 12" />
+                                        </svg>
+                                        Approve
+                                      </>
+                                    )}
+                                  </button>
+                                  <button
+                                    className="btn btn-sm"
+                                    style={{
+                                      ...S.btn,
+                                      background: "#dc2626",
+                                      color: "#fff",
+                                      border: "none",
+                                      fontSize: 12,
+                                    }}
+                                    onClick={() => cancelAppt(selectedAppt.id)}
+                                  >
+                                    Decline
+                                  </button>
+                                </>
+                              )}
+                            {selectedAppt.status === "Confirmed" &&
+                              (isAdmin || isEmployee) && (
                                 <button
                                   className="btn btn-sm"
                                   style={{
                                     ...S.btn,
-                                    background: "#16a34a",
-                                    color: "#fff",
-                                    border: "none",
-                                    display: "inline-flex",
-                                    alignItems: "center",
-                                    gap: 5,
-                                    fontSize: 12,
-                                  }}
-                                  disabled={approving}
-                                  onClick={() => openApproveModal(selectedAppt)}
-                                >
-                                  {approving ? (
-                                    "Approving…"
-                                  ) : (
-                                    <>
-                                      <svg
-                                        width="11"
-                                        height="11"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        strokeWidth="3"
-                                        strokeLinecap="round"
-                                      >
-                                        <polyline points="20 6 9 17 4 12" />
-                                      </svg>
-                                      Approve
-                                    </>
-                                  )}
-                                </button>
-                                <button
-                                  className="btn btn-sm"
-                                  style={{
-                                    ...S.btn,
-                                    background: "#dc2626",
+                                    background: "#1e3a8a",
                                     color: "#fff",
                                     border: "none",
                                     fontSize: 12,
                                   }}
-                                  onClick={() => cancelAppt(selectedAppt.id)}
+                                  disabled={completing}
+                                  onClick={() => completeAppt(selectedAppt.id)}
                                 >
-                                  Decline
+                                  {completing ? "Saving…" : "Mark Complete"}
                                 </button>
-                              </>
-                            )}
-                            {selectedAppt.status === "Confirmed" && isAdmin && (
-                              <button
-                                className="btn btn-sm"
-                                style={{
-                                  ...S.btn,
-                                  background: "#1e3a8a",
-                                  color: "#fff",
-                                  border: "none",
-                                  fontSize: 12,
-                                }}
-                                disabled={completing}
-                                onClick={() => completeAppt(selectedAppt.id)}
-                              >
-                                {completing ? "Saving…" : "Mark Complete"}
-                              </button>
-                            )}
+                              )}
                           </div>
                         </div>
                       )}
