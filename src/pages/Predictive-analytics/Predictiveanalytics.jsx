@@ -1,5 +1,6 @@
 // src/pages/PredictiveAnalytics.jsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
+import ReactDOM from "react-dom";
 import Layout from "../../components/layout";
 import { supabase } from "../../js/Utils/supabase";
 import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
@@ -46,6 +47,267 @@ const MONTHS = [
   "Dec",
 ];
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+/* ── Custom branch dropdown (matches Appointments.jsx) ── */
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  placeholder = "—",
+  accent = "#6366f1",
+  searchable = false,
+}) => {
+  const [open, setOpen] = React.useState(false);
+  const [dropPos, setDropPos] = React.useState({ top: 0, left: 0, width: 0 });
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const triggerRef = React.useRef(null);
+  const ref = React.useRef(null);
+  const selected = options.find((o) => (o.value ?? o) === value);
+  const label = selected ? (selected.label ?? selected) : placeholder;
+  const filteredOptions =
+    searchable && searchTerm
+      ? options.filter((o) =>
+          String(o.label ?? o)
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()),
+        )
+      : options;
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (
+        ref.current &&
+        !ref.current.contains(e.target) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target)
+      )
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleOpen = () => {
+    if (!open) setSearchTerm("");
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = Math.min((options.length + 1) * 38, 240);
+      const showAbove = spaceBelow < dropHeight + 10;
+      let left = rect.left + window.scrollX;
+      const maxLeft = window.scrollX + window.innerWidth - rect.width - 8;
+      const minLeft = window.scrollX + 8;
+      if (left > maxLeft) left = maxLeft;
+      if (left < minLeft) left = minLeft;
+      setDropPos({
+        top: showAbove
+          ? rect.top + window.scrollY - dropHeight - 6
+          : rect.bottom + window.scrollY + 6,
+        left,
+        width: rect.width,
+      });
+    }
+    setOpen((o) => !o);
+  };
+
+  const portal =
+    open && typeof document !== "undefined"
+      ? ReactDOM.createPortal(
+          <div
+            ref={ref}
+            style={{
+              position: "absolute",
+              top: dropPos.top,
+              left: dropPos.left,
+              width: dropPos.width,
+              background: "var(--card)",
+              borderRadius: 12,
+              zIndex: 99999,
+              boxShadow:
+                "0 16px 40px rgba(0,0,0,0.13), 0 4px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06)",
+              border: "1.5px solid #e8edf4",
+              maxHeight: 300,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            {searchable && (
+              <div
+                style={{
+                  padding: "6px 6px 4px",
+                  borderBottom: "1px solid #f1f5f9",
+                  flexShrink: 0,
+                }}
+              >
+                <input
+                  autoFocus
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Search…"
+                  style={{
+                    width: "100%",
+                    padding: "7px 10px",
+                    borderRadius: 8,
+                    border: "1.5px solid #e2e8f0",
+                    fontSize: 13,
+                    outline: "none",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                    color: "var(--text)",
+                    background: "var(--card)",
+                  }}
+                />
+              </div>
+            )}
+            <div style={{ overflowY: "auto", padding: "5px" }}>
+              {[{ value: "", label: placeholder }, ...filteredOptions].map(
+                (opt, i) => {
+                  const optVal = opt.value ?? opt;
+                  const optLabel = opt.label ?? opt;
+                  const isSelected = optVal === value;
+                  const isEmpty = optVal === "";
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => {
+                        if ((!opt.disabled && optVal !== "") || optVal === "") {
+                          onChange(optVal);
+                          setOpen(false);
+                        }
+                      }}
+                      style={{
+                        padding: "8px 10px",
+                        fontSize: 13,
+                        fontWeight: isSelected ? 700 : 500,
+                        color: opt.disabled
+                          ? "#cbd5e1"
+                          : isEmpty
+                            ? "#b0bac9"
+                            : isSelected
+                              ? accent
+                              : "var(--text)",
+                        cursor: opt.disabled
+                          ? "not-allowed"
+                          : isEmpty
+                            ? "default"
+                            : "pointer",
+                        transition: "background 0.12s, color 0.12s",
+                        background: isSelected ? `${accent}12` : "transparent",
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        opacity: opt.disabled ? 0.45 : 1,
+                        marginBottom: 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected && !opt.disabled && !isEmpty)
+                          e.currentTarget.style.background = "var(--bg)";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected)
+                          e.currentTarget.style.background = isSelected
+                            ? `${accent}12`
+                            : "transparent";
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          minWidth: 0,
+                        }}
+                      >
+                        {!isEmpty && (
+                          <div
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              flexShrink: 0,
+                              background: isSelected ? accent : "transparent",
+                              border: `1.5px solid ${isSelected ? accent : opt.disabled ? "#e2e8f0" : "#cbd5e1"}`,
+                              transition:
+                                "background 0.15s, border-color 0.15s",
+                            }}
+                          />
+                        )}
+                        <span
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {optLabel}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                },
+              )}
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <>
+      <div
+        ref={triggerRef}
+        onClick={handleOpen}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          padding: "8px 12px",
+          borderRadius: 10,
+          border: `1.5px solid ${open ? accent : "#e2e8f0"}`,
+          background: "var(--card)",
+          cursor: "pointer",
+          fontSize: 13,
+          fontWeight: 600,
+          color: value ? "var(--text)" : "#94a3b8",
+          userSelect: "none",
+        }}
+      >
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+          }}
+        >
+          {label}
+        </span>
+        <svg
+          width="12"
+          height="12"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke={accent}
+          strokeWidth="3"
+          strokeLinecap="round"
+          style={{
+            flexShrink: 0,
+            transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            transition: "transform 0.15s",
+          }}
+        >
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </div>
+      {portal}
+    </>
+  );
+};
 
 /* ────────────────────────────────────────────
    MINI SPARKLINE — pure SVG, zero deps
@@ -391,6 +653,8 @@ const PredictiveAnalytics = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("visits");
   const [openInsight, setOpenInsight] = useState(null);
+  const [branches, setBranches] = useState([]);
+  const [branchFilter, setBranchFilter] = useState("");
 
   /* raw data */
   const [appts, setAppts] = useState([]);
@@ -400,6 +664,15 @@ const PredictiveAnalytics = () => {
 
   /* computed analytics */
   const [analytics, setAnalytics] = useState(null);
+
+  useEffect(() => {
+    if (seeAllBranches)
+      supabase
+        .from("branches")
+        .select("id,name")
+        .order("name")
+        .then(({ data }) => setBranches(data || []));
+  }, [seeAllBranches]);
 
   /* ── fetch ── */
   useEffect(() => {
@@ -432,6 +705,12 @@ const PredictiveAnalytics = () => {
         invQ = invQ.eq("branch_id", user.branchId);
         patQ = patQ.eq("branch_id", user.branchId);
       }
+      if (seeAllBranches && branchFilter) {
+        apptQ = apptQ.eq("branch_id", branchFilter);
+        wiQ = wiQ.eq("branch_id", branchFilter);
+        invQ = invQ.eq("branch_id", branchFilter);
+        patQ = patQ.eq("branch_id", branchFilter);
+      }
 
       const [a, w, inv, p] = await Promise.all([apptQ, wiQ, invQ, patQ]);
 
@@ -442,7 +721,7 @@ const PredictiveAnalytics = () => {
       setLoading(false);
     };
     run();
-  }, [user, seeAllBranches, userLoading]);
+  }, [user, seeAllBranches, branchFilter, userLoading]);
 
   /* ── compute analytics whenever data arrives ── */
   useEffect(() => {
@@ -832,11 +1111,30 @@ const PredictiveAnalytics = () => {
           <div>
             <h1>Predictive Analytics</h1>
             <p>
-              AI-assisted forecasting · patient trends · inventory intelligence
+              {seeAllBranches
+                ? branchFilter
+                  ? `Forecasting for ${
+                      branches.find(
+                        (b) => String(b.id) === String(branchFilter),
+                      )?.name || "selected branch"
+                    }`
+                  : "AI-assisted forecasting · patient trends · inventory intelligence — All Branches"
+                : "AI-assisted forecasting · patient trends · inventory intelligence"}
             </p>
           </div>
         </div>
         <div className="topbar-actions">
+          {seeAllBranches && branches.length > 0 && (
+            <div style={{ width: 180 }}>
+              <CustomSelect
+                value={branchFilter}
+                onChange={(val) => setBranchFilter(val)}
+                placeholder="All Branches"
+                accent="#7c3aed"
+                options={branches.map((b) => ({ value: b.id, label: b.name }))}
+              />
+            </div>
+          )}
           <div
             style={{
               display: "flex",
@@ -1133,6 +1431,7 @@ const PredictiveAnalytics = () => {
               display: "grid",
               gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
               gap: 16,
+              alignItems: "start",
             }}
           >
             {/* Day-of-week chart */}
@@ -1367,6 +1666,7 @@ const PredictiveAnalytics = () => {
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
               gap: 16,
+              alignItems: "start",
             }}
           >
             {/* Critical stock */}
@@ -1735,6 +2035,7 @@ const PredictiveAnalytics = () => {
               display: "grid",
               gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
               gap: 16,
+              alignItems: "start",
             }}
           >
             {/* Monthly patient growth */}
