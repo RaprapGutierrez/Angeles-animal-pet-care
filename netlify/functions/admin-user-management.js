@@ -89,8 +89,16 @@ export async function handler(event) {
     // CREATE USER
     // =========================================================
     if (action === "create") {
-      const { email, password, first_name, last_name, role, branch_id, sex } =
-        body;
+      const {
+        email,
+        password,
+        first_name,
+        last_name,
+        role,
+        branch_id,
+        sex,
+        phone_number,
+      } = body;
 
       if (!email || !password || !first_name || !last_name || !role) {
         return {
@@ -152,6 +160,7 @@ export async function handler(event) {
               role,
               branch_id: branch_id || null,
               sex: sex || null,
+              phone: phone_number || null,
               status: "Active",
               deleted_at: null,
             },
@@ -280,7 +289,7 @@ export async function handler(event) {
       }
 
       if (phone_number !== undefined) {
-        profileUpdates.phone_number = phone_number || null;
+        profileUpdates.phone = phone_number || null;
       }
 
       if (status !== undefined) {
