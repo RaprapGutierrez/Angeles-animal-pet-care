@@ -1169,6 +1169,17 @@ const Appointment = () => {
   const [vetScheduleDraft, setVetScheduleDraft] = useState(null);
   const [savingVetSchedule, setSavingVetSchedule] = useState(false);
   const [vets, setVets] = useState(DEFAULT_VETS);
+  const GROOMERS = ["Marco Reyes", "Jun Bautista"];
+  const MAX_GROOMERS = 10;
+  const GROOMING_CUTOFF_TIME = "04:00 PM";
+  const groomingUsedOnDate = (dateStr, excludeId = null) =>
+    appts.filter(
+      (a) =>
+        a.purpose === "Grooming" &&
+        a.date === dateStr &&
+        ["Pending", "Confirmed"].includes(a.status) &&
+        a.id !== excludeId,
+    ).length;
   const [newVetName, setNewVetName] = useState("");
   const [showAddVetModal, setShowAddVetModal] = useState(false);
   const [newVetDays, setNewVetDays] = useState([]);
@@ -5410,6 +5421,27 @@ const Appointment = () => {
                               </svg>
                             ),
                           },
+                          Grooming: {
+                            bg: "#f3e8ff",
+                            color: "#7c3aed",
+                            icon: (
+                              <svg
+                                width="10"
+                                height="10"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                              >
+                                <circle cx="6" cy="6" r="3" />
+                                <circle cx="6" cy="18" r="3" />
+                                <line x1="20" y1="4" x2="8.12" y2="15.88" />
+                                <line x1="14.47" y1="14.48" x2="20" y2="20" />
+                                <line x1="8.12" y1="8.12" x2="12" y2="12" />
+                              </svg>
+                            ),
+                          },
                         }[a.purpose] || {
                           bg: "#f8fafc",
                           color: "#475569",
@@ -7113,14 +7145,54 @@ const Appointment = () => {
                           Veterinarian{" "}
                           <span style={{ color: "#ef4444" }}>*</span>
                         </div>
-                        <CustomSelect
-                          value={form.vet}
-                          onChange={(val) =>
-                            setForm({ ...form, vet: val, time: "" })
-                          }
-                          placeholder="— Select Veterinarian —"
-                          options={vets}
-                        />
+                        {form.purpose === "Grooming" ? (
+                          <>
+                            <CustomSelect
+                              value={form.vet}
+                              onChange={(val) => setForm({ ...form, vet: val })}
+                              placeholder="— Select Groomer —"
+                              options={GROOMERS}
+                            />
+                            {form.date &&
+                              groomingUsedOnDate(
+                                form.date,
+                                editMode ? selectedAppt?.id : null,
+                              ) >= MAX_GROOMERS && (
+                                <p
+                                  style={{
+                                    margin: "6px 0 0",
+                                    fontSize: 11,
+                                    color: "#dc2626",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  All {MAX_GROOMERS} grooming slots are booked
+                                  on {form.date}.
+                                </p>
+                              )}
+                            {form.time && form.time > GROOMING_CUTOFF_TIME && (
+                              <p
+                                style={{
+                                  margin: "6px 0 0",
+                                  fontSize: 11,
+                                  color: "#dc2626",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Grooming cut-off is {GROOMING_CUTOFF_TIME}.
+                              </p>
+                            )}
+                          </>
+                        ) : (
+                          <CustomSelect
+                            value={form.vet}
+                            onChange={(val) =>
+                              setForm({ ...form, vet: val, time: "" })
+                            }
+                            placeholder="— Select Veterinarian —"
+                            options={vets}
+                          />
+                        )}
                         {form.vet && vetSchedule[form.vet] && (
                           <p
                             style={{

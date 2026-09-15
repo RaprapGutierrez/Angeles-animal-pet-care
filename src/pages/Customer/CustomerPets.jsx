@@ -609,15 +609,17 @@ const CustomerPets = () => {
                   <div
                     style={{
                       display: "flex",
+                      flexDirection: "column",
                       alignItems: "center",
-                      gap: 12,
+                      textAlign: "center",
+                      gap: 10,
                       marginBottom: 12,
                     }}
                   >
                     <div
                       style={{
-                        width: 52,
-                        height: 52,
+                        width: 92,
+                        height: 92,
                         borderRadius: 14,
                         background: "var(--light-blue)",
                         display: "flex",
@@ -630,8 +632,8 @@ const CustomerPets = () => {
                     >
                       {uploadingId === pet.id ? (
                         <svg
-                          width="18"
-                          height="18"
+                          width="26"
+                          height="26"
                           viewBox="0 0 24 24"
                           fill="none"
                           stroke="var(--royal)"
@@ -642,7 +644,7 @@ const CustomerPets = () => {
                           <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" />
                         </svg>
                       ) : (
-                        renderPetAvatar(pet, 30, "box")
+                        renderPetAvatar(pet, 92, "box")
                       )}
                     </div>
                     <div>

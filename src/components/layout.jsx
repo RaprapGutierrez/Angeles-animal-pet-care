@@ -402,6 +402,7 @@ const ToastContainer = ({ toasts, onClose }) => (
 // its status (pending → responding → resolved) from here.
 const AlertDetailModal = ({ alert, onClose, onUpdateStatus, isAdmin }) => {
   const [updating, setUpdating] = useState(false);
+  const [showPhotoPreview, setShowPhotoPreview] = useState(false);
   if (!alert) return null;
   const status = alert.status || "pending";
   const col = STATUS_COLORS[status] || STATUS_COLORS.pending;
@@ -698,19 +699,78 @@ const AlertDetailModal = ({ alert, onClose, onUpdateStatus, isAdmin }) => {
               >
                 Pet Photo
               </p>
-              <a href={alert.pet_photo_url} target="_blank" rel="noreferrer">
-                <img
-                  src={alert.pet_photo_url}
-                  alt="Pet"
-                  style={{
-                    width: 72,
-                    height: 72,
-                    borderRadius: 8,
-                    objectFit: "cover",
-                    border: "1px solid var(--border)",
-                  }}
-                />
-              </a>
+              <img
+                src={alert.pet_photo_url}
+                alt="Pet"
+                onClick={() => setShowPhotoPreview(true)}
+                style={{
+                  width: 72,
+                  height: 72,
+                  borderRadius: 8,
+                  objectFit: "cover",
+                  border: "1px solid var(--border)",
+                  cursor: "pointer",
+                }}
+              />
+            </div>
+          )}
+          {showPhotoPreview && alert.pet_photo_url && (
+            <div
+              onClick={() => setShowPhotoPreview(false)}
+              style={{
+                position: "fixed",
+                inset: 0,
+                background: "rgba(0,0,0,0.8)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                zIndex: 100000,
+                padding: 24,
+                cursor: "zoom-out",
+              }}
+            >
+              <img
+                src={alert.pet_photo_url}
+                alt="Pet"
+                onClick={(e) => e.stopPropagation()}
+                style={{
+                  maxWidth: "90vw",
+                  maxHeight: "85vh",
+                  borderRadius: 12,
+                  boxShadow: "0 20px 60px rgba(0,0,0,0.5)",
+                }}
+              />
+              <button
+                onClick={() => setShowPhotoPreview(false)}
+                style={{
+                  position: "absolute",
+                  top: 20,
+                  right: 20,
+                  background: "rgba(255,255,255,0.15)",
+                  border: "none",
+                  borderRadius: 8,
+                  width: 36,
+                  height: 36,
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#fff",
+                }}
+              >
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18" />
+                  <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
+              </button>
             </div>
           )}
         </div>

@@ -22,9 +22,11 @@ const STATUS_BADGE = {
   Cancelled: "badge-red",
 };
 const VETS = ["Dr. Santos", "Dr. Reyes", "Dr. Cruz", "Dr. Garcia"];
+const GROOMERS = ["Marco Reyes", "Jun Bautista"];
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const today = new Date().toISOString().split("T")[0];
-const MAX_GROOMERS = 2;
+const MAX_GROOMERS = 10;
+const GROOMING_CUTOFF_TIME = "04:00 PM";
 const EMPTY_FORM = {
   patient: "",
   species: "Dog",
@@ -1071,7 +1073,8 @@ const Walkin = () => {
     const used = walkins.filter(
       (w) =>
         w.purpose === "Grooming" &&
-        w.status === "Waiting" &&
+        (w.status === "Waiting" || w.status === "Attended") &&
+        w.arrived_at?.startsWith(today) &&
         w.id !== excludeId,
     ).length;
     setGroomingUsed(used);
@@ -3233,7 +3236,11 @@ const Walkin = () => {
                           Grooming: { bg: "#f3e8ff", color: "#7c3aed" },
                           Emergency: { bg: "#fee2e2", color: "#dc2626" },
                           Checkup: { bg: "#eff6ff", color: "#1e40af" },
+                          Consultation: { bg: "#f8fafc", color: "#475569" },
                           Vaccination: { bg: "#f0fdf4", color: "#166534" },
+                          Deworming: { bg: "#f3e8ff", color: "#6d28d9" },
+                          Imaging: { bg: "#eff6ff", color: "#1d4ed8" },
+                          Diagnostics: { bg: "#fee2e2", color: "#dc2626" },
                           Dental: { bg: "#fef3c7", color: "#92400e" },
                           Other: { bg: "#f1f5f9", color: "#475569" },
                         }[w?.purpose] ?? { bg: "#f1f5f9", color: "#475569" };
@@ -6136,35 +6143,35 @@ const Walkin = () => {
                           <div style={{ paddingTop: 4 }}>
                             <div
                               style={{
-                                background: "#f3e8ff",
-                                border: "1px solid #d8b4fe",
-                                borderRadius: 8,
-                                padding: "8px 12px",
-                                fontSize: 12,
-                                color: "#6b21a8",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 6,
+                                fontSize: 10,
+                                fontWeight: 700,
+                                color: "#94a3b8",
+                                textTransform: "uppercase",
+                                letterSpacing: "0.8px",
+                                marginBottom: 6,
                               }}
                             >
-                              <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="#7c3aed"
-                                strokeWidth="2"
-                                strokeLinecap="round"
-                              >
-                                <circle cx="6" cy="6" r="3" />
-                                <circle cx="6" cy="18" r="3" />
-                                <line x1="20" y1="4" x2="8.12" y2="15.88" />
-                                <line x1="14.47" y1="14.48" x2="20" y2="20" />
-                                <line x1="8.12" y1="8.12" x2="12" y2="12" />
-                              </svg>
-                              <strong>Grooming</strong> — handled by our{" "}
-                              {MAX_GROOMERS} groomers.
+                              Assign Groomer{" "}
+                              <span style={{ color: "#ef4444" }}>*</span>
                             </div>
+                            <CustomSelect
+                              value={form.vet}
+                              onChange={(val) => setForm({ ...form, vet: val })}
+                              options={GROOMERS}
+                              placeholder="— Select Groomer —"
+                            />
+                            {form.time && form.time > GROOMING_CUTOFF_TIME && (
+                              <p
+                                style={{
+                                  margin: "6px 0 0",
+                                  fontSize: 11,
+                                  color: "#dc2626",
+                                  fontWeight: 700,
+                                }}
+                              >
+                                Grooming cut-off is {GROOMING_CUTOFF_TIME}.
+                              </p>
+                            )}
                           </div>
                         )}
                       </div>

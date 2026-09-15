@@ -23,6 +23,9 @@ const TIMES = [
   "04:00 PM",
 ];
 const VETS = ["Dr. Santos", "Dr. Reyes", "Dr. Cruz", "Dr. Garcia"];
+const GROOMERS = ["Marco Reyes", "Jun Bautista"];
+const MAX_GROOMERS = 10;
+const GROOMING_CUTOFF_TIME = "04:00 PM"; // last acceptable grooming slot
 const sanitizeContact = (v) => v.replace(/\D/g, "").slice(0, 11);
 
 const SERVICE_META = {
@@ -1443,7 +1446,21 @@ const CustomerAppointment = () => {
     }
   };
 
+  const getGroomerConflictFor = (pet) => {
+    if (pet.purpose !== "Grooming" || !pet.date) return null;
+    if (pet.time && pet.time > GROOMING_CUTOFF_TIME) return "groomer-cutoff";
+    const usedCount = appts.filter(
+      (a) =>
+        a.purpose === "Grooming" &&
+        a.date === pet.date &&
+        ["Pending", "Confirmed"].includes(a.status),
+    ).length;
+    if (usedCount >= MAX_GROOMERS) return "groomer-full";
+    return null;
+  };
+
   const getVetConflictFor = (pet) => {
+    if (pet.purpose === "Grooming") return getGroomerConflictFor(pet);
     if (!pet.vet || !pet.date || !pet.time) return null;
     if (!isVetAvailableOnDate(pet.vet, pet.date)) return "vet-day";
     if (!isVetAvailableAtTime(pet.vet, pet.time)) return "vet-time";
@@ -1736,7 +1753,9 @@ const CustomerAppointment = () => {
       if (!pet.vet || pet.vet === "") {
         showAlert(
           "Missing Fields",
-          "Please select a veterinarian for each pet.",
+          pet.purpose === "Grooming"
+            ? "Please select a groomer for each pet."
+            : "Please select a veterinarian for each pet.",
         );
         return;
       }
@@ -2845,6 +2864,7 @@ const CustomerAppointment = () => {
                         Deworming: { bg: "#f3e8ff", color: "#6d28d9" },
                         Imaging: { bg: "#eff6ff", color: "#1d4ed8" },
                         Diagnostics: { bg: "#fee2e2", color: "#dc2626" },
+                        Grooming: { bg: "#f3e8ff", color: "#7c3aed" },
                       }[a.purpose] || { bg: "#f8fafc", color: "#475569" };
                       return (
                         <tr
@@ -3940,18 +3960,30 @@ const CustomerAppointment = () => {
                               marginBottom: 6,
                             }}
                           >
-                            Preferred Vet{" "}
+                            {pet.purpose === "Grooming"
+                              ? "Groomer"
+                              : "Preferred Vet"}{" "}
                             <span style={{ color: "#ef4444" }}>*</span>
                           </div>
-                          <CustomSelect
-                            value={pet.vet}
-                            onChange={(val) => {
-                              updatePet(idx, { vet: val, time: "" });
-                              if (pet.date) fetchVetBookedTimes(val, pet.date);
-                            }}
-                            placeholder="— Select Vet —"
-                            options={VETS}
-                          />
+                          {pet.purpose === "Grooming" ? (
+                            <CustomSelect
+                              value={pet.vet}
+                              onChange={(val) => updatePet(idx, { vet: val })}
+                              placeholder="— Select Groomer —"
+                              options={GROOMERS}
+                            />
+                          ) : (
+                            <CustomSelect
+                              value={pet.vet}
+                              onChange={(val) => {
+                                updatePet(idx, { vet: val, time: "" });
+                                if (pet.date)
+                                  fetchVetBookedTimes(val, pet.date);
+                              }}
+                              placeholder="— Select Vet —"
+                              options={VETS}
+                            />
+                          )}
                           {pet.vet && vetSchedule[pet.vet] && (
                             <p
                               style={{
@@ -4088,6 +4120,46 @@ const CustomerAppointment = () => {
                       </div>
 
                       {/* Conflict banners */}
+                      {getVetConflictFor(pet) === "groomer-full" && (
+                        <div
+                          style={{
+                            background: "#fee2e2",
+                            borderTop: "1px solid #fca5a5",
+                            padding: "10px 16px",
+                          }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              color: "#b91c1c",
+                              fontSize: 11,
+                            }}
+                          >
+                            All {MAX_GROOMERS} grooming slots are full on this
+                            date. Please choose another day.
+                          </p>
+                        </div>
+                      )}
+                      {getVetConflictFor(pet) === "groomer-cutoff" && (
+                        <div
+                          style={{
+                            background: "#fee2e2",
+                            borderTop: "1px solid #fca5a5",
+                            padding: "10px 16px",
+                          }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              color: "#b91c1c",
+                              fontSize: 11,
+                            }}
+                          >
+                            Grooming cut-off is {GROOMING_CUTOFF_TIME}. Please
+                            pick an earlier time.
+                          </p>
+                        </div>
+                      )}
                       {getVetConflictFor(pet) === "vet-day" && (
                         <div
                           style={{

@@ -865,6 +865,12 @@ const validateBranchForm = (form, isEdit) => {
   return { valid: true, message: "" };
 };
 
+// Only ever display services that still exist in the current SERVICES_LIST —
+// branches created under an older schema may have stale names (e.g. "Checkup",
+// "Surgery") stuck in their `services` array that no longer map to anything.
+const getValidServices = (branch) =>
+  (branch.services || []).filter((s) => SERVICES_LIST.includes(s));
+
 const generatePassword = () => {
   const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ",
     lower = "abcdefghjkmnpqrstuvwxyz";
@@ -1606,15 +1612,21 @@ const Branches = () => {
     setShowModal(true);
   };
   const openEdit = (b) => {
+    // Drop any stored service names that no longer exist in SERVICES_LIST —
+    // otherwise they're invisibly kept in form.services with no toggle to
+    // represent them, making the edit form look incomplete.
+    const validServices = (b.services || []).filter((s) =>
+      SERVICES_LIST.includes(s),
+    );
     setForm({
       ...b,
-      services: b.services || [],
+      services: validServices,
       lat: b.lat || "",
       lng: b.lng || "",
       modules: b.modules || defaultModules(),
     });
     setEditBranch(b);
-    setFormDirty(false);
+    setFormDirty(validServices.length !== (b.services || []).length);
     setShowModal(true);
   };
 
@@ -2358,6 +2370,7 @@ const Branches = () => {
                       const totalModules = Object.values(
                         b.modules || {},
                       ).reduce((sum, arr) => sum + (arr?.length || 0), 0);
+                      const validServiceCount = getValidServices(b).length;
                       return (
                         <tr
                           key={b.id}
@@ -2396,7 +2409,7 @@ const Branches = () => {
                               color: "rgba(255,255,255,0.75)",
                             }}
                           >
-                            {(b.services || []).length}
+                            {validServiceCount}
                           </td>
                           <td
                             style={{
@@ -2947,46 +2960,51 @@ const Branches = () => {
 
                       {/* Service badges (compact preview) */}
                       <div style={{ minHeight: 26, marginBottom: 12 }}>
-                        {b.services && b.services.length > 0 && !isExpanded && (
-                          <div
-                            style={{
-                              display: "flex",
-                              flexWrap: "wrap",
-                              gap: 4,
-                            }}
-                          >
-                            {b.services.slice(0, 3).map((svc) => (
-                              <span
-                                key={svc}
-                                style={{
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  padding: "3px 10px",
-                                  borderRadius: 99,
-                                  background: "#eef2ff",
-                                  color: "#4338ca",
-                                  border: "1px solid #c7d2fe",
-                                }}
-                              >
-                                {svc}
-                              </span>
-                            ))}
-                            {b.services.length > 3 && (
-                              <span
-                                style={{
-                                  fontSize: 11,
-                                  fontWeight: 600,
-                                  padding: "3px 10px",
-                                  borderRadius: 99,
-                                  background: "#f1f5f9",
-                                  color: "var(--muted)",
-                                }}
-                              >
-                                +{b.services.length - 3} more
-                              </span>
-                            )}
-                          </div>
-                        )}
+                        {(() => {
+                          const validServices = getValidServices(b);
+                          if (validServices.length === 0 || isExpanded)
+                            return null;
+                          return (
+                            <div
+                              style={{
+                                display: "flex",
+                                flexWrap: "wrap",
+                                gap: 4,
+                              }}
+                            >
+                              {validServices.slice(0, 3).map((svc) => (
+                                <span
+                                  key={svc}
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    padding: "3px 10px",
+                                    borderRadius: 99,
+                                    background: "#eef2ff",
+                                    color: "#4338ca",
+                                    border: "1px solid #c7d2fe",
+                                  }}
+                                >
+                                  {svc}
+                                </span>
+                              ))}
+                              {validServices.length > 3 && (
+                                <span
+                                  style={{
+                                    fontSize: 11,
+                                    fontWeight: 600,
+                                    padding: "3px 10px",
+                                    borderRadius: 99,
+                                    background: "#f1f5f9",
+                                    color: "var(--muted)",
+                                  }}
+                                >
+                                  +{validServices.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
 
                       <div
@@ -3384,7 +3402,7 @@ const Branches = () => {
               </div>
 
               {/* Services */}
-              {viewBranch.services && viewBranch.services.length > 0 && (
+              {getValidServices(viewBranch).length > 0 && (
                 <div>
                   <p
                     style={{
@@ -3399,7 +3417,7 @@ const Branches = () => {
                     Services
                   </p>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                    {viewBranch.services.map((svc) => (
+                    {getValidServices(viewBranch).map((svc) => (
                       <span
                         key={svc}
                         style={{
