@@ -1491,6 +1491,15 @@ const Appointment = () => {
       });
   }, [seeAllBranches, branchFilter, user?.branchId]);
 
+  const SERVICE_OPTIONS = [
+    "Consultation",
+    "Vaccination",
+    "Deworming",
+    "Imaging",
+    "Diagnostics",
+    "Grooming",
+  ];
+
   const visibleServiceOptions = branchServices
     ? SERVICE_OPTIONS.filter((o) => branchServices.includes(o))
     : SERVICE_OPTIONS;
@@ -1627,15 +1636,6 @@ const Appointment = () => {
       bg: "#f3e8ff",
     },
   };
-  const SERVICE_OPTIONS = [
-    "Consultation",
-    "Vaccination",
-    "Deworming",
-    "Imaging",
-    "Diagnostics",
-    "Grooming",
-  ];
-
   const getServicePrice = (purpose, branchId, imagingType) => {
     if (!purpose) return null;
     const lookupName =

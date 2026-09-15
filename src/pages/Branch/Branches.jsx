@@ -1149,9 +1149,9 @@ const BranchViewPanel = ({ branch }) => {
                   fontWeight: 600,
                   padding: "3px 10px",
                   borderRadius: 99,
-                  background: "rgba(99,102,241,0.18)",
-                  color: "#a5b4fc",
-                  border: "1px solid rgba(99,102,241,0.35)",
+                  background: "#eef2ff",
+                  color: "#4338ca",
+                  border: "1px solid #c7d2fe",
                 }}
               >
                 {svc}
@@ -2963,9 +2963,9 @@ const Branches = () => {
                                   fontWeight: 600,
                                   padding: "3px 10px",
                                   borderRadius: 99,
-                                  background: "rgba(99,102,241,0.18)",
-                                  color: "#a5b4fc",
-                                  border: "1px solid rgba(99,102,241,0.35)",
+                                  background: "#eef2ff",
+                                  color: "#4338ca",
+                                  border: "1px solid #c7d2fe",
                                 }}
                               >
                                 {svc}
@@ -3069,48 +3069,6 @@ const Branches = () => {
                               <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
                             </svg>
                             Delete
-                          </button>
-                        )}
-                        {canEdit && b.email && (
-                          <button
-                            title="Create manager account"
-                            disabled={provisioningId === b.id}
-                            style={{
-                              height: 28,
-                              padding: "0 10px",
-                              gap: 5,
-                              display: "inline-flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              background: "#f0fdf4",
-                              border: "1.5px solid #86efac",
-                              color: "#15803d",
-                              borderRadius: 20,
-                              fontSize: 11,
-                              fontWeight: 600,
-                              cursor:
-                                provisioningId === b.id
-                                  ? "not-allowed"
-                                  : "pointer",
-                              opacity: provisioningId === b.id ? 0.6 : 1,
-                            }}
-                            onClick={() => createAccountForBranch(b)}
-                          >
-                            <svg
-                              width="12"
-                              height="12"
-                              viewBox="0 0 24 24"
-                              fill="none"
-                              stroke="currentColor"
-                              strokeWidth="2.5"
-                              strokeLinecap="round"
-                            >
-                              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-                              <circle cx="12" cy="7" r="4" />
-                              <line x1="19" y1="8" x2="19" y2="14" />
-                              <line x1="16" y1="11" x2="22" y2="11" />
-                            </svg>
-                            {provisioningId === b.id ? "Creating…" : "Account"}
                           </button>
                         )}
                         <button
@@ -3449,9 +3407,9 @@ const Branches = () => {
                           fontWeight: 600,
                           padding: "4px 12px",
                           borderRadius: 99,
-                          background: "rgba(99,102,241,0.18)",
-                          color: "#a5b4fc",
-                          border: "1px solid rgba(99,102,241,0.35)",
+                          background: "#eef2ff",
+                          color: "#4338ca",
+                          border: "1px solid #c7d2fe",
                         }}
                       >
                         {svc}

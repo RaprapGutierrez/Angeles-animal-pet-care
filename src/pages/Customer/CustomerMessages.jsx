@@ -1644,6 +1644,8 @@ const CustomerMessages = () => {
                               <img
                                 src={item.attachment_url}
                                 alt={item.attachment_name || "attachment"}
+                                loading="lazy"
+                                decoding="async"
                                 onClick={(e) => {
                                   e.preventDefault();
                                   setPreviewZoom(1);
@@ -1664,11 +1666,16 @@ const CustomerMessages = () => {
                                   });
                                 }}
                                 style={{
-                                  maxWidth: 220,
+                                  maxWidth: 320,
+                                  maxHeight: 320,
+                                  width: "auto",
+                                  height: "auto",
                                   borderRadius: 10,
                                   display: "block",
                                   marginBottom: item.message ? 6 : 0,
                                   cursor: "pointer",
+                                  imageRendering: "auto",
+                                  objectFit: "contain",
                                 }}
                               />
                             ) : (

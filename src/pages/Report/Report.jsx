@@ -1269,17 +1269,24 @@ const Report = () => {
           }
           if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
             return new Date(val).toLocaleString("en-PH", {
-              dateStyle: "medium",
-              timeStyle: "short",
+              month: "short",
+              day: "numeric",
+              hour: "numeric",
+              minute: "2-digit",
+              hour12: true,
             });
           }
           return String(val);
         };
 
         const itemsColIdx = cols.indexOf("items");
+        const createdColIdx = cols.indexOf("created_at");
         const columnStyles = {};
         if (itemsColIdx !== -1) {
-          columnStyles[itemsColIdx] = { cellWidth: 70 };
+          columnStyles[itemsColIdx] = { cellWidth: 65 };
+        }
+        if (createdColIdx !== -1) {
+          columnStyles[createdColIdx] = { cellWidth: 32 };
         }
 
         autoTable(doc, {
@@ -1299,7 +1306,7 @@ const Report = () => {
             valign: "top",
           },
           columnStyles,
-          margin: { left: 10, right: 10 },
+          margin: { left: 8, right: 8 },
         });
         doc.save(`${cfg.label.replace(/\s/g, "")}_${periodLabel}.pdf`);
       } else {
