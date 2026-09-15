@@ -1888,22 +1888,32 @@ const PredictiveAnalytics = () => {
                           >
                             est. appointments
                           </p>
-                          {i > 0 && (
-                            <span
-                              style={{
-                                display: "inline-block",
-                                marginTop: 8,
-                                fontSize: 11,
-                                fontWeight: 700,
-                                color: C.emerald,
-                                background: "#dcfce7",
-                                borderRadius: 20,
-                                padding: "2px 8px",
-                              }}
-                            >
-                              +{Math.round((growth ** i - 1) * 100)}% projected
-                            </span>
-                          )}
+                          {i > 0 &&
+                            (() => {
+                              const pctChange = Math.round(
+                                (growth ** i - 1) * 100,
+                              );
+                              const isPositive = pctChange >= 0;
+                              return (
+                                <span
+                                  style={{
+                                    display: "inline-block",
+                                    marginTop: 8,
+                                    fontSize: 11,
+                                    fontWeight: 700,
+                                    color: isPositive ? C.emerald : C.rose,
+                                    background: isPositive
+                                      ? "#dcfce7"
+                                      : "#fee2e2",
+                                    borderRadius: 20,
+                                    padding: "2px 8px",
+                                  }}
+                                >
+                                  {isPositive ? "+" : ""}
+                                  {pctChange}% projected
+                                </span>
+                              );
+                            })()}
                         </div>
                       ))}
                     </div>
