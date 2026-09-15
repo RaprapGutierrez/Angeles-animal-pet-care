@@ -2164,13 +2164,22 @@ const AdminSecurity = () => {
           // Don't apply yet — show confirmation modal first.
           // Save the rest of the profile changes (non-email fields) now,
           // then pause and wait for the user to confirm the email change.
-          const { error: partialError } = await supabaseAdmin
+          const { data: partialData, error: partialError } = await supabaseAdmin
             .from("profiles")
             .update(updatePayload)
-            .eq("id", editUser.id);
+            .eq("id", editUser.id)
+            .select();
 
           if (partialError) {
             alert("Error: " + partialError.message);
+            setSaving(false);
+            return;
+          }
+
+          if (!partialData || partialData.length === 0) {
+            alert(
+              "Update failed: no matching user record was found (or you don't have permission to edit this user).",
+            );
             setSaving(false);
             return;
           }
@@ -2218,13 +2227,22 @@ const AdminSecurity = () => {
         },
       ]);
 
-      const { error } = await supabaseAdmin
+      const { data: updateData, error } = await supabaseAdmin
         .from("profiles")
         .update(updatePayload)
-        .eq("id", editUser.id);
+        .eq("id", editUser.id)
+        .select();
 
       if (error) {
         alert("Error: " + error.message);
+        setSaving(false);
+        return;
+      }
+
+      if (!updateData || updateData.length === 0) {
+        alert(
+          "Update failed: no matching user record was found (or you don't have permission to edit this user). Nothing was saved.",
+        );
         setSaving(false);
         return;
       }
