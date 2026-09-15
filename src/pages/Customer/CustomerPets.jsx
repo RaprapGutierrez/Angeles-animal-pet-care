@@ -122,8 +122,17 @@ const CustomerPets = () => {
     const { data, error } = await supabase
       .from(T_PATIENTS)
       .select("*")
+      .is("deleted_at", null)
       .or(orParts.join(","))
       .order("name");
+
+    const dedupeById = (rows) => {
+      const seen = new Map();
+      (rows || []).forEach((row) => {
+        if (row && !seen.has(row.id)) seen.set(row.id, row);
+      });
+      return Array.from(seen.values());
+    };
 
     if (error) {
       console.error("[CustomerPets] Fetch error:", error.message);
@@ -132,14 +141,15 @@ const CustomerPets = () => {
         const { data: fallbackData } = await supabase
           .from(T_PATIENTS)
           .select("*")
+          .is("deleted_at", null)
           .ilike("owner_email", userEmail)
           .order("name");
-        setPets(fallbackData || []);
+        setPets(dedupeById(fallbackData));
       } else {
         setPets([]);
       }
     } else {
-      setPets(data || []);
+      setPets(dedupeById(data));
     }
     setLoading(false);
     fetchingRef.current = false;
@@ -153,8 +163,9 @@ const CustomerPets = () => {
     fetchPets();
 
     const matches = (row) =>
-      (userId && row?.owner_user_id === userId) ||
-      (userEmail && (row?.owner_email || "").toLowerCase() === userEmail);
+      !row?.deleted_at &&
+      ((userId && row?.owner_user_id === userId) ||
+        (userEmail && (row?.owner_email || "").toLowerCase() === userEmail));
 
     const filterOpts = userId ? { filter: `owner_user_id=eq.${userId}` } : {};
 
@@ -165,11 +176,12 @@ const CustomerPets = () => {
         { event: "INSERT", schema: "public", table: T_PATIENTS, ...filterOpts },
         (payload) => {
           if (matches(payload.new)) {
-            setPets((prev) =>
-              [...prev, payload.new].sort((a, b) =>
+            setPets((prev) => {
+              if (prev.some((p) => p.id === payload.new.id)) return prev;
+              return [...prev, payload.new].sort((a, b) =>
                 (a.name || "").localeCompare(b.name || ""),
-              ),
-            );
+              );
+            });
           }
         },
       )
@@ -181,6 +193,9 @@ const CustomerPets = () => {
             setPets((prev) =>
               prev.map((p) => (p.id === payload.new.id ? payload.new : p)),
             );
+          } else {
+            // Was deleted (or reassigned away) — remove it from the customer's view
+            setPets((prev) => prev.filter((p) => p.id !== payload.new.id));
           }
         },
       )
@@ -556,13 +571,14 @@ const CustomerPets = () => {
             >
               <div
                 style={{
-                  fontSize: 64,
                   marginBottom: 16,
                   display: "flex",
                   justifyContent: "center",
+                  gap: 10,
                 }}
               >
-                <DogIcon size={64} color="var(--muted)" />
+                <DogIcon size={28} color="var(--muted)" />
+                <CatIcon size={28} color="var(--muted)" />
               </div>
               <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
                 No pets found
