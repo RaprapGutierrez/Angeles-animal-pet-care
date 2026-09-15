@@ -3,6 +3,7 @@ import Layout from "../../components/layout";
 import { supabase } from "../../js/Utils/supabase";
 import { useCurrentUser } from "../../js/hooks/Usecurrentuser";
 import "../../styles/CustomerMessages.css";
+import { CROSS_BRANCH_TABLE, normRole } from "../../js/Utils/crossBranch";
 
 /* ─────────────────────────────────────────
    Helpers (matched with admin/employee UI)
@@ -562,9 +563,15 @@ const CustomerMessages = () => {
       const { data } = await supabase
         .from(T_PROFILES)
         .select("id, first_name, last_name, email, role, branch_id")
-        .in("role", ["Admin", "Manager", "Employee"])
+        .in("role", [
+          "Admin",
+          "Manager",
+          "Employee",
+          "super_admin",
+          "Super Admin",
+        ])
         .eq("status", "Active")
-        .eq("branch_id", user?.branchId ?? null)
+        .or(`branch_id.eq.${user?.branchId ?? null},role.ilike.super_admin`)
         .order("first_name");
 
       const mapped = (data || []).map((p) => ({
@@ -586,20 +593,38 @@ const CustomerMessages = () => {
   useEffect(() => {
     if (userLoading || !myId) return;
     const fetchConversations = async () => {
-      const { data } = await supabase
-        .from(T_MESSAGES)
-        .select("sender_id, receiver_id, created_at")
-        .or(`sender_id.eq.${myId},receiver_id.eq.${myId}`)
-        .order("created_at", { ascending: false })
-        .limit(1000);
+      const [{ data: sameData }, { data: crossData }] = await Promise.all([
+        supabase
+          .from(T_MESSAGES)
+          .select("sender_id, receiver_id, created_at")
+          .or(`sender_id.eq.${myId},receiver_id.eq.${myId}`)
+          .order("created_at", { ascending: false })
+          .limit(1000),
+        supabase
+          .from(CROSS_BRANCH_TABLE)
+          .select("sender_id, recipient_id, created_at")
+          .or(`sender_id.eq.${myId},recipient_id.eq.${myId}`)
+          .order("created_at", { ascending: false })
+          .limit(1000),
+      ]);
       const ids = new Set();
       const times = {};
-      (data || []).forEach((m) => {
+      (sameData || []).forEach((m) => {
         const otherId = m.sender_id === myId ? m.receiver_id : m.sender_id;
         if (otherId) {
           ids.add(otherId);
-          // Rows arrive newest-first, so the first hit per partner is the most recent
           if (!times[otherId]) times[otherId] = m.created_at;
+        }
+      });
+      (crossData || []).forEach((m) => {
+        const otherId = m.sender_id === myId ? m.recipient_id : m.sender_id;
+        if (otherId) {
+          ids.add(otherId);
+          if (
+            !times[otherId] ||
+            new Date(m.created_at) > new Date(times[otherId])
+          )
+            times[otherId] = m.created_at;
         }
       });
       setConversationIds(ids);
@@ -618,6 +643,16 @@ const CustomerMessages = () => {
             fetchConversations();
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: CROSS_BRANCH_TABLE },
+        (payload) => {
+          const m = payload.new;
+          if (!m) return;
+          if (m.sender_id === myId || m.recipient_id === myId)
+            fetchConversations();
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(ch);
@@ -626,16 +661,35 @@ const CustomerMessages = () => {
 
   const fetchMessages = async (staffId) => {
     if (!myId || !staffId) return;
-    const { data } = await supabase
-      .from(T_MESSAGES)
-      .select("*")
-      .or(
-        `and(sender_id.eq.${myId},receiver_id.eq.${staffId}),` +
-          `and(sender_id.eq.${staffId},receiver_id.eq.${myId})`,
-      )
-      .order("created_at", { ascending: false })
-      .limit(100);
-    setMessages((data || []).slice().reverse());
+    const [{ data: sameData }, { data: crossData }] = await Promise.all([
+      supabase
+        .from(T_MESSAGES)
+        .select("*")
+        .or(
+          `and(sender_id.eq.${myId},receiver_id.eq.${staffId}),` +
+            `and(sender_id.eq.${staffId},receiver_id.eq.${myId})`,
+        )
+        .order("created_at", { ascending: false })
+        .limit(100),
+      supabase
+        .from(CROSS_BRANCH_TABLE)
+        .select("*")
+        .or(
+          `and(sender_id.eq.${myId},recipient_id.eq.${staffId}),` +
+            `and(sender_id.eq.${staffId},recipient_id.eq.${myId})`,
+        )
+        .order("created_at", { ascending: false })
+        .limit(100),
+    ]);
+    const crossMsgs = (crossData || []).map((m) => ({
+      ...m,
+      message: m.content,
+      receiver_id: m.recipient_id,
+    }));
+    const merged = [...(sameData || []), ...crossMsgs].sort(
+      (a, b) => new Date(b.created_at) - new Date(a.created_at),
+    );
+    setMessages(merged.slice().reverse());
     setTimeout(
       () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
       80,
@@ -651,6 +705,12 @@ const CustomerMessages = () => {
       .from(T_MESSAGES)
       .update({ is_read: true })
       .eq("receiver_id", myId)
+      .eq("sender_id", selected.id)
+      .eq("is_read", false);
+    supabase
+      .from(CROSS_BRANCH_TABLE)
+      .update({ is_read: true })
+      .eq("recipient_id", myId)
       .eq("sender_id", selected.id)
       .eq("is_read", false);
     setUnread((prev) => ({ ...prev, [selected.id]: 0 }));
@@ -669,6 +729,18 @@ const CustomerMessages = () => {
           if (relevant) fetchMessages(selected.id);
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: CROSS_BRANCH_TABLE },
+        (payload) => {
+          const msg = payload.new || payload.old;
+          if (!msg) return;
+          const relevant =
+            (msg.sender_id === myId && msg.recipient_id === selected.id) ||
+            (msg.sender_id === selected.id && msg.recipient_id === myId);
+          if (relevant) fetchMessages(selected.id);
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(sub);
@@ -680,14 +752,28 @@ const CustomerMessages = () => {
   useEffect(() => {
     if (!myId) return;
     const recompute = async () => {
-      const { data } = await supabase
-        .from(T_MESSAGES)
-        .select("sender_id")
-        .eq("receiver_id", myId)
-        .eq("is_read", false);
+      const [{ data: sameData }, { data: crossData }] = await Promise.all([
+        supabase
+          .from(T_MESSAGES)
+          .select("sender_id")
+          .eq("receiver_id", myId)
+          .eq("is_read", false),
+        supabase
+          .from(CROSS_BRANCH_TABLE)
+          .select("sender_id")
+          .eq("recipient_id", myId)
+          .eq("is_read", false),
+      ]);
       const counts = {};
-      (data || []).forEach((m) => {
+      (sameData || []).forEach((m) => {
         counts[m.sender_id] = (counts[m.sender_id] || 0) + 1;
+      });
+      (crossData || []).forEach((m) => {
+        counts[m.sender_id] = (counts[m.sender_id] || 0) + 1;
+      });
+      setSelected((sel) => {
+        if (sel?.id) delete counts[sel.id];
+        return sel;
       });
       setUnread(counts);
     };
@@ -701,6 +787,16 @@ const CustomerMessages = () => {
           schema: "public",
           table: T_MESSAGES,
           filter: `receiver_id=eq.${myId}`,
+        },
+        recompute,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: CROSS_BRANCH_TABLE,
+          filter: `recipient_id=eq.${myId}`,
         },
         recompute,
       )
@@ -760,19 +856,37 @@ const CustomerMessages = () => {
       80,
     );
 
-    // ── PATCH: insert now includes branch_id ─────────────────────────────
-    const { error } = await supabase.from(T_MESSAGES).insert([
-      {
-        sender_id: myId,
-        receiver_id: selected.id,
-        message: text,
-        is_read: false,
-        branch_id: user?.branchId ?? null,
-        attachment_url,
-        attachment_name,
-        attachment_type,
-      },
-    ]);
+    // ── Route to cross-branch table when messaging a super admin ─────────
+    const isCrossWrite = normRole(selected.role) === "super_admin";
+    const { error } = isCrossWrite
+      ? await supabase.from(CROSS_BRANCH_TABLE).insert([
+          {
+            sender_id: myId,
+            sender_name: myName,
+            sender_role: "customer",
+            sender_branch: user?.branchId ?? "",
+            recipient_id: selected.id,
+            recipient_name: selected.full_name || selected.email,
+            recipient_role: "super_admin",
+            recipient_branch: "head_office",
+            content: text,
+            attachment_url,
+            attachment_name,
+            attachment_type,
+          },
+        ])
+      : await supabase.from(T_MESSAGES).insert([
+          {
+            sender_id: myId,
+            receiver_id: selected.id,
+            message: text,
+            is_read: false,
+            branch_id: user?.branchId ?? null,
+            attachment_url,
+            attachment_name,
+            attachment_type,
+          },
+        ]);
     setSending(false);
     if (error) {
       setMessages((prev) => prev.filter((m) => m.id !== optimistic.id));
@@ -997,6 +1111,7 @@ const CustomerMessages = () => {
   }
 
   const conversationStaff = staff
+    .filter((s) => conversationIds.has(s.id))
     .slice()
     .sort(
       (a, b) =>
@@ -1194,7 +1309,7 @@ const CustomerMessages = () => {
                 <div style={{ fontSize: 13, color: "#9ca3af" }}>
                   {search
                     ? "No matches found."
-                    : "No staff available in your branch."}
+                    : "No conversations yet. A staff member will reach out to you here."}
                 </div>
               </div>
             ) : (

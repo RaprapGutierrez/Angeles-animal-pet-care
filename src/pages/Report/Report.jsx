@@ -1219,7 +1219,11 @@ const Report = () => {
         setGenerating(false);
         return;
       }
-      const cols = rows.length > 0 ? Object.keys(rows[0]) : [];
+      const HIDDEN_COLS = new Set(["client_id", "voided_by", "branch_id"]);
+      const cols =
+        rows.length > 0
+          ? Object.keys(rows[0]).filter((c) => !HIDDEN_COLS.has(c))
+          : [];
 
       if (genFormat === "pdf") {
         const { default: jsPDF } = await import("jspdf");
@@ -1242,12 +1246,40 @@ const Report = () => {
           29,
           { align: "center" },
         );
+        const formatCell = (val) => {
+          if (val == null) return "";
+          if (Array.isArray(val)) {
+            return val
+              .map((item) => {
+                if (item && typeof item === "object") {
+                  return (
+                    item.name ||
+                    item.label ||
+                    item.title ||
+                    item.item_name ||
+                    JSON.stringify(item)
+                  );
+                }
+                return String(item);
+              })
+              .join(", ");
+          }
+          if (typeof val === "object") {
+            return val.name || val.label || val.title || JSON.stringify(val);
+          }
+          if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+            return new Date(val).toLocaleString("en-PH", {
+              dateStyle: "medium",
+              timeStyle: "short",
+            });
+          }
+          return String(val);
+        };
+
         autoTable(doc, {
           startY: 36,
           head: [cols],
-          body: rows.map((r) =>
-            cols.map((c) => (r[c] == null ? "" : String(r[c]))),
-          ),
+          body: rows.map((r) => cols.map((c) => formatCell(r[c]))),
           headStyles: {
             fillColor: [30, 58, 138],
             textColor: 255,

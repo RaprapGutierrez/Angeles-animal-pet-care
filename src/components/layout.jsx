@@ -2948,12 +2948,19 @@ export const Layout = ({ children }) => {
 
     const fetchCustMsgCount = async () => {
       try {
-        const { data } = await supabase
-          .from("messages")
-          .select("id")
-          .eq("receiver_id", user.id)
-          .eq("is_read", false);
-        setCustMsgCount(data?.length || 0);
+        const [{ data: sameData }, { data: crossData }] = await Promise.all([
+          supabase
+            .from("messages")
+            .select("id")
+            .eq("receiver_id", user.id)
+            .eq("is_read", false),
+          supabase
+            .from("cross_branch_messages")
+            .select("id")
+            .eq("recipient_id", user.id)
+            .eq("is_read", false),
+        ]);
+        setCustMsgCount((sameData?.length || 0) + (crossData?.length || 0));
       } catch (e) {
         console.error("Customer message count fetch error:", e);
       }
@@ -2970,6 +2977,16 @@ export const Layout = ({ children }) => {
           schema: "public",
           table: "messages",
           filter: `receiver_id=eq.${user.id}`,
+        },
+        () => fetchCustMsgCount(),
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "cross_branch_messages",
+          filter: `recipient_id=eq.${user.id}`,
         },
         () => fetchCustMsgCount(),
       )

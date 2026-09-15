@@ -830,6 +830,30 @@ const Walkin = () => {
       .then(({ data }) => setBranches(data || []));
   }, []);
 
+  // Only offer services this branch has actually enabled (set in Branches.jsx).
+  const [branchServices, setBranchServices] = useState(null);
+  useEffect(() => {
+    const activeBranchId = seeAllBranches ? branchFilter : user?.branchId;
+    if (!activeBranchId) {
+      setBranchServices(null);
+      return;
+    }
+    supabase
+      .from("branches")
+      .select("services")
+      .eq("id", activeBranchId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setBranchServices(
+          data?.services && data.services.length ? data.services : null,
+        );
+      });
+  }, [seeAllBranches, branchFilter, user?.branchId]);
+
+  const visiblePurposes = branchServices
+    ? PURPOSES.filter((o) => branchServices.includes(o))
+    : PURPOSES;
+
   const fetchVetSchedules = useCallback(async () => {
     const { data, error } = await supabase.from("vet_schedules").select("*");
     if (error || !data || data.length === 0) return;
@@ -4345,7 +4369,7 @@ const Walkin = () => {
                       gap: 10,
                     }}
                   >
-                    {PURPOSES.map((opt) => {
+                    {visiblePurposes.map((opt) => {
                       const meta =
                         SERVICE_META[opt] || SERVICE_META.Consultation;
                       const price =

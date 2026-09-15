@@ -749,14 +749,15 @@ const ALL_MODULES = {
 };
 
 const SERVICE_TRIGGER_MODULES = ["appointment", "walkin"];
+// Mirrors SERVICE_OPTIONS in Appointments.jsx / PURPOSES in Walkins.jsx exactly,
+// so whatever a branch enables here is exactly what customers/staff see there.
 const SERVICES_LIST = [
-  "Checkup",
-  "Surgery",
+  "Consultation",
   "Vaccination",
+  "Deworming",
+  "Imaging",
+  "Diagnostics",
   "Grooming",
-  "Dental",
-  "X-Ray",
-  "Emergency",
 ];
 
 const ROLE_COLORS = {

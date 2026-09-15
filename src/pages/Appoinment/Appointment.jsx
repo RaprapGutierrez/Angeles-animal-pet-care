@@ -1470,6 +1470,31 @@ const Appointment = () => {
         .then(({ data }) => setBranches(data || []));
   }, [seeAllBranches]);
 
+  // Only offer services this branch has actually enabled (set in Branches.jsx).
+  // Falls back to showing all services if the branch has none configured.
+  const [branchServices, setBranchServices] = useState(null);
+  useEffect(() => {
+    const activeBranchId = seeAllBranches ? branchFilter : user?.branchId;
+    if (!activeBranchId) {
+      setBranchServices(null);
+      return;
+    }
+    supabase
+      .from("branches")
+      .select("services")
+      .eq("id", activeBranchId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setBranchServices(
+          data?.services && data.services.length ? data.services : null,
+        );
+      });
+  }, [seeAllBranches, branchFilter, user?.branchId]);
+
+  const visibleServiceOptions = branchServices
+    ? SERVICE_OPTIONS.filter((o) => branchServices.includes(o))
+    : SERVICE_OPTIONS;
+
   useEffect(() => {
     supabase
       .from("inventory")
@@ -6454,7 +6479,7 @@ const Appointment = () => {
                         gap: 10,
                       }}
                     >
-                      {SERVICE_OPTIONS.map((opt) => {
+                      {visibleServiceOptions.map((opt) => {
                         const meta = SERVICE_META[opt] || {
                           icon: (
                             <svg

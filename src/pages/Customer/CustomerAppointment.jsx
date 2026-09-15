@@ -22,13 +22,7 @@ const TIMES = [
   "03:00 PM",
   "04:00 PM",
 ];
-const VETS = [
-  "Any Available",
-  "Dr. Santos",
-  "Dr. Reyes",
-  "Dr. Cruz",
-  "Dr. Garcia",
-];
+const VETS = ["Dr. Santos", "Dr. Reyes", "Dr. Cruz", "Dr. Garcia"];
 const sanitizeContact = (v) => v.replace(/\D/g, "").slice(0, 11);
 
 const SERVICE_META = {
@@ -1369,7 +1363,7 @@ const CustomerAppointment = () => {
     species: "Dog",
     purpose: "Consultation",
     imagingType: "",
-    vet: "Any Available",
+    vet: "",
     date: "",
     time: "",
     notes: "",
@@ -1416,14 +1410,14 @@ const CustomerAppointment = () => {
   }, []);
 
   const isVetAvailableOnDate = (vet, dateStr) => {
-    if (!vet || vet === "Any Available" || !dateStr) return true;
+    if (!vet || !dateStr) return true;
     const sched = vetSchedule[vet];
     if (!sched) return true;
     const day = new Date(dateStr + "T00:00:00").getDay();
     return sched.includes(day);
   };
   const isVetAvailableAtTime = (vet, time) => {
-    if (!vet || vet === "Any Available" || !time) return true;
+    if (!vet || !time) return true;
     const sched = vetTimeSchedule[vet];
     if (!sched) return true;
     return sched.includes(time);
@@ -1433,7 +1427,7 @@ const CustomerAppointment = () => {
   const [loadingAllReviews, setLoadingAllReviews] = useState(false);
 
   const fetchVetBookedTimes = async (vet, date) => {
-    if (!vet || vet === "Any Available" || !date) return;
+    if (!vet || !date) return;
     const key = `${vet}|${date}`;
     const { data, error } = await supabase
       .from("appointments")
@@ -1450,8 +1444,7 @@ const CustomerAppointment = () => {
   };
 
   const getVetConflictFor = (pet) => {
-    if (!pet.vet || pet.vet === "Any Available" || !pet.date || !pet.time)
-      return null;
+    if (!pet.vet || !pet.date || !pet.time) return null;
     if (!isVetAvailableOnDate(pet.vet, pet.date)) return "vet-day";
     if (!isVetAvailableAtTime(pet.vet, pet.time)) return "vet-time";
     const key = `${pet.vet}|${pet.date}`;
@@ -1529,6 +1522,29 @@ const CustomerAppointment = () => {
       .eq("category", "Service")
       .then(({ data }) => setServices(data || []));
   }, []);
+
+  // Only offer services this branch has actually enabled (set in Branches.jsx).
+  const [branchServices, setBranchServices] = useState(null);
+  useEffect(() => {
+    if (!user?.branchId) {
+      setBranchServices(null);
+      return;
+    }
+    supabase
+      .from("branches")
+      .select("services")
+      .eq("id", user.branchId)
+      .maybeSingle()
+      .then(({ data }) => {
+        setBranchServices(
+          data?.services && data.services.length ? data.services : null,
+        );
+      });
+  }, [user?.branchId]);
+
+  const visibleServiceOptions = branchServices
+    ? SERVICE_OPTIONS.filter((o) => branchServices.includes(o))
+    : SERVICE_OPTIONS;
 
   const getServicePrice = (purpose, branchId, imagingType) => {
     if (!purpose) return null;
@@ -1798,7 +1814,7 @@ const CustomerAppointment = () => {
           species: petSpecies || null,
           owner: user.fullName || user.email || "Customer",
           contact: contact,
-          vet: pet.vet === "Any Available" ? "TBD" : pet.vet,
+          vet: pet.vet,
           date: pet.date,
           time: pet.time,
           purpose: pet.purpose,
@@ -3433,7 +3449,7 @@ const CustomerAppointment = () => {
                       gap: 10,
                     }}
                   >
-                    {SERVICE_OPTIONS.map((opt) => {
+                    {visibleServiceOptions.map((opt) => {
                       const meta = SERVICE_META[opt] || {
                         icon: (
                           <svg
@@ -3936,36 +3952,32 @@ const CustomerAppointment = () => {
                             placeholder="— Select Vet —"
                             options={VETS}
                           />
-                          {pet.vet &&
-                            pet.vet !== "Any Available" &&
-                            vetSchedule[pet.vet] && (
-                              <p
-                                style={{
-                                  margin: "6px 0 0",
-                                  fontSize: 10,
-                                  color: "var(--muted)",
-                                }}
-                              >
-                                Available days:{" "}
-                                {vetSchedule[pet.vet]
-                                  .map((d) => DAY_NAMES[d])
-                                  .join(", ")}
-                              </p>
-                            )}
-                          {pet.vet &&
-                            pet.vet !== "Any Available" &&
-                            vetTimeSchedule[pet.vet] && (
-                              <p
-                                style={{
-                                  margin: "2px 0 0",
-                                  fontSize: 10,
-                                  color: "var(--muted)",
-                                }}
-                              >
-                                Available times:{" "}
-                                {vetTimeSchedule[pet.vet].join(", ")}
-                              </p>
-                            )}
+                          {pet.vet && vetSchedule[pet.vet] && (
+                            <p
+                              style={{
+                                margin: "6px 0 0",
+                                fontSize: 10,
+                                color: "var(--muted)",
+                              }}
+                            >
+                              Available days:{" "}
+                              {vetSchedule[pet.vet]
+                                .map((d) => DAY_NAMES[d])
+                                .join(", ")}
+                            </p>
+                          )}
+                          {pet.vet && vetTimeSchedule[pet.vet] && (
+                            <p
+                              style={{
+                                margin: "2px 0 0",
+                                fontSize: 10,
+                                color: "var(--muted)",
+                              }}
+                            >
+                              Available times:{" "}
+                              {vetTimeSchedule[pet.vet].join(", ")}
+                            </p>
+                          )}
                         </div>
                       </div>
 
@@ -4011,7 +4023,6 @@ const CustomerAppointment = () => {
                             placeholder="Select date"
                           />
                           {pet.vet &&
-                            pet.vet !== "Any Available" &&
                             pet.date &&
                             !isVetAvailableOnDate(pet.vet, pet.date) && (
                               <p
@@ -4054,17 +4065,13 @@ const CustomerAppointment = () => {
                                   : null;
                               const vetTaken =
                                 vetKey &&
-                                pet.vet !== "Any Available" &&
                                 (vetBookedTimes[vetKey] || []).includes(t);
                               const vetDayBlocked =
                                 pet.vet &&
-                                pet.vet !== "Any Available" &&
                                 pet.date &&
                                 !isVetAvailableOnDate(pet.vet, pet.date);
                               const vetTimeBlocked =
-                                pet.vet &&
-                                pet.vet !== "Any Available" &&
-                                !isVetAvailableAtTime(pet.vet, t);
+                                pet.vet && !isVetAvailableAtTime(pet.vet, t);
                               const disabled =
                                 vetTaken || vetDayBlocked || vetTimeBlocked;
                               let label = t;

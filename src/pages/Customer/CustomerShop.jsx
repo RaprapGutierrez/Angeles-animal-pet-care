@@ -165,7 +165,12 @@ const CustomerShop = () => {
   // items. If you need branch-scoping add: .eq('branch_id', user?.branchId)
   const fetchProducts = useCallback(async () => {
     setLoading(true);
-    let q = supabase.from(T_INVENTORY).select("*").gt("qty", 0).order("name");
+    let q = supabase
+      .from(T_INVENTORY)
+      .select("*")
+      .gt("qty", 0)
+      .not("category", "in", "(Service,Consultation)")
+      .order("name");
     // Scope to customer's branch if branchId is available
     if (user?.branchId) q = q.eq("branch_id", user.branchId);
     const { data, error } = await q;
@@ -874,16 +879,29 @@ const CustomerShop = () => {
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
+                      overflow: "hidden",
                     }}
                   >
-                    {ICONS[p.category] || (
+                    {p.image_url ? (
                       <img
-                        className="cshop-cat-icon"
-                        src="/icon/inventory_2.webp"
-                        alt={p.category}
-                        width={40}
-                        height={40}
+                        src={p.image_url}
+                        alt={p.name}
+                        style={{
+                          width: "100%",
+                          height: "100%",
+                          objectFit: "cover",
+                        }}
                       />
+                    ) : (
+                      ICONS[p.category] || (
+                        <img
+                          className="cshop-cat-icon"
+                          src="/icon/inventory_2.webp"
+                          alt={p.category}
+                          width={40}
+                          height={40}
+                        />
+                      )
                     )}
                   </div>
                   <div style={{ padding: 14 }}>
@@ -1664,14 +1682,26 @@ Payment  : ${tx.payment}
                 position: "relative",
               }}
             >
-              {ICONS[selectedProduct.category] || (
+              {selectedProduct.image_url ? (
                 <img
-                  className="cshop-cat-icon"
-                  src="/icon/inventory_2.webp"
-                  alt={selectedProduct.category}
-                  width={isMobile ? 44 : 56}
-                  height={isMobile ? 44 : 56}
+                  src={selectedProduct.image_url}
+                  alt={selectedProduct.name}
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
                 />
+              ) : (
+                ICONS[selectedProduct.category] || (
+                  <img
+                    className="cshop-cat-icon"
+                    src="/icon/inventory_2.webp"
+                    alt={selectedProduct.category}
+                    width={isMobile ? 44 : 56}
+                    height={isMobile ? 44 : 56}
+                  />
+                )
               )}
               <button
                 onClick={() => setSelectedProduct(null)}
