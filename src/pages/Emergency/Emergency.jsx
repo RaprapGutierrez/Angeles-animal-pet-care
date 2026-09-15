@@ -191,14 +191,24 @@ const CustomSelect = ({
   placeholder = "—",
   accent = "#dc2626",
   disabled = false,
+  searchable = false,
 }) => {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
   const [dropPos, setDropPos] = useState({ top: 0, left: 0, width: 0 });
   const triggerRef = useRef(null);
   const ref = useRef(null);
+  const searchRef = useRef(null);
   const selected = options.find((o) => (o.value ?? o) === value);
   const label = selected ? (selected.label ?? selected) : placeholder;
-
+  const filteredOptions =
+    searchable && search.trim()
+      ? options.filter((o) =>
+          String(o.label ?? o)
+            .toLowerCase()
+            .includes(search.trim().toLowerCase()),
+        )
+      : options;
   useEffect(() => {
     const handler = (e) => {
       if (
@@ -206,8 +216,10 @@ const CustomSelect = ({
         !ref.current.contains(e.target) &&
         triggerRef.current &&
         !triggerRef.current.contains(e.target)
-      )
+      ) {
         setOpen(false);
+        setSearch("");
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -218,7 +230,10 @@ const CustomSelect = ({
     if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      const dropHeight = Math.min((options.length + 1) * 38, 240);
+      const dropHeight = Math.min(
+        (options.length + 1) * 38 + (searchable ? 40 : 0),
+        280,
+      );
       const showAbove = spaceBelow < dropHeight + 10;
       let left = rect.left + window.scrollX;
       const maxLeft = window.scrollX + window.innerWidth - rect.width - 8;
@@ -233,7 +248,12 @@ const CustomSelect = ({
         width: rect.width,
       });
     }
-    setOpen((o) => !o);
+    setOpen((o) => {
+      const next = !o;
+      if (next) setSearch("");
+      return next;
+    });
+    if (!open) setTimeout(() => searchRef.current?.focus(), 50);
   };
 
   const portal =
@@ -253,12 +273,56 @@ const CustomSelect = ({
               boxShadow:
                 "0 16px 40px rgba(0,0,0,0.13), 0 4px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06)",
               border: "1.5px solid #fecaca",
-              maxHeight: 260,
+              maxHeight: 300,
               overflowY: "auto",
               padding: "5px",
             }}
           >
-            {options.map((opt, i) => {
+            {searchable && (
+              <div
+                style={{
+                  padding: "3px 3px 6px",
+                  position: "sticky",
+                  top: 0,
+                  background: "var(--card)",
+                  zIndex: 1,
+                }}
+              >
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Search…"
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "7px 10px",
+                    fontSize: 12,
+                    border: "1.5px solid #fecaca",
+                    borderRadius: 8,
+                    outline: "none",
+                    fontFamily: "inherit",
+                    background: "#fff7f7",
+                    color: "var(--text)",
+                  }}
+                />
+              </div>
+            )}
+            {searchable && filteredOptions.length === 0 && (
+              <div
+                style={{
+                  padding: "10px 8px",
+                  fontSize: 12,
+                  color: "#94a3b8",
+                  textAlign: "center",
+                }}
+              >
+                No matches
+              </div>
+            )}
+            {filteredOptions.map((opt, i) => {
               const optVal = opt.value ?? opt;
               const optLabel = opt.label ?? opt;
               const isSelected = optVal === value;
@@ -463,30 +527,42 @@ const CustomSelect = ({
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const EMERGENCY_TYPES = [
-  "Hit by Vehicle / Trauma",
+  "Allergic Reaction / Anaphylaxis",
+  "Animal Bite / Fight Wound",
+  "Birthing Emergency / Dystocia",
+  "Bloat / GDV (Gastric Dilatation)",
+  "Broken Bone / Fracture",
+  "Cardiac Arrest / No Pulse",
+  "Choking / Airway Obstruction",
   "Difficulty Breathing / Respiratory Distress",
+  "Eye / Ear Injury",
+  "Heatstroke / Hyperthermia",
+  "Hit by Vehicle / Trauma",
+  "Paralysis / Cannot Walk",
   "Seizure / Convulsion",
   "Severe Bleeding / Open Wound",
-  "Unconscious / Unresponsive",
-  "Suspected Poisoning / Toxic Ingestion",
-  "Broken Bone / Fracture",
-  "Severe Vomiting / Diarrhea",
-  "Eye / Ear Injury",
-  "Allergic Reaction / Anaphylaxis",
-  "Birthing Emergency / Dystocia",
-  "Heatstroke / Hyperthermia",
-  "Animal Bite / Fight Wound",
-  "Choking / Airway Obstruction",
-  "Cardiac Arrest / No Pulse",
-  "Bloat / GDV (Gastric Dilatation)",
-  "Urinary Blockage",
-  "Paralysis / Cannot Walk",
   "Severe Lethargy / Collapse",
+  "Severe Vomiting / Diarrhea",
   "Suspected Fracture / Limping",
+  "Suspected Poisoning / Toxic Ingestion",
+  "Unconscious / Unresponsive",
+  "Urinary Blockage",
   "Other",
 ];
 
-const BRANCHES = ["Main", "Mabalacat 2", "Tarlac", "San Fernando", "Angeles"];
+const BRANCHES = [
+  "Angeles",
+  "Baguio",
+  "Cabanatuan",
+  "Cebu",
+  "Mabalacat 2",
+  "Magalang",
+  "Main",
+  "Olongapo",
+  "San Fernando",
+  "Sucat",
+  "Tarlac",
+];
 // availability is fetched inside EmergencyForm
 
 // Maps any historical/legacy branch string variant to the current canonical name
@@ -934,8 +1010,13 @@ const BRANCH_COORDS = {
   Tarlac: { lat: 15.4755, lng: 120.596 },
   "San Fernando": { lat: 15.0349, lng: 120.6842 },
   Angeles: { lat: 15.1449, lng: 120.5887 },
+  Magalang: { lat: 15.2114, lng: 120.6572 },
+  Olongapo: { lat: 14.8386, lng: 120.2842 },
+  Cabanatuan: { lat: 15.4863, lng: 120.9663 },
+  Baguio: { lat: 16.4023, lng: 120.596 },
+  Sucat: { lat: 14.4791, lng: 121.0198 },
+  Cebu: { lat: 10.3157, lng: 123.8854 },
 };
-
 // ── City-level coords for the local service area (more accurate); everything
 // else falls back to a province centroid, which is enough to catch far provinces ──
 const CITY_COORDS = {
@@ -2279,6 +2360,7 @@ const EmergencyForm = memo(
                         options={PROVINCES.map((p) => ({ value: p, label: p }))}
                         placeholder="— Province —"
                         accent="#dc2626"
+                        searchable
                       />
                     </div>
                     <div>
@@ -2315,7 +2397,8 @@ const EmergencyForm = memo(
                         placeholder="— City —"
                         accent="#dc2626"
                         disabled={!form.guest_province}
-                      />
+                        searchable
+                      />{" "}
                     </div>
                   </div>
                   <div style={{ marginBottom: 8 }}>
@@ -2358,6 +2441,7 @@ const EmergencyForm = memo(
                       placeholder="— Barangay —"
                       accent="#dc2626"
                       disabled={!form.guest_city}
+                      searchable
                     />
                   </div>
                   <div>
@@ -2744,6 +2828,7 @@ const EmergencyForm = memo(
                       options={PROVINCES.map((p) => ({ value: p, label: p }))}
                       placeholder="— Province —"
                       accent="#dc2626"
+                      searchable
                     />
                   </div>
                   <div>
@@ -2780,7 +2865,8 @@ const EmergencyForm = memo(
                       placeholder="— City —"
                       accent="#dc2626"
                       disabled={!form.location_province}
-                    />
+                      searchable
+                    />{" "}
                   </div>
                 </div>
                 <div style={{ marginBottom: 8 }}>
@@ -2823,6 +2909,7 @@ const EmergencyForm = memo(
                     placeholder="— Barangay —"
                     accent="#dc2626"
                     disabled={!form.location_city}
+                    searchable
                   />
                 </div>
                 <div>
@@ -4897,8 +4984,14 @@ const Emergency = ({ guestMode = false }) => {
     1: "Main",
     2: "Mabalacat 2",
     3: "Tarlac",
-    4: "San Fernando",
-    5: "Angeles",
+    4: "Angeles",
+    5: "San Fernando",
+    6: "Magalang",
+    7: "Olongapo",
+    8: "Cabanatuan",
+    9: "Baguio",
+    10: "Sucat",
+    11: "Cebu",
   };
   const userBranch =
     BRANCH_ID_MAP[user?.branchId] || user?.branch || user?.branchName || null;
@@ -5097,8 +5190,14 @@ const Emergency = ({ guestMode = false }) => {
         Main: 1,
         "Mabalacat 2": 2,
         Tarlac: 3,
-        "San Fernando": 4,
-        Angeles: 5,
+        Angeles: 4,
+        "San Fernando": 5,
+        Magalang: 6,
+        Olongapo: 7,
+        Cabanatuan: 8,
+        Baguio: 9,
+        Sucat: 10,
+        Cebu: 11,
       };
       const guestRef = guestMode
         ? `g_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`

@@ -22,30 +22,42 @@ const Skeleton = ({ w = "100%", h = 14, r = 6, mb = 0 }) => (
 );
 
 const EMERGENCY_TYPES = [
-  "Hit by Vehicle / Trauma",
+  "Allergic Reaction / Anaphylaxis",
+  "Animal Bite / Fight Wound",
+  "Birthing Emergency / Dystocia",
+  "Bloat / GDV (Gastric Dilatation)",
+  "Broken Bone / Fracture",
+  "Cardiac Arrest / No Pulse",
+  "Choking / Airway Obstruction",
   "Difficulty Breathing / Respiratory Distress",
+  "Eye / Ear Injury",
+  "Heatstroke / Hyperthermia",
+  "Hit by Vehicle / Trauma",
+  "Paralysis / Cannot Walk",
   "Seizure / Convulsion",
   "Severe Bleeding / Open Wound",
-  "Unconscious / Unresponsive",
-  "Suspected Poisoning / Toxic Ingestion",
-  "Broken Bone / Fracture",
-  "Severe Vomiting / Diarrhea",
-  "Eye / Ear Injury",
-  "Allergic Reaction / Anaphylaxis",
-  "Birthing Emergency / Dystocia",
-  "Heatstroke / Hyperthermia",
-  "Animal Bite / Fight Wound",
-  "Choking / Airway Obstruction",
-  "Cardiac Arrest / No Pulse",
-  "Bloat / GDV (Gastric Dilatation)",
-  "Urinary Blockage",
-  "Paralysis / Cannot Walk",
   "Severe Lethargy / Collapse",
+  "Severe Vomiting / Diarrhea",
   "Suspected Fracture / Limping",
+  "Suspected Poisoning / Toxic Ingestion",
+  "Unconscious / Unresponsive",
+  "Urinary Blockage",
   "Other",
 ];
 
-const BRANCHES = ["Main", "Mabalacat 2", "Tarlac", "San Fernando", "Angeles"];
+const BRANCHES = [
+  "Angeles",
+  "Baguio",
+  "Cabanatuan",
+  "Cebu",
+  "Mabalacat 2",
+  "Magalang",
+  "Main",
+  "Olongapo",
+  "San Fernando",
+  "Sucat",
+  "Tarlac",
+];
 
 // ── Cascading location data: Province → City → Street/Barangay ──
 const CITIES_BY_PROVINCE = {
@@ -258,7 +270,7 @@ const CITIES_BY_PROVINCE = {
   Sulu: ["Jolo", "Patikul", "Indanan"],
   "Tawi-Tawi": ["Bongao", "Panglima Sugala", "Simunul"],
 };
-const PROVINCES = Object.keys(CITIES_BY_PROVINCE);
+const PROVINCES = Object.keys(CITIES_BY_PROVINCE).sort();
 
 // ── Flat city list + reverse lookup, so City can be picked first ──
 const CITY_TO_PROVINCE = {};
@@ -539,8 +551,13 @@ const BRANCH_COORDS = {
   Tarlac: { lat: 15.4755, lng: 120.596 },
   "San Fernando": { lat: 15.0349, lng: 120.6842 },
   Angeles: { lat: 15.1449, lng: 120.5887 },
+  Magalang: { lat: 15.2114, lng: 120.6572 },
+  Olongapo: { lat: 14.8386, lng: 120.2842 },
+  Cabanatuan: { lat: 15.4863, lng: 120.9663 },
+  Baguio: { lat: 16.4023, lng: 120.596 },
+  Sucat: { lat: 14.4791, lng: 121.0198 },
+  Cebu: { lat: 10.3157, lng: 123.8854 },
 };
-
 // ── City-level coords for the local service area (more accurate); everything
 // else falls back to a province centroid, which is enough to catch far provinces ──
 const CITY_COORDS = {
@@ -824,13 +841,24 @@ const CustomSelect = ({
   placeholder = "—",
   accent = "#dc2626",
   disabled = false,
+  searchable = false,
 }) => {
   const [open, setOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
   const [dropPos, setDropPos] = React.useState({ top: 0, left: 0, width: 0 });
   const triggerRef = React.useRef(null);
   const ref = React.useRef(null);
+  const searchRef = React.useRef(null);
   const selected = options.find((o) => (o.value ?? o) === value);
   const label = selected ? (selected.label ?? selected) : placeholder;
+  const filteredOptions =
+    searchable && search.trim()
+      ? options.filter((o) =>
+          String(o.label ?? o)
+            .toLowerCase()
+            .includes(search.trim().toLowerCase()),
+        )
+      : options;
 
   React.useEffect(() => {
     const handler = (e) => {
@@ -839,8 +867,10 @@ const CustomSelect = ({
         !ref.current.contains(e.target) &&
         triggerRef.current &&
         !triggerRef.current.contains(e.target)
-      )
+      ) {
         setOpen(false);
+        setSearch("");
+      }
     };
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -851,7 +881,10 @@ const CustomSelect = ({
     if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      const dropHeight = Math.min((options.length + 1) * 38, 240);
+      const dropHeight = Math.min(
+        (options.length + 1) * 38 + (searchable ? 40 : 0),
+        280,
+      );
       const showAbove = spaceBelow < dropHeight + 10;
       setDropPos({
         top: showAbove
@@ -861,7 +894,12 @@ const CustomSelect = ({
         width: rect.width,
       });
     }
-    setOpen((o) => !o);
+    setOpen((o) => {
+      const next = !o;
+      if (next) setSearch("");
+      return next;
+    });
+    if (!open) setTimeout(() => searchRef.current?.focus(), 50);
   };
 
   const portal =
@@ -880,12 +918,56 @@ const CustomSelect = ({
               boxShadow:
                 "0 16px 40px rgba(0,0,0,0.13), 0 4px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06)",
               border: "1.5px solid var(--border, #e8edf4)",
-              maxHeight: 260,
+              maxHeight: 300,
               overflowY: "auto",
               padding: "5px",
             }}
           >
-            {options.map((opt, i) => {
+            {searchable && (
+              <div
+                style={{
+                  padding: "3px 3px 6px",
+                  position: "sticky",
+                  top: 0,
+                  background: "var(--card)",
+                  zIndex: 1,
+                }}
+              >
+                <input
+                  ref={searchRef}
+                  type="text"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Search…"
+                  style={{
+                    width: "100%",
+                    boxSizing: "border-box",
+                    padding: "7px 10px",
+                    fontSize: 12,
+                    border: "1.5px solid var(--border, #dde3ec)",
+                    borderRadius: 8,
+                    outline: "none",
+                    fontFamily: "inherit",
+                    background: "var(--bg, #f8fafc)",
+                    color: "var(--text)",
+                  }}
+                />
+              </div>
+            )}
+            {searchable && filteredOptions.length === 0 && (
+              <div
+                style={{
+                  padding: "10px 8px",
+                  fontSize: 12,
+                  color: "#94a3b8",
+                  textAlign: "center",
+                }}
+              >
+                No matches
+              </div>
+            )}
+            {filteredOptions.map((opt, i) => {
               const optVal = opt.value ?? opt;
               const optLabel = opt.label ?? opt;
               const isSelected = optVal === value;
@@ -1627,6 +1709,7 @@ const ReportForm = memo(
                 placeholder="— Province —"
                 accent="#dc2626"
                 disabled={!form.type}
+                searchable
               />
             </div>
             <div>
@@ -1655,12 +1738,13 @@ const ReportForm = memo(
                   setDescErr("");
                 }}
                 options={(form.province
-                  ? CITIES_BY_PROVINCE[form.province] || []
+                  ? [...(CITIES_BY_PROVINCE[form.province] || [])].sort()
                   : ALL_CITIES
                 ).map((c) => ({ value: c, label: c }))}
                 placeholder="— City —"
                 accent="#dc2626"
                 disabled={!form.province}
+                searchable
               />
             </div>
           </div>
@@ -1700,15 +1784,15 @@ const ReportForm = memo(
               }}
               options={
                 form.city
-                  ? (BARANGAYS_BY_CITY[form.city] || []).map((b) => ({
-                      value: b,
-                      label: b,
-                    }))
+                  ? [...(BARANGAYS_BY_CITY[form.city] || [])]
+                      .sort()
+                      .map((b) => ({ value: b, label: b }))
                   : BARANGAY_CITY_OPTIONS
               }
               placeholder="— Barangay —"
               accent="#dc2626"
               disabled={!form.city}
+              searchable
             />
           </div>
           <div>
@@ -1776,7 +1860,8 @@ const ReportForm = memo(
             placeholder="— Select Branch —"
             accent="#dc2626"
             disabled={!form.barangay}
-          />
+            searchable
+          />{" "}
           {rateLimitErr && (
             <p style={{ fontSize: 11, color: "#dc2626", marginTop: 6 }}>
               {rateLimitErr}
