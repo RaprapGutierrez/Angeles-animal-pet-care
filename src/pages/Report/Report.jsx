@@ -1276,6 +1276,12 @@ const Report = () => {
           return String(val);
         };
 
+        const itemsColIdx = cols.indexOf("items");
+        const columnStyles = {};
+        if (itemsColIdx !== -1) {
+          columnStyles[itemsColIdx] = { cellWidth: 70 };
+        }
+
         autoTable(doc, {
           startY: 36,
           head: [cols],
@@ -1285,7 +1291,14 @@ const Report = () => {
             textColor: 255,
             fontStyle: "bold",
           },
-          styles: { fontSize: 8, cellPadding: 3 },
+          styles: {
+            fontSize: 8,
+            cellPadding: 3,
+            overflow: "linebreak",
+            cellWidth: "wrap",
+            valign: "top",
+          },
+          columnStyles,
           margin: { left: 10, right: 10 },
         });
         doc.save(`${cfg.label.replace(/\s/g, "")}_${periodLabel}.pdf`);
