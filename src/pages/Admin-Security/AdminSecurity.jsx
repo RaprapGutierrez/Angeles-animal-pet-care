@@ -2227,21 +2227,34 @@ const AdminSecurity = () => {
         },
       ]);
 
-      const { data: updateData, error } = await supabaseAdmin
-        .from("profiles")
-        .update(updatePayload)
-        .eq("id", editUser.id)
-        .select();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
 
-      if (error) {
-        alert("Error: " + error.message);
-        setSaving(false);
-        return;
-      }
+      const res = await fetch("/.netlify/functions/admin-user-management", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          action: "update",
+          userId: editUser.id,
+          first_name: editForm.first_name,
+          last_name: editForm.last_name,
+          role: editForm.role,
+          branch_id: editForm.branch_id || null,
+          sex: editForm.sex || null,
+          status: editForm.status,
+          phone_number: editForm.phone_number || null,
+        }),
+      });
 
-      if (!updateData || updateData.length === 0) {
+      const result = await res.json();
+
+      if (!res.ok) {
         alert(
-          "Update failed: no matching user record was found (or you don't have permission to edit this user). Nothing was saved.",
+          "Error: " + (result.error || "Update failed. Nothing was saved."),
         );
         setSaving(false);
         return;

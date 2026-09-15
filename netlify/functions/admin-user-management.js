@@ -199,6 +199,7 @@ export async function handler(event) {
         branch_id,
         sex,
         status,
+        phone_number,
       } = body;
 
       if (!userId) {
@@ -276,6 +277,10 @@ export async function handler(event) {
 
       if (sex !== undefined) {
         profileUpdates.sex = sex || null;
+      }
+
+      if (phone_number !== undefined) {
+        profileUpdates.phone_number = phone_number || null;
       }
 
       if (status !== undefined) {
