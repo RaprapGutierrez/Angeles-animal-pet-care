@@ -3011,16 +3011,22 @@ export const Layout = ({ children }) => {
         const [{ data: sameData }, { data: crossData }] = await Promise.all([
           supabase
             .from("messages")
-            .select("id")
+            .select("id, sender_id, sender:sender_id(status)")
             .eq("receiver_id", user.id)
             .eq("is_read", false),
           supabase
             .from("cross_branch_messages")
-            .select("id")
+            .select("id, sender_id")
             .eq("recipient_id", user.id)
             .eq("is_read", false),
         ]);
-        setCustMsgCount((sameData?.length || 0) + (crossData?.length || 0));
+        // Only count unread messages from senders who'd actually show up as a
+        // conversation the customer can open — otherwise the badge can get
+        // stuck on messages from deactivated/deleted staff with no way to clear it.
+        const visibleSame = (sameData || []).filter(
+          (m) => !m.sender || m.sender.status !== "Inactive",
+        );
+        setCustMsgCount(visibleSame.length + (crossData?.length || 0));
       } catch (e) {
         console.error("Customer message count fetch error:", e);
       }
