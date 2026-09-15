@@ -4975,33 +4975,62 @@ const Inventory = () => {
                 >
                   prev
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (pg) => (
-                    <button
-                      key={pg}
-                      onClick={() => setCurrentPage(pg)}
-                      style={{
-                        width: 34,
-                        height: 34,
-                        borderRadius: 20,
-                        border: "1.5px solid",
-                        fontSize: 13,
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        fontFamily: "inherit",
-                        transition: "all 0.15s",
-                        flexShrink: 0,
-                        background:
-                          safePage === pg ? "var(--royal)" : "transparent",
-                        color: safePage === pg ? "#fff" : "var(--text)",
-                        borderColor:
-                          safePage === pg ? "var(--royal)" : "var(--border)",
-                      }}
-                    >
-                      {pg}
-                    </button>
-                  ),
-                )}
+                {(() => {
+                  // Build a windowed page list: first, last, current ±1, with "…" gaps.
+                  const pages = [];
+                  const addPage = (p) => pages.push(p);
+                  const windowStart = Math.max(2, safePage - 1);
+                  const windowEnd = Math.min(totalPages - 1, safePage + 1);
+
+                  addPage(1);
+                  if (windowStart > 2) addPage("ellipsis-start");
+                  for (let p = windowStart; p <= windowEnd; p++) addPage(p);
+                  if (windowEnd < totalPages - 1) addPage("ellipsis-end");
+                  if (totalPages > 1) addPage(totalPages);
+
+                  return pages.map((pg, idx) =>
+                    typeof pg === "number" ? (
+                      <button
+                        key={pg}
+                        onClick={() => setCurrentPage(pg)}
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 20,
+                          border: "1.5px solid",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          transition: "all 0.15s",
+                          flexShrink: 0,
+                          background:
+                            safePage === pg ? "var(--royal)" : "transparent",
+                          color: safePage === pg ? "#fff" : "var(--text)",
+                          borderColor:
+                            safePage === pg ? "var(--royal)" : "var(--border)",
+                        }}
+                      >
+                        {pg}
+                      </button>
+                    ) : (
+                      <span
+                        key={pg + idx}
+                        style={{
+                          width: 24,
+                          textAlign: "center",
+                          fontSize: 13,
+                          fontWeight: 700,
+                          color: "var(--muted)",
+                          flexShrink: 0,
+                          userSelect: "none",
+                        }}
+                      >
+                        …
+                      </span>
+                    ),
+                  );
+                })()}
                 <button
                   onClick={() =>
                     setCurrentPage((p) => Math.min(totalPages, p + 1))
