@@ -20,7 +20,10 @@ const C = {
 
 /* ── tiny helpers ── */
 const today = new Date();
-const isoDate = (d) => d.toISOString().split("T")[0];
+const isoDate = (d) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+    d.getDate(),
+  ).padStart(2, "0")}`;
 
 const addDays = (d, n) => {
   const r = new Date(d);
@@ -514,10 +517,15 @@ const PredictiveAnalytics = () => {
       purposeCounts[s] = 0;
     });
     appts.forEach((a) => {
+      if (!ALL_SERVICES.includes(a.purpose)) return;
       purposeCounts[a.purpose] = (purposeCounts[a.purpose] || 0) + 1;
     });
     const topPurposes = Object.entries(purposeCounts).sort(
       (a, b) => b[1] - a[1],
+    );
+    const purposeTotal = Object.values(purposeCounts).reduce(
+      (s, n) => s + n,
+      0,
     );
 
     /* --- heatmap data (date → count) --- */
@@ -531,8 +539,15 @@ const PredictiveAnalytics = () => {
     });
 
     /* --- low stock items --- */
-    const lowStock = (inventory || [])
-      .filter((i) => i.stock <= (i.reorder_level || 10) * 1.5)
+    const invQty = (i) => Number(i.stock ?? i.qty ?? 0);
+    const invReorder = (i) => Number(i.reorder_level ?? i.threshold ?? 10);
+    const invNorm = (inventory || []).map((i) => ({
+      ...i,
+      stock: invQty(i),
+      reorder_level: invReorder(i),
+    }));
+    const lowStock = invNorm
+      .filter((i) => i.stock <= i.reorder_level * 1.5)
       .sort(
         (a, b) =>
           a.stock / (a.reorder_level || 1) - b.stock / (b.reorder_level || 1),
@@ -540,7 +555,7 @@ const PredictiveAnalytics = () => {
       .slice(0, 6);
 
     /* --- inventory turnover (simulated from stock vs reorder) --- */
-    const invTurnover = (inventory || [])
+    const invTurnover = invNorm
       .filter((i) => i.reorder_level > 0)
       .map((i) => ({
         name: i.name,
@@ -553,6 +568,21 @@ const PredictiveAnalytics = () => {
       .slice(0, 5);
 
     /* --- new patients trend --- */
+    const walkinByMonth = [0, 0, 0];
+    walkins.forEach((w) => {
+      const d = new Date(w.created_at);
+      const diff =
+        (today.getFullYear() - d.getFullYear()) * 12 +
+        (today.getMonth() - d.getMonth());
+      if (diff >= 0 && diff <= 2) walkinByMonth[2 - diff]++;
+    });
+    const pctChange = (arr) => {
+      const prev = arr[1];
+      const curr = arr[2];
+      if (!prev) return null;
+      const pct = Math.round(((curr - prev) / prev) * 100);
+      return `${pct >= 0 ? "+" : ""}${pct}%`;
+    };
     const patByMonth = [0, 0, 0];
     patients.forEach((p) => {
       const d = new Date(p.created_at);
@@ -728,10 +758,19 @@ const PredictiveAnalytics = () => {
       monthVisits,
       monthLabels,
       topPurposes,
+      purposeTotal,
       heatData,
       lowStock,
       invTurnover,
       patByMonth,
+      walkinByMonth,
+      apptDelta: pctChange(monthVisits),
+      walkinDelta: pctChange(walkinByMonth),
+      patientDelta: pctChange(patByMonth),
+      projGrowth:
+        monthVisits[1] > 0
+          ? Math.max(0.9, Math.min(1.5, monthVisits[2] / monthVisits[1]))
+          : 1,
       busyDays,
       insights,
       totalAppts: appts.length,
@@ -918,21 +957,21 @@ const PredictiveAnalytics = () => {
                 {
                   label: "Total Appointments",
                   value: analytics?.totalAppts || 0,
-                  delta: "+12%",
+                  delta: analytics?.apptDelta,
                   color: C.indigo,
                   spark: analytics?.monthVisits || [],
                 },
                 {
                   label: "Walk-Ins (90d)",
                   value: analytics?.totalWalkins || 0,
-                  delta: "+8%",
+                  delta: analytics?.walkinDelta,
                   color: C.teal,
-                  spark: [2, 4, 3, 6, 5, 7, 8],
+                  spark: analytics?.walkinByMonth || [],
                 },
                 {
                   label: "New Patients (90d)",
                   value: analytics?.totalPatients || 0,
-                  delta: "+5%",
+                  delta: analytics?.patientDelta,
                   color: C.emerald,
                   spark: analytics?.patByMonth || [],
                 },
@@ -985,8 +1024,10 @@ const PredictiveAnalytics = () => {
                         style={{
                           fontSize: 11,
                           fontWeight: 700,
-                          color: C.emerald,
-                          background: "#dcfce7",
+                          color: kpi.delta.startsWith("-") ? C.rose : C.emerald,
+                          background: kpi.delta.startsWith("-")
+                            ? "#fee2e2"
+                            : "#dcfce7",
                           borderRadius: 20,
                           padding: "2px 8px",
                           marginBottom: 3,
@@ -1799,7 +1840,7 @@ const PredictiveAnalytics = () => {
               ) : (
                 (() => {
                   const base = analytics?.totalAppts || 0;
-                  const growth = 1.08;
+                  const growth = analytics?.projGrowth || 1;
                   const proj = [
                     base,
                     Math.round(base * growth),
@@ -1873,8 +1914,10 @@ const PredictiveAnalytics = () => {
                 })()
               )}
               <p style={{ margin: "12px 0 0", fontSize: 11, color: "#94a3b8" }}>
-                Projection assumes a conservative 8% month-over-month growth
-                based on the last 90-day trend. Actual results may vary.
+                Projection extrapolates the month-over-month change observed in
+                the last 90 days (
+                {Math.round(((analytics?.projGrowth || 1) - 1) * 100)}% per
+                month). Actual results may vary.
               </p>
             </div>
 
@@ -1912,7 +1955,7 @@ const PredictiveAnalytics = () => {
                       C.rose,
                       C.violet,
                     ];
-                    const total = analytics?.totalAppts || 1;
+                    const total = analytics?.purposeTotal || 1;
                     const pct = Math.round((c / total) * 100);
                     return (
                       <div
