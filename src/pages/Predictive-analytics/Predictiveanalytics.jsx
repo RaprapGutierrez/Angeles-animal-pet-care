@@ -419,10 +419,7 @@ const PredictiveAnalytics = () => {
         .select("*")
         .gte("date", since90)
         .order("date");
-      let wiQ = supabase
-        .from("walk_ins")
-        .select("*")
-        .gte("created_at", since90);
+      let wiQ = supabase.from("walkins").select("*").gte("arrived_at", since90);
       let invQ = supabase.from("inventory").select("*");
       let patQ = supabase
         .from("patients")
@@ -458,7 +455,7 @@ const PredictiveAnalytics = () => {
       if (!isNaN(d)) dowAppt[d.getDay()]++;
     });
     walkins.forEach((w) => {
-      const d = new Date(w.created_at);
+      const d = new Date(w.arrived_at);
       if (!isNaN(d)) dowAppt[d.getDay()]++;
     });
 
@@ -534,7 +531,7 @@ const PredictiveAnalytics = () => {
       heatData[a.date] = (heatData[a.date] || 0) + 1;
     });
     walkins.forEach((w) => {
-      const d = isoDate(new Date(w.created_at));
+      const d = isoDate(new Date(w.arrived_at));
       heatData[d] = (heatData[d] || 0) + 1;
     });
 
@@ -570,7 +567,7 @@ const PredictiveAnalytics = () => {
     /* --- new patients trend --- */
     const walkinByMonth = [0, 0, 0];
     walkins.forEach((w) => {
-      const d = new Date(w.created_at);
+      const d = new Date(w.arrived_at);
       const diff =
         (today.getFullYear() - d.getFullYear()) * 12 +
         (today.getMonth() - d.getMonth());
