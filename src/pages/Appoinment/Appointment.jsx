@@ -1118,6 +1118,28 @@ const AppModal = ({
   );
 };
 
+const getPageNumbers = (current, total, delta = 1) => {
+  const range = [];
+  for (let i = 1; i <= total; i++) {
+    if (
+      i === 1 ||
+      i === total ||
+      (i >= current - delta && i <= current + delta)
+    ) {
+      range.push(i);
+    }
+  }
+  const withDots = [];
+  let prev = 0;
+  range.forEach((i) => {
+    if (prev && i - prev === 2) withDots.push(prev + 1);
+    else if (prev && i - prev > 2) withDots.push("...");
+    withDots.push(i);
+    prev = i;
+  });
+  return withDots;
+};
+
 const Appointment = () => {
   const {
     user,
@@ -6021,8 +6043,24 @@ const Appointment = () => {
                 >
                   prev
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                  (pg) => (
+                {getPageNumbers(safePage, totalPages).map((pg, idx) =>
+                  pg === "..." ? (
+                    <span
+                      key={`dots-${idx}`}
+                      style={{
+                        width: 34,
+                        height: 34,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: 13,
+                        fontWeight: 700,
+                        color: "var(--muted)",
+                      }}
+                    >
+                      …
+                    </span>
+                  ) : (
                     <button
                       key={pg}
                       onClick={() => setCurrentPage(pg)}

@@ -2965,6 +2965,28 @@ const PrescriptionSlip = ({ rx, onEdit, onDelete }) => (
 );
 
 // ── Main component ────────────────────────────────────────────────────────────
+const getPageNumbers = (current, total, delta = 1) => {
+  const range = [];
+  for (let i = 1; i <= total; i++) {
+    if (
+      i === 1 ||
+      i === total ||
+      (i >= current - delta && i <= current + delta)
+    ) {
+      range.push(i);
+    }
+  }
+  const withDots = [];
+  let prev = 0;
+  range.forEach((i) => {
+    if (prev && i - prev === 2) withDots.push(prev + 1);
+    else if (prev && i - prev > 2) withDots.push("...");
+    withDots.push(i);
+    prev = i;
+  });
+  return withDots;
+};
+
 const PatientRecord = () => {
   const {
     user,
@@ -7297,29 +7319,48 @@ const PatientRecord = () => {
             >
               prev
             </button>
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pg) => (
-              <button
-                key={pg}
-                onClick={() => setCurrentPage(pg)}
-                style={{
-                  width: 34,
-                  height: 34,
-                  borderRadius: 20,
-                  border: "1.5px solid",
-                  fontSize: 13,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  fontFamily: "inherit",
-                  transition: "all 0.15s",
-                  background: safePage === pg ? "var(--royal)" : "transparent",
-                  color: safePage === pg ? "#fff" : "var(--text)",
-                  borderColor:
-                    safePage === pg ? "var(--royal)" : "var(--border)",
-                }}
-              >
-                {pg}
-              </button>
-            ))}
+            {getPageNumbers(safePage, totalPages).map((pg, idx) =>
+              pg === "..." ? (
+                <span
+                  key={`dots-${idx}`}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color: "var(--muted)",
+                  }}
+                >
+                  …
+                </span>
+              ) : (
+                <button
+                  key={pg}
+                  onClick={() => setCurrentPage(pg)}
+                  style={{
+                    width: 34,
+                    height: 34,
+                    borderRadius: 20,
+                    border: "1.5px solid",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "all 0.15s",
+                    background:
+                      safePage === pg ? "var(--royal)" : "transparent",
+                    color: safePage === pg ? "#fff" : "var(--text)",
+                    borderColor:
+                      safePage === pg ? "var(--royal)" : "var(--border)",
+                  }}
+                >
+                  {pg}
+                </button>
+              ),
+            )}
             <button
               onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
               disabled={safePage === totalPages}
