@@ -507,6 +507,10 @@ const CustomerMessages = () => {
   };
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
+  const selectedRef = useRef(null);
+  useEffect(() => {
+    selectedRef.current = selected;
+  }, [selected]);
 
   const myId = user?.id ?? null;
   const myName = user?.fullName || user?.email || "Customer";
@@ -701,19 +705,24 @@ const CustomerMessages = () => {
     if (!selected || !myId) return;
     fetchMessages(selected.id);
 
-    supabase
-      .from(T_MESSAGES)
-      .update({ is_read: true })
-      .eq("receiver_id", myId)
-      .eq("sender_id", selected.id)
-      .eq("is_read", false);
-    supabase
-      .from(CROSS_BRANCH_TABLE)
-      .update({ is_read: true })
-      .eq("recipient_id", myId)
-      .eq("sender_id", selected.id)
-      .eq("is_read", false);
-    setUnread((prev) => ({ ...prev, [selected.id]: 0 }));
+    const markRead = async () => {
+      await Promise.all([
+        supabase
+          .from(T_MESSAGES)
+          .update({ is_read: true })
+          .eq("receiver_id", myId)
+          .eq("sender_id", selected.id)
+          .eq("is_read", false),
+        supabase
+          .from(CROSS_BRANCH_TABLE)
+          .update({ is_read: true })
+          .eq("recipient_id", myId)
+          .eq("sender_id", selected.id)
+          .eq("is_read", false),
+      ]);
+      setUnread((prev) => ({ ...prev, [selected.id]: 0 }));
+    };
+    markRead();
 
     const sub = supabase
       .channel("customer-messages-" + selected.id)
@@ -726,7 +735,10 @@ const CustomerMessages = () => {
           const relevant =
             (msg.sender_id === myId && msg.receiver_id === selected.id) ||
             (msg.sender_id === selected.id && msg.receiver_id === myId);
-          if (relevant) fetchMessages(selected.id);
+          if (relevant) {
+            fetchMessages(selected.id);
+            markRead();
+          }
         },
       )
       .on(
@@ -738,7 +750,10 @@ const CustomerMessages = () => {
           const relevant =
             (msg.sender_id === myId && msg.recipient_id === selected.id) ||
             (msg.sender_id === selected.id && msg.recipient_id === myId);
-          if (relevant) fetchMessages(selected.id);
+          if (relevant) {
+            fetchMessages(selected.id);
+            markRead();
+          }
         },
       )
       .subscribe();
@@ -771,10 +786,8 @@ const CustomerMessages = () => {
       (crossData || []).forEach((m) => {
         counts[m.sender_id] = (counts[m.sender_id] || 0) + 1;
       });
-      setSelected((sel) => {
-        if (sel?.id) delete counts[sel.id];
-        return sel;
-      });
+      const sel = selectedRef.current;
+      if (sel?.id) delete counts[sel.id];
       setUnread(counts);
     };
     recompute();
@@ -783,7 +796,7 @@ const CustomerMessages = () => {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: T_MESSAGES,
           filter: `receiver_id=eq.${myId}`,
@@ -793,7 +806,7 @@ const CustomerMessages = () => {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: CROSS_BRANCH_TABLE,
           filter: `recipient_id=eq.${myId}`,
@@ -1127,7 +1140,10 @@ const CustomerMessages = () => {
   );
   const grouped = groupByDate(messages);
   const isMobile = typeof window !== "undefined" && window.innerWidth <= 768;
-  const totalUnread = Object.values(unread).reduce((a, b) => a + b, 0);
+  const totalUnread = conversationStaff.reduce(
+    (sum, s) => sum + (unread[s.id] || 0),
+    0,
+  );
 
   return (
     <Layout>
