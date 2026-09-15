@@ -3768,15 +3768,20 @@ const Inventory = () => {
         {/* Low stock alert */}
         {lowStock.length > 0 && (
           <div
+            onClick={() => {
+              setStockFilter((f) => (f === "low" ? "" : "low"));
+              setExpiryFilter(false);
+            }}
             style={{
               display: "flex",
-              alignItems: "center",
+              alignItems: "flex-start",
               gap: 12,
               background: "#fee2e2",
               border: "1px solid #fca5a5",
               borderRadius: 10,
               padding: "12px 16px",
               marginBottom: 20,
+              cursor: "pointer",
             }}
           >
             <svg
@@ -3787,19 +3792,79 @@ const Inventory = () => {
               stroke="#dc2626"
               strokeWidth="2"
               strokeLinecap="round"
-              style={{ flexShrink: 0 }}
+              style={{ flexShrink: 0, marginTop: 1 }}
             >
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
               <line x1="12" y1="9" x2="12" y2="13" />
               <line x1="12" y1="17" x2="12.01" y2="17" />
             </svg>
-            <div>
-              <strong style={{ color: "#dc2626", fontSize: 13 }}>
-                Low Stock Alert
-              </strong>
-              <p style={{ fontSize: 12, color: "#dc2626", margin: 0 }}>
-                {lowStock.map((i) => i.name).join(", ")}
-              </p>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 8,
+                  flexWrap: "wrap",
+                }}
+              >
+                <strong style={{ color: "#dc2626", fontSize: 13 }}>
+                  Low Stock Alert — {lowStock.length} item
+                  {lowStock.length !== 1 ? "s" : ""} need reordering
+                </strong>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#991b1b",
+                    background: "rgba(255,255,255,0.6)",
+                    border: "1px solid #fca5a5",
+                    borderRadius: 20,
+                    padding: "2px 10px",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  View all →
+                </span>
+              </div>
+              <div
+                style={{
+                  display: "flex",
+                  flexWrap: "wrap",
+                  gap: 6,
+                  marginTop: 8,
+                }}
+              >
+                {lowStock.slice(0, 6).map((i) => (
+                  <span
+                    key={i.id}
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 600,
+                      color: "#991b1b",
+                      background: "rgba(255,255,255,0.7)",
+                      border: "1px solid #fca5a5",
+                      borderRadius: 20,
+                      padding: "3px 10px",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    {i.name}
+                  </span>
+                ))}
+                {lowStock.length > 6 && (
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 700,
+                      color: "#dc2626",
+                      padding: "3px 4px",
+                    }}
+                  >
+                    +{lowStock.length - 6} more
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         )}
