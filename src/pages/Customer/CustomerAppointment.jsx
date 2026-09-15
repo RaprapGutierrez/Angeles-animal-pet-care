@@ -1633,6 +1633,24 @@ const CustomerAppointment = () => {
     setShowReviews(true);
   };
 
+  useEffect(() => {
+    if (!user?.branchId) return;
+    const ch = supabase
+      .channel(`customer-reviews-rt-${user.branchId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "reviews",
+          filter: `branch_id=eq.${user.branchId}`,
+        },
+        () => fetchAllReviews(),
+      )
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [user?.branchId]);
+
   const submitReview = async () => {
     if (!reviewModal.rating) {
       showAlert(

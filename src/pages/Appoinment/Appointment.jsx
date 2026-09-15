@@ -1745,6 +1745,19 @@ const Appointment = () => {
   };
 
   useEffect(() => {
+    if (userLoading || !user) return;
+    const ch = supabase
+      .channel(`staff-reviews-rt-${user.branchId || "all"}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "reviews" },
+        () => fetchReviews(),
+      )
+      .subscribe();
+    return () => supabase.removeChannel(ch);
+  }, [user, userLoading, fetchReviews]);
+
+  useEffect(() => {
     if (user)
       logActivity(user, "Viewed appointments", "Opened appointments list");
   }, []);
