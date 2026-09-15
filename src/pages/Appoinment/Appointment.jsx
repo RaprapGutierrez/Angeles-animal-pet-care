@@ -1948,6 +1948,9 @@ const Appointment = () => {
       ...EMPTY,
       owner: isCustomer ? `${user.firstName} ${user.lastName}`.trim() : "",
       ownerId: isCustomer ? user.id : "",
+      contact: isCustomer
+        ? customers.find((c) => c.id === user.id)?.phone || ""
+        : "",
     });
     setSelectedAppt(null);
     setEditMode(false);

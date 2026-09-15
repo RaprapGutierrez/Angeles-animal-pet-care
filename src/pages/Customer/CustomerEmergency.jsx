@@ -1180,6 +1180,29 @@ const ReportForm = memo(
       street: "",
       branch: defaultBranch || "",
     });
+    const { user: formUser } = useCurrentUser();
+    // Pull the contact number straight from the user's profile.
+    useEffect(() => {
+      if (!formUser?.id) return;
+      supabase
+        .from("profiles")
+        .select("phone, phone_number")
+        .eq("id", formUser.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          const saved = (data?.phone || data?.phone_number || "").replace(
+            /\D/g,
+            "",
+          );
+          if (saved)
+            setForm((f) =>
+              f.contact_number
+                ? f
+                : { ...f, contact_number: saved.slice(0, 11) },
+            );
+        });
+    }, [formUser?.id]);
+
     const [descErr, setDescErr] = useState("");
     const [typeErr, setTypeErr] = useState("");
     const [branchErr, setBranchErr] = useState("");
@@ -1355,10 +1378,10 @@ const ReportForm = memo(
         description: finalLocation,
       });
       if (result?.success) {
-        setForm({
+        setForm((f) => ({
           type: "",
           customType: "",
-          contact_number: "",
+          contact_number: f.contact_number,
           patient_name: "",
           pet_photo_url: "",
           province: "",
@@ -1366,7 +1389,7 @@ const ReportForm = memo(
           barangay: "",
           street: "",
           branch: defaultBranch || "",
-        });
+        }));
         setLocateStatus(null);
       }
     }, [form, onSend, defaultBranch]);

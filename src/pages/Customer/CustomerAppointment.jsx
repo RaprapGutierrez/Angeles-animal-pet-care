@@ -1540,6 +1540,23 @@ const CustomerAppointment = () => {
       .then(({ data }) => setServices(data || []));
   }, []);
 
+  // Contact number comes from the user's saved profile — no need to retype it.
+  useEffect(() => {
+    if (!user?.id) return;
+    supabase
+      .from("profiles")
+      .select("phone, phone_number")
+      .eq("id", user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        const saved = (data?.phone || data?.phone_number || "").replace(
+          /\D/g,
+          "",
+        );
+        if (saved) setContact((c) => c || saved.slice(0, 11));
+      });
+  }, [user?.id]);
+
   // Only offer services this branch has actually enabled (set in Branches.jsx).
   const [branchServices, setBranchServices] = useState(null);
   useEffect(() => {
@@ -1917,7 +1934,6 @@ const CustomerAppointment = () => {
       }
       setShowModal(false);
       setPets([{ ...EMPTY_PET }]);
-      setContact("");
       fetchAppts();
     } finally {
       setSaving(false);
@@ -2440,7 +2456,6 @@ const CustomerAppointment = () => {
             <button
               onClick={() => {
                 setPets([{ ...EMPTY_PET }]);
-                setContact("");
                 setBookStep("service");
                 fetchMyPets();
                 setShowModal(true);

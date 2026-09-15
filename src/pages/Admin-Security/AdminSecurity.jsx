@@ -2031,7 +2031,7 @@ const AdminSecurity = () => {
                     first_name: (req.first_name || "").trim(),
                     last_name: (req.last_name || "").trim(),
                     email: (req.email || "").toLowerCase().trim(),
-                    phone_number: (req.phone_number || "").trim(),
+                    phone: (req.phone_number || req.phone || "").trim(),
                     sex: req.sex || null,
                     role: req.role || "Customer",
                     branch_id: resolvedBranchId || null,
@@ -2103,7 +2103,7 @@ const AdminSecurity = () => {
       branch_id: u.branch_id || "",
       email: u.email || "",
       sex: u.sex || "",
-      phone_number: u.phone_number || "",
+      phone_number: u.phone || "",
     };
     setEditForm(initialForm);
     setEditFormOriginal(JSON.stringify(initialForm));
@@ -2146,6 +2146,7 @@ const AdminSecurity = () => {
         branch_id: editForm.branch_id || null,
         sex: editForm.sex || null,
         phone: editForm.phone_number || null,
+        phone_number: editForm.phone_number || null,
       };
 
       // SuperAdmin can also update email via admin API

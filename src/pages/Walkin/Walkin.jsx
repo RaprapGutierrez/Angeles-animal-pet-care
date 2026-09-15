@@ -956,7 +956,7 @@ const Walkin = () => {
     if (!user) return;
     let q = supabase
       .from("profiles")
-      .select("id, first_name, last_name, email, phone, role")
+      .select("id, first_name, last_name, email, phone, phone_number, role")
       .eq("status", "Active")
       .in("role", ["customer", "Customer"])
       .order("first_name");
@@ -1199,7 +1199,9 @@ const Walkin = () => {
       ...prev,
       owner: client.full_name,
       owner_id: client.id,
-      contact: client.phone || prev.contact,
+      contact: (client.phone || client.phone_number || prev.contact || "")
+        .replace(/\D/g, "")
+        .slice(0, 11),
     }));
     fetchExistingPatientsFor(client.full_name, client.id);
   };

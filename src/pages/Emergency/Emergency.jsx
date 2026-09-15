@@ -1875,6 +1875,29 @@ const EmergencyForm = memo(
       patient_name: "",
       pet_photo_url: "",
     });
+    const { user: formUser } = useCurrentUser();
+    // Staff contact number comes from their profile record.
+    useEffect(() => {
+      if (guestMode || !formUser?.id) return;
+      supabase
+        .from("profiles")
+        .select("phone, phone_number")
+        .eq("id", formUser.id)
+        .maybeSingle()
+        .then(({ data }) => {
+          const saved = (data?.phone || data?.phone_number || "").replace(
+            /\D/g,
+            "",
+          );
+          if (saved)
+            setForm((f) =>
+              f.contact_number
+                ? f
+                : { ...f, contact_number: saved.slice(0, 11) },
+            );
+        });
+    }, [guestMode, formUser?.id]);
+
     const [errors, setErrors] = useState({});
     const [locating, setLocating] = useState(false);
     const [locateStatus, setLocateStatus] = useState(null); // {type:'ok'|'partial'|'error', message}

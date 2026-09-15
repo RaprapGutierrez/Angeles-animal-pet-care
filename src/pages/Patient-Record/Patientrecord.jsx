@@ -3571,7 +3571,7 @@ const PatientRecord = () => {
       const q = ownerSearchQuery.trim();
       let query = supabase
         .from(T_PROFILES)
-        .select("id, first_name, last_name, email, role, branch_id")
+        .select("id, first_name, last_name, email, phone, role, branch_id")
         .in("role", ["customer", "Customer"])
         .limit(20);
       if (q)
@@ -5242,6 +5242,7 @@ const PatientRecord = () => {
                           ...prev,
                           owner: p.full_name || prev.owner,
                           owner_email: p.email,
+                          contact: p.phone || prev.contact,
                         }));
                         fetchExistingPatientsForOwner(p.full_name, p.id);
                       }}
