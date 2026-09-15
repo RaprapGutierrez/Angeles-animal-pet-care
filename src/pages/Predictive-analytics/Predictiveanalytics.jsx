@@ -1104,7 +1104,7 @@ const PredictiveAnalytics = () => {
       >
         <div className="topbar-title">
           <img
-            src="/icon/report.png"
+            src="/icon/predictive-analytics.webp"
             alt=""
             style={{ width: 28, opacity: 0.9 }}
           />
