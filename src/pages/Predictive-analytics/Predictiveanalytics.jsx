@@ -661,6 +661,7 @@ const PredictiveAnalytics = () => {
   const [inventory, setInventory] = useState([]);
   const [walkins, setWalkins] = useState([]);
   const [patients, setPatients] = useState([]);
+  const [transactions, setTransactions] = useState([]);
 
   /* computed analytics */
   const [analytics, setAnalytics] = useState(null);
@@ -698,26 +699,39 @@ const PredictiveAnalytics = () => {
         .from("patients")
         .select("*")
         .gte("created_at", since90);
+      let txnQ = supabase
+        .from("transactions")
+        .select("*")
+        .gte("created_at", since90);
 
       if (!seeAllBranches && user.branchId) {
         apptQ = apptQ.eq("branch_id", user.branchId);
         wiQ = wiQ.eq("branch_id", user.branchId);
         invQ = invQ.eq("branch_id", user.branchId);
         patQ = patQ.eq("branch_id", user.branchId);
+        txnQ = txnQ.eq("branch_id", user.branchId);
       }
       if (seeAllBranches && branchFilter) {
         apptQ = apptQ.eq("branch_id", branchFilter);
         wiQ = wiQ.eq("branch_id", branchFilter);
         invQ = invQ.eq("branch_id", branchFilter);
         patQ = patQ.eq("branch_id", branchFilter);
+        txnQ = txnQ.eq("branch_id", branchFilter);
       }
 
-      const [a, w, inv, p] = await Promise.all([apptQ, wiQ, invQ, patQ]);
+      const [a, w, inv, p, tx] = await Promise.all([
+        apptQ,
+        wiQ,
+        invQ,
+        patQ,
+        txnQ,
+      ]);
 
       setAppts(a.data || []);
       setWalkins(w.data || []);
       setInventory(inv.data || []);
       setPatients(p.data || []);
+      setTransactions(tx.data || []);
       setLoading(false);
     };
     run();
@@ -830,18 +844,46 @@ const PredictiveAnalytics = () => {
       )
       .slice(0, 6);
 
-    /* --- inventory turnover (simulated from stock vs reorder) --- */
-    const invTurnover = invNorm
-      .filter((i) => i.reorder_level > 0)
-      .map((i) => ({
-        name: i.name,
-        turnover: +(
-          ((i.reorder_level - i.stock + i.reorder_level) / i.reorder_level) *
-          100
-        ).toFixed(0),
-      }))
-      .sort((a, b) => b.turnover - a.turnover)
+    /* --- real sales velocity from POS transactions (last 90 days) --- */
+    const DAYS_WINDOW = 90;
+    const unitsSoldById = {};
+    (transactions || []).forEach((t) => {
+      if (t.voided_at) return; // skip voided sales
+      if (t.status && t.status !== "Active") return;
+      const items = Array.isArray(t.items) ? t.items : [];
+      items.forEach((it) => {
+        if (it.isCustom) return; // not a real inventory item, skip
+        const qty = Number(it.qty) || 1;
+        unitsSoldById[it.id] = (unitsSoldById[it.id] || 0) + qty;
+      });
+    });
+
+    const salesVelocity = invNorm
+      .map((i) => {
+        const sold = unitsSoldById[i.id] || 0;
+        const perDay = sold / DAYS_WINDOW;
+        const daysLeft = perDay > 0 ? Math.round(i.stock / perDay) : Infinity;
+        return {
+          ...i,
+          sold90d: sold,
+          perWeek: +(perDay * 7).toFixed(1),
+          daysLeft,
+        };
+      })
+      .filter((i) => i.sold90d > 0);
+
+    const bestSellers = [...salesVelocity]
+      .sort((a, b) => b.sold90d - a.sold90d)
       .slice(0, 5);
+
+    const restockNeeded = salesVelocity
+      .filter((i) => Number.isFinite(i.daysLeft) && i.daysLeft <= 14)
+      .sort((a, b) => a.daysLeft - b.daysLeft)
+      .slice(0, 6)
+      .map((i) => ({
+        ...i,
+        suggestedQty: Math.max(1, Math.ceil(i.perWeek * 4 - i.stock)), // cover ~4 weeks of demand
+      }));
 
     /* --- new patients trend --- */
     const walkinByMonth = [0, 0, 0];
@@ -1037,7 +1079,8 @@ const PredictiveAnalytics = () => {
       purposeTotal,
       heatData,
       lowStock,
-      invTurnover,
+      bestSellers,
+      restockNeeded,
       patByMonth,
       walkinByMonth,
       apptDelta: pctChange(monthVisits),
@@ -1055,7 +1098,7 @@ const PredictiveAnalytics = () => {
       peakDow,
       peakHour,
     });
-  }, [loading, appts, walkins, inventory, patients]);
+  }, [loading, appts, walkins, inventory, patients, transactions]);
 
   /* ── styles ── */
   const card = {
@@ -1841,14 +1884,14 @@ const PredictiveAnalytics = () => {
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
                   </svg>
                 }
-                title="Inventory Usage Rate"
-                subtitle="Items with highest consumption relative to stock level"
+                title="Best-Selling Products"
+                subtitle="Actual units sold from POS transactions — last 90 days"
               />
               {loading ? (
                 <Skel h={200} />
               ) : (
                 <>
-                  {(analytics?.invTurnover || []).length === 0 ? (
+                  {(analytics?.bestSellers || []).length === 0 ? (
                     <p
                       style={{
                         color: "#94a3b8",
@@ -1857,19 +1900,19 @@ const PredictiveAnalytics = () => {
                         padding: "32px 0",
                       }}
                     >
-                      No inventory data available
+                      No sales data available
                     </p>
                   ) : (
-                    (analytics?.invTurnover || []).map((item, i) => (
+                    (analytics?.bestSellers || []).map((item, i) => (
                       <HBar
                         key={item.name}
                         label={item.name}
-                        value={item.turnover}
-                        max={100}
+                        value={item.sold90d}
+                        max={analytics?.bestSellers?.[0]?.sold90d || 1}
                         color={
                           [C.violet, C.indigo, C.teal, C.emerald, C.sky][i % 5]
                         }
-                        sublabel="%"
+                        sublabel={`units · ${item.perWeek}/wk`}
                       />
                     ))
                   )}
@@ -1901,7 +1944,7 @@ const PredictiveAnalytics = () => {
                   </svg>
                 }
                 title="Restock Recommendations"
-                subtitle="Predictive suggestions based on stock vs. usage trends"
+                subtitle="Based on actual sales velocity from POS — items projected to run out soon"
               />
               {loading ? (
                 <div
@@ -1919,12 +1962,8 @@ const PredictiveAnalytics = () => {
                     gap: 12,
                   }}
                 >
-                  {(analytics?.lowStock || []).slice(0, 6).map((item) => {
-                    const isCritical = item.stock <= (item.reorder_level || 10);
-                    const suggested = Math.max(
-                      1,
-                      (item.reorder_level || 10) * 2 - item.stock,
-                    );
+                  {(analytics?.restockNeeded || []).slice(0, 6).map((item) => {
+                    const isCritical = item.daysLeft <= 7;
                     return (
                       <div
                         key={item.id}
@@ -1960,7 +1999,19 @@ const PredictiveAnalytics = () => {
                                 color: "#64748b",
                               }}
                             >
-                              Current: {item.stock} units
+                              Current: {item.stock} units · {item.perWeek}/wk
+                              sold
+                            </p>
+                            <p
+                              style={{
+                                margin: "2px 0 0",
+                                fontSize: 11,
+                                fontWeight: 700,
+                                color: isCritical ? C.rose : C.amber,
+                              }}
+                            >
+                              ~{item.daysLeft} day
+                              {item.daysLeft === 1 ? "" : "s"} until stockout
                             </p>
                           </div>
                           <div style={{ textAlign: "right" }}>
@@ -1981,14 +2032,14 @@ const PredictiveAnalytics = () => {
                                 color: isCritical ? C.rose : C.amber,
                               }}
                             >
-                              {suggested}
+                              {item.suggestedQty}
                             </p>
                           </div>
                         </div>
                       </div>
                     );
                   })}
-                  {(analytics?.lowStock || []).length === 0 && (
+                  {(analytics?.restockNeeded || []).length === 0 && (
                     <div
                       style={{
                         gridColumn: "1 / -1",
