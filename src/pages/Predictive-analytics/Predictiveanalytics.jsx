@@ -517,6 +517,12 @@ const genSuggestions = (type, ctx) => {
         `Open 1–2 more appointment slots per week to match the +${ctx.growth}% patient growth.`,
         `Review vet/staff capacity against the growth trend for next month.`,
       ];
+    case "walkinRush":
+      return [
+        `Station an extra receptionist or triage nurse around ${ctx.hourLabel} to manage walk-in queues.`,
+        `Set up a queue/ticket system for walk-ins to reduce perceived wait time at ${ctx.hourLabel}.`,
+        `Communicate expected wait times to walk-in clients arriving around ${ctx.hourLabel}.`,
+      ];
     default:
       return [];
   }
@@ -779,6 +785,28 @@ const PredictiveAnalytics = () => {
       if (idx !== undefined) hourBuckets[idx]++;
     });
 
+    /* --- walk-in visits by hour, from actual arrival timestamps --- */
+    const walkinHourBuckets = Array(8).fill(0);
+    const WALKIN_SLOT_MAP = {
+      8: 0,
+      9: 1,
+      10: 2,
+      11: 3,
+      13: 4,
+      14: 5,
+      15: 6,
+      16: 7,
+    };
+    walkins.forEach((w) => {
+      const d = new Date(w.arrived_at);
+      if (isNaN(d)) return;
+      const idx = WALKIN_SLOT_MAP[d.getHours()];
+      if (idx !== undefined) walkinHourBuckets[idx]++;
+    });
+    const walkinPeakHourIdx = walkinHourBuckets.some((v) => v > 0)
+      ? walkinHourBuckets.indexOf(Math.max(...walkinHourBuckets))
+      : -1;
+
     /* --- visits by month (last 3 months) --- */
     const monthVisits = [0, 0, 0];
     const monthLabels = [-2, -1, 0].map((o) => {
@@ -987,6 +1015,31 @@ const PredictiveAnalytics = () => {
         }),
       });
     }
+    if (walkinPeakHourIdx !== -1) {
+      insights.push({
+        icon: (
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+          </svg>
+        ),
+        title: `Walk-In Rush Hour: ${HOUR_LABELS[walkinPeakHourIdx]}`,
+        body: `Walk-ins cluster heavily around ${HOUR_LABELS[walkinPeakHourIdx]}. Expect longer wait times and possible front-desk overcrowding during this window.`,
+        color: C.rose,
+        action: "Prep front desk →",
+        type: "walkinRush",
+        suggestions: genSuggestions("walkinRush", {
+          hourLabel: HOUR_LABELS[walkinPeakHourIdx],
+        }),
+      });
+    }
     if (criticalStock.length > 0) {
       insights.push({
         icon: (
@@ -1076,9 +1129,81 @@ const PredictiveAnalytics = () => {
       });
     }
 
+    /* --- branch comparison: break "All Branches" out per-branch instead of only combining --- */
+    let branchComparison = [];
+    if (seeAllBranches && branches.length > 0) {
+      branchComparison = branches.map((b) => {
+        const bAppts = appts.filter((a) => a.branch_id === b.id);
+        const bWalkins = walkins.filter((w) => w.branch_id === b.id);
+        const bInv = invNorm.filter((i) => i.branch_id === b.id);
+        const bPatients = patients.filter((p) => p.branch_id === b.id);
+
+        const bDow = Array(7).fill(0);
+        bAppts.forEach((a) => {
+          const d = new Date(a.date);
+          if (!isNaN(d)) bDow[d.getDay()]++;
+        });
+        bWalkins.forEach((w) => {
+          const d = new Date(w.arrived_at);
+          if (!isNaN(d)) bDow[d.getDay()]++;
+        });
+        const bPeakDow = bDow.indexOf(Math.max(...bDow));
+        const bTotalVisits = bAppts.length + bWalkins.length;
+
+        const bLowStock = bInv.filter(
+          (i) => i.stock <= (i.reorder_level || 10),
+        );
+
+        // predicted problems + suggested solutions, per branch
+        const problems = [];
+        if (bLowStock.length > 0) {
+          problems.push({
+            issue: `${bLowStock.length} item${bLowStock.length > 1 ? "s" : ""} below reorder level`,
+            suggestion: `Reorder ${bLowStock
+              .slice(0, 3)
+              .map((i) => i.name)
+              .join(", ")}${bLowStock.length > 3 ? " and more" : ""} soon.`,
+            color: C.rose,
+          });
+        }
+        if (bTotalVisits === 0) {
+          problems.push({
+            issue: "No recorded visits in the last 90 days",
+            suggestion:
+              "Confirm this branch is active and staffed, or consider local promotions to drive visits.",
+            color: C.amber,
+          });
+        } else if (
+          Math.max(...bDow) > 0 &&
+          Math.max(...bDow) / bTotalVisits > 0.35
+        ) {
+          problems.push({
+            issue: `Visits are heavily concentrated on ${DAYS[bPeakDow]}s`,
+            suggestion: `Add extra staff on ${DAYS[bPeakDow]}s, or run promotions on slower days to balance load.`,
+            color: C.indigo,
+          });
+        }
+
+        return {
+          id: b.id,
+          name: b.name,
+          totalAppts: bAppts.length,
+          totalWalkins: bWalkins.length,
+          totalVisits: bTotalVisits,
+          totalPatients: bPatients.length,
+          peakDay: DAYS[bPeakDow],
+          lowStockCount: bLowStock.length,
+          problems,
+        };
+      });
+    }
+
     setAnalytics({
       dowAppt,
       hourBuckets,
+      walkinHourBuckets,
+      walkinPeakHourIdx,
+      branchComparison,
       HOUR_LABELS,
       monthVisits,
       monthLabels,
@@ -1105,7 +1230,16 @@ const PredictiveAnalytics = () => {
       peakDow,
       peakHour,
     });
-  }, [loading, appts, walkins, inventory, patients, transactions]);
+  }, [
+    loading,
+    appts,
+    walkins,
+    inventory,
+    patients,
+    transactions,
+    branches,
+    seeAllBranches,
+  ]);
 
   /* ── styles ── */
   const card = {
@@ -1168,7 +1302,7 @@ const PredictiveAnalytics = () => {
                         (b) => String(b.id) === String(branchFilter),
                       )?.name || "selected branch"
                     }`
-                  : "AI-assisted forecasting · patient trends · inventory intelligence — All Branches"
+                  : 'AI-assisted forecasting · patient trends · inventory intelligence — All Branches combined. Use "Compare Branches" for a per-branch breakdown.'
                 : "AI-assisted forecasting · patient trends · inventory intelligence"}
             </p>
           </div>
@@ -1253,6 +1387,29 @@ const PredictiveAnalytics = () => {
                   </svg>
                 ),
               },
+              ...(seeAllBranches
+                ? [
+                    {
+                      key: "compare",
+                      label: "Compare Branches",
+                      icon: (
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                        >
+                          <line x1="18" y1="20" x2="18" y2="10" />
+                          <line x1="12" y1="20" x2="12" y2="4" />
+                          <line x1="6" y1="20" x2="6" y2="14" />
+                        </svg>
+                      ),
+                    },
+                  ]
+                : []),
             ].map((t) => (
               <button
                 key={t.key}
@@ -2346,6 +2503,206 @@ const PredictiveAnalytics = () => {
                 </div>
               )}
             </div>
+          </div>
+        )}
+        {tab === "compare" && seeAllBranches && (
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+              gap: 16,
+              alignItems: "start",
+            }}
+          >
+            <div
+              className="pa-card"
+              style={{ ...card, gridColumn: "1 / -1", animationDelay: "0.1s" }}
+            >
+              <SectionHeader
+                icon={
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                  >
+                    <line x1="18" y1="20" x2="18" y2="10" />
+                    <line x1="12" y1="20" x2="12" y2="4" />
+                    <line x1="6" y1="20" x2="6" y2="14" />
+                  </svg>
+                }
+                title="Total Visits by Branch"
+                subtitle="Appointments + walk-ins over the last 90 days"
+              />
+              {loading ? (
+                <Skel h={140} />
+              ) : (analytics?.branchComparison || []).length === 0 ? (
+                <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>
+                  No branches to compare.
+                </p>
+              ) : (
+                <BarChart
+                  labels={(analytics?.branchComparison || []).map(
+                    (b) => b.name,
+                  )}
+                  values={(analytics?.branchComparison || []).map(
+                    (b) => b.totalVisits,
+                  )}
+                  color={C.violet}
+                  height={140}
+                />
+              )}
+            </div>
+
+            {!loading &&
+              (analytics?.branchComparison || []).map((b, i) => (
+                <div
+                  key={b.id}
+                  className="pa-card"
+                  style={{ ...card, animationDelay: `${0.15 + i * 0.05}s` }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "flex-start",
+                      marginBottom: 10,
+                    }}
+                  >
+                    <h3
+                      style={{
+                        margin: 0,
+                        fontSize: 15,
+                        fontWeight: 800,
+                        color: "var(--text)",
+                      }}
+                    >
+                      {b.name}
+                    </h3>
+                    <span
+                      style={{
+                        fontSize: 10,
+                        fontWeight: 700,
+                        color: C.violet,
+                        background: `${C.violet}15`,
+                        borderRadius: 20,
+                        padding: "2px 8px",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      Peak: {b.peakDay}
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(3, 1fr)",
+                      gap: 8,
+                      marginBottom: 12,
+                    }}
+                  >
+                    {[
+                      ["Appts", b.totalAppts],
+                      ["Walk-ins", b.totalWalkins],
+                      ["New Patients", b.totalPatients],
+                    ].map(([lbl, val]) => (
+                      <div
+                        key={lbl}
+                        style={{
+                          textAlign: "center",
+                          padding: "8px 4px",
+                          borderRadius: 8,
+                          background: "var(--bg)",
+                        }}
+                      >
+                        <p
+                          style={{
+                            margin: "0 0 2px",
+                            fontSize: 16,
+                            fontWeight: 900,
+                            color: "var(--text)",
+                          }}
+                        >
+                          {val}
+                        </p>
+                        <p style={{ margin: 0, fontSize: 9, color: "#94a3b8" }}>
+                          {lbl}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  {b.problems.length === 0 ? (
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        fontSize: 12,
+                        color: C.emerald,
+                        fontWeight: 600,
+                      }}
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
+                        <circle cx="12" cy="12" r="10" />
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                      No predicted problems right now
+                    </div>
+                  ) : (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 8,
+                      }}
+                    >
+                      {b.problems.map((p, pi) => (
+                        <div
+                          key={pi}
+                          style={{
+                            borderRadius: 10,
+                            border: `1px solid ${p.color}30`,
+                            background: `${p.color}08`,
+                            padding: "8px 10px",
+                          }}
+                        >
+                          <p
+                            style={{
+                              margin: "0 0 3px",
+                              fontSize: 12,
+                              fontWeight: 700,
+                              color: p.color,
+                            }}
+                          >
+                            ⚠ {p.issue}
+                          </p>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: 11,
+                              color: "var(--muted)",
+                              lineHeight: 1.5,
+                            }}
+                          >
+                            Suggestion: {p.suggestion}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
           </div>
         )}
       </div>

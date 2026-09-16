@@ -1536,6 +1536,9 @@ const AdminSecurity = () => {
       fetchPwdRequests();
       fetchCustomRoles();
       fetchLogs();
+      if (canSeeAllBranches) {
+        syncMissingOwnerAccounts();
+      }
     }
   }, [
     userLoading,
@@ -1545,7 +1548,7 @@ const AdminSecurity = () => {
     fetchPwdRequests,
     fetchCustomRoles,
     fetchBranches,
-  ]);
+  ]); // eslint-disable-line
 
   useEffect(() => {
     if (canSeeAllBranches) {
