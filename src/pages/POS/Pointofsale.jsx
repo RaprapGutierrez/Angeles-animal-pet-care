@@ -932,6 +932,34 @@ const PointOfSale = () => {
   const discountAmt = subtotal * (Number(discount) / 100);
   const total = subtotal - discountAmt;
 
+  // Auto-create a reorder request once a sale drops an item at/below its
+  // threshold — skips if one is already Pending for this item.
+  const maybeCreateReorderRequest = async (product, newQty) => {
+    const threshold = product.threshold ?? 10;
+    if (newQty > threshold) return;
+    const { data: existing } = await supabase
+      .from("reorder_requests")
+      .select("id")
+      .eq("item_id", product.id)
+      .eq("status", "Pending")
+      .maybeSingle();
+    if (existing) return;
+    await supabase.from("reorder_requests").insert([
+      {
+        item_id: product.id,
+        item_name: product.name,
+        qty_at_trigger: newQty,
+        threshold,
+        branch_id: product.branch_id ?? user?.branchId ?? null,
+      },
+    ]);
+    logActivity(
+      user,
+      "Reorder request created",
+      `${product.name} hit ${newQty} (threshold ${threshold})`,
+    );
+  };
+
   const processPayment = async () => {
     if (cart.length === 0) {
       showToast("Cart is empty", "error");
@@ -1001,10 +1029,12 @@ const PointOfSale = () => {
       if (!item.isCustom) {
         const product = products.find((p) => p.id === item.id);
         if (product) {
+          const newQty = Math.max(0, product.qty - item.qty);
           await supabase
             .from("inventory")
-            .update({ qty: Math.max(0, product.qty - item.qty) })
+            .update({ qty: newQty })
             .eq("id", item.id);
+          await maybeCreateReorderRequest(product, newQty);
         }
       }
     }

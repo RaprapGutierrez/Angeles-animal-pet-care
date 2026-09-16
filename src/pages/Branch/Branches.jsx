@@ -892,6 +892,21 @@ const formatPhMobile = (digits) => {
 
 const isValidPhMobile = (digits) => /^09\d{9}$/.test((digits || "").trim());
 
+// ── Forward-geocode a typed address into lat/lng using OpenStreetMap's free
+// Nominatim API — lets the person auto-fill coordinates from the Address
+// field instead of having to look them up and type them in manually. ──
+const geocodeAddress = async (address) => {
+  const res = await fetch(
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(address)}&limit=1&countrycodes=ph`,
+    { headers: { Accept: "application/json" } },
+  );
+  if (!res.ok) throw new Error("Geocoding request failed");
+  const data = await res.json();
+  if (!data || data.length === 0)
+    throw new Error("No match found for that address");
+  return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+};
+
 // ── Module Selector sub-component ──
 const ModuleSelector = ({ modules, onChange }) => {
   const [activeRole, setActiveRole] = useState("admin");
@@ -1455,6 +1470,8 @@ const Branches = () => {
   const [branchAccounts, setBranchAccounts] = useState([]); // real accounts already linked to an existing branch being edited
   const [loadingBranchAccounts, setLoadingBranchAccounts] = useState(false);
   const [creatingBranchAccount, setCreatingBranchAccount] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
+  const [geocodeStatus, setGeocodeStatus] = useState(null); // {type:'ok'|'error', message}
 
   const showToast = (message, type = "success") => {
     const id = ++toastIdRef.current;
@@ -1707,44 +1724,39 @@ const Branches = () => {
       return;
     }
 
-    // Editing an existing branch — create the account for real right away,
-    // instead of staging it as a draft that only applies once the branch
-    // form itself is saved.
+    // Editing an existing branch — create the account for real right away.
+    // Goes through the same secure serverless function AdminSecurity.jsx
+    // uses (service_role key lives server-side only) rather than calling
+    // supabaseAdmin.auth.admin.createUser directly from the browser, which
+    // fails with a permissions error and silently creates nothing.
     if (editBranch) {
       setCreatingBranchAccount(true);
       try {
-        const { data: authData, error: authError } =
-          await supabaseAdmin.auth.admin.createUser({
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+
+        const res = await fetch("/.netlify/functions/admin-user-management", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${session?.access_token}`,
+          },
+          body: JSON.stringify({
+            action: "create",
             email: accountForm.email.trim().toLowerCase(),
             password: accountForm.password,
-            email_confirm: true,
-            user_metadata: {
-              first_name: accountForm.first_name.trim(),
-              last_name: accountForm.last_name.trim(),
-              role: accountForm.role,
-              sex: accountForm.sex || null,
-              phone_number: accountForm.phone_number || null,
-              branch_id: editBranch.id,
-            },
-          });
-        if (authError) throw new Error(authError.message);
-
-        const { error: profileError } = await supabaseAdmin
-          .from("profiles")
-          .insert([
-            {
-              id: authData.user.id,
-              first_name: accountForm.first_name.trim(),
-              last_name: accountForm.last_name.trim(),
-              sex: accountForm.sex || null,
-              phone: accountForm.phone_number || null,
-              email: accountForm.email.trim().toLowerCase(),
-              role: accountForm.role,
-              status: "Active",
-              branch_id: editBranch.id,
-            },
-          ]);
-        if (profileError) throw new Error(profileError.message);
+            first_name: accountForm.first_name.trim(),
+            last_name: accountForm.last_name.trim(),
+            role: accountForm.role,
+            branch_id: editBranch.id,
+            sex: accountForm.sex || null,
+            status: "Active",
+            phone_number: accountForm.phone_number || null,
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok) throw new Error(result.error || "Account creation failed");
 
         showToast(
           `Account created for ${accountForm.first_name} ${accountForm.last_name}`,
@@ -1860,40 +1872,35 @@ const Branches = () => {
       }
 
       try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
         const created = [];
         for (const acct of accountDrafts) {
-          const { data: authData, error: authError } =
-            await supabaseAdmin.auth.admin.createUser({
+          const res = await fetch("/.netlify/functions/admin-user-management", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session?.access_token}`,
+            },
+            body: JSON.stringify({
+              action: "create",
               email: acct.email,
               password: acct.password,
-              email_confirm: true,
-              user_metadata: {
-                first_name: acct.first_name,
-                last_name: acct.last_name,
-                role: acct.role,
-                sex: acct.sex,
-                phone_number: acct.phone_number,
-                branch_id: inserted.id,
-              },
-            });
-          if (authError) throw new Error(authError.message);
-
-          const { error: profileError } = await supabaseAdmin
-            .from("profiles")
-            .insert([
-              {
-                id: authData.user.id,
-                first_name: acct.first_name,
-                last_name: acct.last_name,
-                sex: acct.sex,
-                phone: acct.phone_number,
-                email: acct.email,
-                role: acct.role,
-                status: "Active",
-                branch_id: inserted.id,
-              },
-            ]);
-          if (profileError) throw new Error(profileError.message);
+              first_name: acct.first_name,
+              last_name: acct.last_name,
+              role: acct.role,
+              branch_id: inserted.id,
+              sex: acct.sex || null,
+              status: "Active",
+              phone_number: acct.phone_number || null,
+            }),
+          });
+          const result = await res.json();
+          if (!res.ok)
+            throw new Error(
+              result.error || `Failed to create account for ${acct.email}`,
+            );
 
           created.push({
             email: acct.email,
@@ -4031,9 +4038,84 @@ const Branches = () => {
                   />
                 </div>
                 <div className="form-group form-full">
-                  <label>
-                    Address <span style={{ color: "#dc2626" }}>*</span>
-                  </label>
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: 5,
+                    }}
+                  >
+                    <label style={{ margin: 0 }}>
+                      Address <span style={{ color: "#dc2626" }}>*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!form.address.trim()) {
+                          setGeocodeStatus({
+                            type: "error",
+                            message: "Type an address first.",
+                          });
+                          return;
+                        }
+                        setGeocoding(true);
+                        setGeocodeStatus(null);
+                        try {
+                          const { lat, lng } = await geocodeAddress(
+                            form.address,
+                          );
+                          setFormDirty(true);
+                          setForm((f) => ({
+                            ...f,
+                            lat: lat.toFixed(6),
+                            lng: lng.toFixed(6),
+                          }));
+                          setGeocodeStatus({
+                            type: "ok",
+                            message:
+                              "Coordinates filled in. Please double-check the pin is correct.",
+                          });
+                        } catch (err) {
+                          setGeocodeStatus({
+                            type: "error",
+                            message:
+                              err.message ||
+                              "Couldn't find coordinates for that address — enter them manually.",
+                          });
+                        }
+                        setGeocoding(false);
+                      }}
+                      disabled={geocoding}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: 5,
+                        background: "none",
+                        border: "1px solid #c7d2fe",
+                        color: "#4338ca",
+                        borderRadius: 20,
+                        padding: "3px 10px",
+                        fontSize: 11,
+                        fontWeight: 700,
+                        cursor: geocoding ? "default" : "pointer",
+                        fontFamily: "inherit",
+                      }}
+                    >
+                      <svg
+                        width="11"
+                        height="11"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2.5"
+                        strokeLinecap="round"
+                      >
+                        <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+                      </svg>
+                      {geocoding ? "Locating…" : "Locate from address"}
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={form.address}
@@ -4043,6 +4125,18 @@ const Branches = () => {
                     }}
                     placeholder="Full address"
                   />
+                  {geocodeStatus && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        margin: "4px 0 0",
+                        color:
+                          geocodeStatus.type === "ok" ? "#16a34a" : "#dc2626",
+                      }}
+                    >
+                      {geocodeStatus.message}
+                    </p>
+                  )}
                 </div>
                 <div className="form-group">
                   <label>

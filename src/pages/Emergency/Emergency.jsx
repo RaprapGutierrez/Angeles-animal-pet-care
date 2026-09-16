@@ -1153,6 +1153,24 @@ const isLocationTooFar = (branch, province, city) => {
   const dist = distanceToBranchKm(branch, province, city);
   return dist !== null && dist > MAX_BRANCH_DISTANCE_KM;
 };
+
+// ── Auto-suggest the nearest branch for a given location. This checks
+// distance against every branch (not just ones in the same province), so a
+// Pampanga address naturally resolves to the closest Pampanga branch. ──
+const findNearestBranch = (province, city) => {
+  const locCoords = getLocationCoords(province, city);
+  if (!locCoords) return null;
+  let best = null;
+  let bestDist = Infinity;
+  Object.entries(BRANCH_COORDS).forEach(([branch, coords]) => {
+    const d = haversineKm(locCoords, coords);
+    if (d < bestDist) {
+      bestDist = d;
+      best = branch;
+    }
+  });
+  return best;
+};
 const OTHER_LOCATION = "__other__";
 const OTHER_TYPE = "Other";
 const STATUS_COLORS = {
@@ -1920,12 +1938,16 @@ const EmergencyForm = memo(
             const { latitude, longitude } = pos.coords;
             const result = await reverseGeocode(latitude, longitude);
             const prefix = guestMode ? "guest_" : "location_";
+            const nearestBranch = result.matched
+              ? findNearestBranch(result.province, result.city)
+              : null;
             setForm((f) => ({
               ...f,
               [`${prefix}province`]: result.province || f[`${prefix}province`],
               [`${prefix}city`]: result.city || f[`${prefix}city`],
               [`${prefix}barangay`]: result.barangay || f[`${prefix}barangay`],
               [`${prefix}street`]: result.street || f[`${prefix}street`],
+              branch: nearestBranch || f.branch,
             }));
             setLocateStatus(
               result.matched
@@ -2402,13 +2424,16 @@ const EmergencyForm = memo(
                         value={form.guest_city}
                         onChange={(val) => {
                           set("guest_city", val);
-                          set("guest_province", CITY_TO_PROVINCE[val] || "");
+                          const prov = CITY_TO_PROVINCE[val] || "";
+                          set("guest_province", prov);
                           if (
                             !BARANGAYS_BY_CITY[val]?.includes(
                               form.guest_barangay,
                             )
                           )
                             set("guest_barangay", "");
+                          const nearest = findNearestBranch(prov, val);
+                          if (nearest) set("branch", nearest);
                         }}
                         options={(form.guest_province
                           ? [
@@ -2449,9 +2474,12 @@ const EmergencyForm = memo(
                           set("guest_barangay", val);
                         } else {
                           const [brgy, city] = val.split("||");
+                          const prov = CITY_TO_PROVINCE[city] || "";
                           set("guest_barangay", brgy);
                           set("guest_city", city);
-                          set("guest_province", CITY_TO_PROVINCE[city] || "");
+                          set("guest_province", prov);
+                          const nearest = findNearestBranch(prov, city);
+                          if (nearest) set("branch", nearest);
                         }
                       }}
                       options={
@@ -2870,13 +2898,16 @@ const EmergencyForm = memo(
                       value={form.location_city}
                       onChange={(val) => {
                         set("location_city", val);
-                        set("location_province", CITY_TO_PROVINCE[val] || "");
+                        const prov = CITY_TO_PROVINCE[val] || "";
+                        set("location_province", prov);
                         if (
                           !BARANGAYS_BY_CITY[val]?.includes(
                             form.location_barangay,
                           )
                         )
                           set("location_barangay", "");
+                        const nearest = findNearestBranch(prov, val);
+                        if (nearest) set("branch", nearest);
                       }}
                       options={(form.location_province
                         ? [
@@ -2917,9 +2948,12 @@ const EmergencyForm = memo(
                         set("location_barangay", val);
                       } else {
                         const [brgy, city] = val.split("||");
+                        const prov = CITY_TO_PROVINCE[city] || "";
                         set("location_barangay", brgy);
                         set("location_city", city);
-                        set("location_province", CITY_TO_PROVINCE[city] || "");
+                        set("location_province", prov);
+                        const nearest = findNearestBranch(prov, city);
+                        if (nearest) set("branch", nearest);
                       }
                     }}
                     options={

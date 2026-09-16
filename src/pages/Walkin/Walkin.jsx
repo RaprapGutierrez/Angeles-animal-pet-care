@@ -941,6 +941,32 @@ const Walkin = () => {
     setRooms(data || []);
   }, [user, seeAllBranches, branchFilter]);
 
+  // Keep the rooms table in sync with walk-in room assignments: occupying a
+  // room here should reflect in Room Availability, and releasing a walk-in's
+  // room should free it back up (into Cleaning, matching the discharge flow).
+  const syncRoomOccupied = async (roomNumber, patientName, branchId) => {
+    if (!roomNumber) return;
+    await supabase
+      .from("rooms")
+      .update({ status: "Occupied", patient: patientName || "" })
+      .eq("number", roomNumber)
+      .eq("branch_id", branchId ?? user?.branchId ?? null);
+  };
+
+  const releaseRoomFromWalkin = async (roomNumber, branchId) => {
+    if (!roomNumber) return;
+    await supabase
+      .from("rooms")
+      .update({
+        status: "Cleaning",
+        patient: "",
+        cleaning_started_at: new Date().toISOString(),
+      })
+      .eq("number", roomNumber)
+      .eq("branch_id", branchId ?? user?.branchId ?? null)
+      .eq("status", "Occupied"); // don't touch rooms already freed/reassigned
+  };
+
   // ── Close dropdown on outside click ──────────────────────────────────────
   useEffect(() => {
     const h = (e) => {
@@ -1497,6 +1523,22 @@ const Walkin = () => {
         showAlert("Error updating: " + error.message, "Error");
         return;
       }
+
+      // Room sync: release the old room if it changed or the visit ended;
+      // occupy the (possibly new) room if the visit is still active.
+      const wasReleased = payload.status !== "Waiting";
+      const roomChanged = editItem.room && editItem.room !== payload.room;
+      if (editItem.room && (wasReleased || roomChanged)) {
+        await releaseRoomFromWalkin(editItem.room, editItem.branch_id);
+      }
+      if (payload.room && payload.status === "Waiting") {
+        await syncRoomOccupied(
+          payload.room,
+          payload.patient,
+          editItem.branch_id,
+        );
+      }
+
       closeModal();
       logActivity(
         user,
@@ -1522,6 +1564,9 @@ const Walkin = () => {
       setSaving(false);
       showAlert("Error saving: " + error.message, "Error");
       return;
+    }
+    if (payload.room) {
+      await syncRoomOccupied(payload.room, payload.patient, user?.branchId);
     }
     await upsertPatient();
 
@@ -1606,7 +1651,14 @@ const Walkin = () => {
       .from("walkins")
       .update({ status })
       .eq("id", id);
-    if (error) showAlert("Error updating status: " + error.message, "Error");
+    if (error) {
+      showAlert("Error updating status: " + error.message, "Error");
+      return;
+    }
+    if (status !== "Waiting") {
+      const w = walkins.find((x) => x.id === id);
+      if (w?.room) await releaseRoomFromWalkin(w.room, w.branch_id);
+    }
   };
 
   const deleteWalkin = async (id) => {

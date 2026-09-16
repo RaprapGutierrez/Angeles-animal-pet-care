@@ -3021,7 +3021,7 @@ const Inventory = () => {
       supabase
         .from("inventory")
         .select(
-          "id, name, category, qty, threshold, price, expiry, supplier, is_low_stock, unit, image_url",
+          "id, name, category, qty, threshold, price, expiry, supplier, is_low_stock, is_expired, unit, image_url",
         )
         .is("deleted_at", null),
     );
@@ -3113,6 +3113,96 @@ const Inventory = () => {
       }),
     [itemsLite],
   );
+
+  // Persistent automation sweep: logs the audit trail once (via DB flags,
+  // not session memory), flags expired items as unsellable, and opens a
+  // reorder request the first time an item dips below threshold.
+  const runInventoryAutomation = useCallback(async () => {
+    if (!user || !isAdminRole) return;
+    const { data: liveItems, error } = await applyFilterRef.current(
+      supabase
+        .from("inventory")
+        .select(
+          "id, name, qty, threshold, unit, expiry, is_low_stock, is_expired, low_stock_alerted_at, expiry_alerted_at, branch_id",
+        )
+        .is("deleted_at", null),
+    );
+    if (error || !liveItems) return;
+    const today = new Date().toISOString().split("T")[0];
+
+    for (const i of liveItems) {
+      // Newly low stock → log + open a reorder request (skip if one's already pending)
+      if (
+        !NO_STOCK_CATEGORIES.includes(i.category) &&
+        i.is_low_stock &&
+        !i.low_stock_alerted_at
+      ) {
+        await supabase
+          .from("inventory")
+          .update({ low_stock_alerted_at: new Date().toISOString() })
+          .eq("id", i.id);
+        logActivity(
+          user,
+          "Low stock detected",
+          `${i.name} is at ${i.qty} ${i.unit || "pcs"} (threshold ${i.threshold ?? 10})`,
+        );
+        const { data: existingReorder } = await supabase
+          .from("reorder_requests")
+          .select("id")
+          .eq("item_id", i.id)
+          .eq("status", "Pending")
+          .maybeSingle();
+        if (!existingReorder) {
+          await supabase.from("reorder_requests").insert([
+            {
+              item_id: i.id,
+              item_name: i.name,
+              qty_at_trigger: i.qty,
+              threshold: i.threshold,
+              branch_id: i.branch_id || null,
+            },
+          ]);
+          logActivity(
+            user,
+            "Reorder request created",
+            `Auto-generated reorder request for ${i.name}`,
+          );
+        }
+      }
+      // Restocked above threshold → reset the flag so a future dip re-alerts
+      if (!i.is_low_stock && i.low_stock_alerted_at) {
+        await supabase
+          .from("inventory")
+          .update({ low_stock_alerted_at: null })
+          .eq("id", i.id);
+      }
+      // Newly expired → log + flag unsellable
+      if (i.expiry && i.expiry < today && !i.is_expired) {
+        await supabase
+          .from("inventory")
+          .update({
+            is_expired: true,
+            expiry_alerted_at: new Date().toISOString(),
+          })
+          .eq("id", i.id);
+        logActivity(
+          user,
+          "Item flagged unsellable",
+          `${i.name} expired on ${i.expiry} and was auto-flagged as unsellable`,
+        );
+      }
+    }
+  }, [user, isAdminRole]);
+
+  useEffect(() => {
+    if (userLoading || !user || !isAdminRole) return;
+    runInventoryAutomation();
+    const interval = setInterval(
+      () => runInventoryAutomation(),
+      15 * 60 * 1000,
+    );
+    return () => clearInterval(interval);
+  }, [userLoading, user, isAdminRole, runInventoryAutomation]);
 
   // Items are already filtered, sorted, and paginated server-side in fetchItems().
   const filtered = items;
@@ -4788,7 +4878,9 @@ const Inventory = () => {
                                             fontWeight: 700,
                                           }}
                                         >
-                                          EXPIRED
+                                          {item.is_expired
+                                            ? "EXPIRED — UNSELLABLE"
+                                            : "EXPIRED"}
                                         </div>
                                       )}
                                     </div>

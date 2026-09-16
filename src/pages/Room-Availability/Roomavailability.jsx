@@ -13,6 +13,7 @@ const Skel = ({ w = "100%", h = 16 }) => (
 );
 
 const statusKey = (s) => (s || "available").toLowerCase().replace(/\s+/g, "");
+const CLEANING_DURATION_MS = 15 * 60 * 1000; // 15 minutes in Cleaning before auto-Available
 const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, "");
 
 const STATUS_LABEL = {
@@ -2201,6 +2202,7 @@ const RoomAvailability = () => {
     if (!error) {
       const list = data || [];
       await autoDischargeExpiredRooms(list);
+      await autoAdvanceCleaningRooms(list);
       setRooms(list);
     } else {
       console.error("fetchRooms error:", error.message);
@@ -2257,23 +2259,50 @@ const RoomAvailability = () => {
         !room.patient || !room.patient.toString().trim()
           ? "no patient assigned"
           : "discharge date reached";
-      room.status = "Available";
+      room.status = "Cleaning";
       room.patient = "";
       room.diagnosis = "";
       room.discharge_date = null;
+      room.cleaning_started_at = now.toISOString();
       await supabase
         .from("rooms")
         .update({
-          status: "Available",
+          status: "Cleaning",
           patient: "",
           diagnosis: "",
           discharge_date: null,
+          cleaning_started_at: now.toISOString(),
         })
         .eq("id", room.id);
       logActivity(
         user,
         "Auto-released room",
-        `Room ${room.number} automatically set to Available (${reason})`,
+        `Room ${room.number} automatically moved to Cleaning (${reason})`,
+      );
+    }
+  };
+
+  // Automatically advance rooms out of Cleaning once the cleaning window has elapsed
+  const autoAdvanceCleaningRooms = async (list) => {
+    const now = Date.now();
+    const done = (list || []).filter(
+      (r) =>
+        r.status === "Cleaning" &&
+        r.cleaning_started_at &&
+        now - new Date(r.cleaning_started_at).getTime() >= CLEANING_DURATION_MS,
+    );
+    if (done.length === 0) return;
+    for (const room of done) {
+      room.status = "Available";
+      room.cleaning_started_at = null;
+      await supabase
+        .from("rooms")
+        .update({ status: "Available", cleaning_started_at: null })
+        .eq("id", room.id);
+      logActivity(
+        user,
+        "Auto-released room",
+        `Room ${room.number} automatically set to Available (cleaning complete)`,
       );
     }
   };

@@ -3310,7 +3310,9 @@ const PatientRecord = () => {
     let q = supabase
       .from(T_PATIENTS)
       .select("*", { count: "exact" })
-      .is("deleted_at", null);
+      .is("deleted_at", null)
+      .not("owner", "is", null)
+      .neq("owner", "");
     if (!seeAllBranches && user?.branchId) q = q.eq("branch_id", user.branchId);
     if (seeAllBranches && branchFilter) q = q.eq("branch_id", branchFilter);
     if (statusFilter === "Critical") q = q.eq("health", "Critical");
@@ -4021,6 +4023,8 @@ const PatientRecord = () => {
     }
     if (ownerStep === OWNER_STEPS.SEARCH && !selectedOwnerProfile)
       errs.owner_search = "Please select a customer account";
+    if (ownerStep === OWNER_STEPS.ASK)
+      errs.owner_first = "Please select an owner option before continuing";
     if (form.contact && form.contact.length !== 11)
       errs.contact = "Contact number must be 11 digits";
     return errs;
@@ -4342,6 +4346,7 @@ const PatientRecord = () => {
 
   const isEditPatientFormValid = () => {
     if (!editPatientForm.name.trim() || !editPatientForm.species) return false;
+    if (!editPatientForm.owner.trim()) return false;
     if (editPatientForm.contact && editPatientForm.contact.length !== 11)
       return false;
     return true;
@@ -10497,7 +10502,9 @@ const PatientRecord = () => {
                   }}
                 />
                 <div className="form-group">
-                  <label>Owner Name</label>
+                  <label>
+                    Owner Name <span style={{ color: "#ef4444" }}>*</span>
+                  </label>
                   <input
                     type="text"
                     value={editPatientForm.owner}
@@ -10507,7 +10514,23 @@ const PatientRecord = () => {
                         owner: e.target.value,
                       })
                     }
+                    style={{
+                      borderColor: !editPatientForm.owner.trim()
+                        ? "#ef4444"
+                        : undefined,
+                    }}
                   />
+                  {!editPatientForm.owner.trim() && (
+                    <p
+                      style={{
+                        fontSize: 11,
+                        color: "#dc2626",
+                        margin: "4px 0 0",
+                      }}
+                    >
+                      Owner name is required.
+                    </p>
+                  )}
                 </div>
                 <div className="form-group">
                   <label>Owner Contact</label>

@@ -1829,6 +1829,47 @@ const Appointment = () => {
     view,
   ]);
 
+  const autoMarkMissed = useCallback(async () => {
+    const { data: overdue, error } = await supabase
+      .from("appointments")
+      .select("id, room")
+      .lt("date", today)
+      .in("status", ["Pending", "Confirmed"]);
+    if (error || !overdue || overdue.length === 0) return;
+
+    const ids = overdue.map((a) => a.id);
+    const { error: updateErr } = await supabase
+      .from("appointments")
+      .update({ status: "Missed" })
+      .in("id", ids);
+    if (updateErr) return;
+
+    const roomsToFree = overdue.filter((a) => a.room).map((a) => a.room);
+    if (roomsToFree.length > 0) {
+      await supabase
+        .from("rooms")
+        .update({ status: "Available", patient: "", diagnosis: "" })
+        .in("number", roomsToFree);
+    }
+
+    logActivity(
+      user,
+      "Auto-marked missed appointments",
+      `${ids.length} overdue appointment(s) marked as Missed`,
+    );
+  }, [user]);
+
+  useEffect(() => {
+    if (userLoading || !user) return;
+    if (isAdmin || isEmployee) autoMarkMissed();
+  }, [userLoading, user, isAdmin, isEmployee, autoMarkMissed]);
+
+  useEffect(() => {
+    if (userLoading || !user || !(isAdmin || isEmployee)) return;
+    const interval = setInterval(() => autoMarkMissed(), 15 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [userLoading, user, isAdmin, isEmployee, autoMarkMissed]);
+
   useEffect(() => {
     fetchAppts();
   }, [fetchAppts]);
