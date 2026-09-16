@@ -1712,7 +1712,7 @@ const PredictiveAnalytics = () => {
               alignItems: "start",
             }}
           >
-            {/* Critical stock */}
+            {/* Most bought — recommend to buy more */}
             <div
               className="pa-card"
               style={{ ...card, animationDelay: "0.1s" }}
@@ -1728,19 +1728,20 @@ const PredictiveAnalytics = () => {
                     strokeWidth="2.5"
                     strokeLinecap="round"
                   >
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                    <line x1="12" y1="9" x2="12" y2="13" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                    <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                   </svg>
                 }
-                title="Low & Critical Stock"
-                subtitle="Items at or near reorder level"
+                title="Most Bought Products"
+                subtitle="Top sellers from POS — recommended to restock more"
               />
               {loading ? (
                 <Skel h={200} />
               ) : (
                 <>
-                  {(analytics?.lowStock || []).length === 0 ? (
+                  {(analytics?.bestSellers || []).length === 0 ? (
                     <div
                       style={{
                         textAlign: "center",
@@ -1748,41 +1749,18 @@ const PredictiveAnalytics = () => {
                         color: "#94a3b8",
                       }}
                     >
-                      <div
-                        style={{
-                          marginBottom: 8,
-                          display: "flex",
-                          justifyContent: "center",
-                        }}
-                      >
-                        <svg
-                          width="32"
-                          height="32"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke={C.emerald}
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                        >
-                          <circle cx="12" cy="12" r="10" />
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      </div>
                       <p style={{ margin: 0, fontWeight: 600 }}>
-                        All stock levels healthy
+                        No sales data yet
                       </p>
                     </div>
                   ) : (
-                    (analytics?.lowStock || []).map((item) => {
-                      const pct = Math.max(
-                        0,
-                        Math.min(
-                          100,
-                          (item.stock / ((item.reorder_level || 10) * 2)) * 100,
-                        ),
+                    (analytics?.bestSellers || []).map((item, i) => {
+                      const buyMore = Math.max(
+                        1,
+                        Math.ceil(item.perWeek * 4 - item.stock),
                       );
-                      const isCritical =
-                        item.stock <= (item.reorder_level || 10);
+                      const runningLow =
+                        Number.isFinite(item.daysLeft) && item.daysLeft <= 14;
                       return (
                         <div key={item.id} style={{ marginBottom: 14 }}>
                           <div
@@ -1802,7 +1780,7 @@ const PredictiveAnalytics = () => {
                               >
                                 {item.name}
                               </span>
-                              {isCritical && (
+                              {runningLow && (
                                 <span
                                   style={{
                                     marginLeft: 6,
@@ -1814,7 +1792,7 @@ const PredictiveAnalytics = () => {
                                     padding: "1px 6px",
                                   }}
                                 >
-                                  CRITICAL
+                                  BUY MORE
                                 </span>
                               )}
                             </div>
@@ -1822,10 +1800,16 @@ const PredictiveAnalytics = () => {
                               style={{
                                 fontSize: 12,
                                 fontWeight: 700,
-                                color: isCritical ? C.rose : C.amber,
+                                color: [
+                                  C.violet,
+                                  C.indigo,
+                                  C.teal,
+                                  C.emerald,
+                                  C.sky,
+                                ][i % 5],
                               }}
                             >
-                              {item.stock} / {item.reorder_level || "—"}
+                              {item.sold90d} sold
                             </span>
                           </div>
                           <div
@@ -1840,8 +1824,20 @@ const PredictiveAnalytics = () => {
                               style={{
                                 height: "100%",
                                 borderRadius: 99,
-                                width: `${pct}%`,
-                                background: isCritical ? C.rose : C.amber,
+                                width: `${Math.min(
+                                  100,
+                                  (item.sold90d /
+                                    (analytics?.bestSellers?.[0]?.sold90d ||
+                                      1)) *
+                                    100,
+                                )}%`,
+                                background: [
+                                  C.violet,
+                                  C.indigo,
+                                  C.teal,
+                                  C.emerald,
+                                  C.sky,
+                                ][i % 5],
                                 transition: "width 0.6s ease",
                               }}
                             />
@@ -1853,8 +1849,8 @@ const PredictiveAnalytics = () => {
                               color: "#94a3b8",
                             }}
                           >
-                            {isCritical ? "Order immediately" : "Reorder soon"}{" "}
-                            · Reorder at {item.reorder_level || "N/A"}
+                            {item.perWeek}/wk sold · {item.stock} in stock ·
+                            recommend buying {buyMore} more
                           </p>
                         </div>
                       );
