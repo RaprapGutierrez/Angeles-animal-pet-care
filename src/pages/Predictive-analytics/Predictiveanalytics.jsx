@@ -877,13 +877,15 @@ const PredictiveAnalytics = () => {
       .slice(0, 5);
 
     const restockNeeded = salesVelocity
-      .filter((i) => Number.isFinite(i.daysLeft) && i.daysLeft <= 14)
+      .filter((i) => Number.isFinite(i.daysLeft) && i.daysLeft <= 21)
       .sort((a, b) => a.daysLeft - b.daysLeft)
-      .slice(0, 6)
-      .map((i) => ({
-        ...i,
-        suggestedQty: Math.max(1, Math.ceil(i.perWeek * 4 - i.stock)), // cover ~4 weeks of demand
-      }));
+      .slice(0, 8)
+      .map((i) => {
+        const suggestedQty = Math.max(1, Math.ceil(i.perWeek * 4 - i.stock)); // cover ~4 weeks of demand
+        const priority =
+          i.daysLeft <= 7 ? "Urgent" : i.daysLeft <= 14 ? "Soon" : "Plan ahead";
+        return { ...i, suggestedQty, priority };
+      });
 
     /* --- new patients trend --- */
     const walkinByMonth = [0, 0, 0];
@@ -1314,10 +1316,11 @@ const PredictiveAnalytics = () => {
                   spark: analytics?.patByMonth || [],
                 },
                 {
-                  label: "Low Stock Items",
-                  value: analytics?.lowStock?.length || 0,
+                  label: "Must-Buy Items",
+                  value: analytics?.restockNeeded?.length || 0,
                   delta: null,
-                  color: analytics?.lowStock?.length > 3 ? C.rose : C.amber,
+                  color:
+                    analytics?.restockNeeded?.length > 3 ? C.rose : C.amber,
                   spark: [],
                 },
               ].map((kpi, i) => (
@@ -1860,61 +1863,7 @@ const PredictiveAnalytics = () => {
               )}
             </div>
 
-            {/* Inventory turnover */}
-            <div
-              className="pa-card"
-              style={{ ...card, animationDelay: "0.15s" }}
-            >
-              <SectionHeader
-                icon={
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  >
-                    <polyline points="23 4 23 10 17 10" />
-                    <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
-                  </svg>
-                }
-                title="Best-Selling Products"
-                subtitle="Actual units sold from POS transactions — last 90 days"
-              />
-              {loading ? (
-                <Skel h={200} />
-              ) : (
-                <>
-                  {(analytics?.bestSellers || []).length === 0 ? (
-                    <p
-                      style={{
-                        color: "#94a3b8",
-                        fontSize: 13,
-                        textAlign: "center",
-                        padding: "32px 0",
-                      }}
-                    >
-                      No sales data available
-                    </p>
-                  ) : (
-                    (analytics?.bestSellers || []).map((item, i) => (
-                      <HBar
-                        key={item.name}
-                        label={item.name}
-                        value={item.sold90d}
-                        max={analytics?.bestSellers?.[0]?.sold90d || 1}
-                        color={
-                          [C.violet, C.indigo, C.teal, C.emerald, C.sky][i % 5]
-                        }
-                        sublabel={`units · ${item.perWeek}/wk`}
-                      />
-                    ))
-                  )}
-                </>
-              )}
-            </div>
+            {/* Restock prediction */}
 
             {/* Restock prediction */}
             <div
@@ -1939,8 +1888,8 @@ const PredictiveAnalytics = () => {
                     <polyline points="10 9 9 9 8 9" />
                   </svg>
                 }
-                title="Restock Recommendations"
-                subtitle="Based on actual sales velocity from POS — items projected to run out soon"
+                title="Must-Buy Recommendations"
+                subtitle="Predicted from sales velocity — items you need to buy more of soon"
               />
               {loading ? (
                 <div
@@ -1958,8 +1907,14 @@ const PredictiveAnalytics = () => {
                     gap: 12,
                   }}
                 >
-                  {(analytics?.restockNeeded || []).slice(0, 6).map((item) => {
-                    const isCritical = item.daysLeft <= 7;
+                  {(analytics?.restockNeeded || []).map((item) => {
+                    const isCritical = item.priority === "Urgent";
+                    const badgeColor =
+                      item.priority === "Urgent"
+                        ? C.rose
+                        : item.priority === "Soon"
+                          ? C.amber
+                          : C.sky;
                     return (
                       <div
                         key={item.id}
@@ -1978,16 +1933,38 @@ const PredictiveAnalytics = () => {
                           }}
                         >
                           <div>
-                            <p
+                            <div
                               style={{
-                                margin: "0 0 2px",
-                                fontSize: 13,
-                                fontWeight: 700,
-                                color: "#1e293b",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 6,
+                                marginBottom: 2,
                               }}
                             >
-                              {item.name}
-                            </p>
+                              <p
+                                style={{
+                                  margin: 0,
+                                  fontSize: 13,
+                                  fontWeight: 700,
+                                  color: "#1e293b",
+                                }}
+                              >
+                                {item.name}
+                              </p>
+                              <span
+                                style={{
+                                  fontSize: 9,
+                                  fontWeight: 800,
+                                  color: "#fff",
+                                  background: badgeColor,
+                                  borderRadius: 20,
+                                  padding: "1px 6px",
+                                  textTransform: "uppercase",
+                                }}
+                              >
+                                {item.priority} · buy more
+                              </span>
+                            </div>
                             <p
                               style={{
                                 margin: 0,
@@ -2003,7 +1980,7 @@ const PredictiveAnalytics = () => {
                                 margin: "2px 0 0",
                                 fontSize: 11,
                                 fontWeight: 700,
-                                color: isCritical ? C.rose : C.amber,
+                                color: badgeColor,
                               }}
                             >
                               ~{item.daysLeft} day
@@ -2018,14 +1995,14 @@ const PredictiveAnalytics = () => {
                                 color: "#94a3b8",
                               }}
                             >
-                              Suggest ordering
+                              Buy at least
                             </p>
                             <p
                               style={{
                                 margin: 0,
                                 fontSize: 18,
                                 fontWeight: 900,
-                                color: isCritical ? C.rose : C.amber,
+                                color: badgeColor,
                               }}
                             >
                               {item.suggestedQty}
