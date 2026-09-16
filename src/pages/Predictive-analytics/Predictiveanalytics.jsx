@@ -876,14 +876,19 @@ const PredictiveAnalytics = () => {
       .sort((a, b) => b.sold90d - a.sold90d)
       .slice(0, 5);
 
-    const restockNeeded = salesVelocity
-      .filter((i) => Number.isFinite(i.daysLeft) && i.daysLeft <= 21)
-      .sort((a, b) => a.daysLeft - b.daysLeft)
+    const restockNeeded = [...salesVelocity]
+      .sort((a, b) => b.sold90d - a.sold90d) // rank by best-selling first
       .slice(0, 8)
       .map((i) => {
-        const suggestedQty = Math.max(1, Math.ceil(i.perWeek * 4 - i.stock)); // cover ~4 weeks of demand
+        const suggestedQty = Math.max(1, Math.ceil(i.perWeek * 4)); // ~4 weeks of demand, regardless of current stock
         const priority =
-          i.daysLeft <= 7 ? "Urgent" : i.daysLeft <= 14 ? "Soon" : "Plan ahead";
+          i.daysLeft <= 7
+            ? "Urgent"
+            : i.daysLeft <= 14
+              ? "Soon"
+              : i.daysLeft <= 30
+                ? "Plan ahead"
+                : "Top seller";
         return { ...i, suggestedQty, priority };
       });
 
@@ -1914,13 +1919,15 @@ const PredictiveAnalytics = () => {
                         ? C.rose
                         : item.priority === "Soon"
                           ? C.amber
-                          : C.sky;
+                          : item.priority === "Plan ahead"
+                            ? C.sky
+                            : C.violet;
                     return (
                       <div
                         key={item.id}
                         style={{
-                          border: `1px solid ${isCritical ? "#fecaca" : "#fde68a"}`,
-                          background: isCritical ? "#fff5f5" : "#fffbeb",
+                          border: `1px solid ${badgeColor}30`,
+                          background: `${badgeColor}08`,
                           borderRadius: 10,
                           padding: "12px 14px",
                         }}
@@ -1972,8 +1979,8 @@ const PredictiveAnalytics = () => {
                                 color: "#64748b",
                               }}
                             >
-                              Current: {item.stock} units · {item.perWeek}/wk
-                              sold
+                              {item.sold90d} sold (90d) · {item.perWeek}/wk ·{" "}
+                              {item.stock} in stock
                             </p>
                             <p
                               style={{
@@ -1983,8 +1990,9 @@ const PredictiveAnalytics = () => {
                                 color: badgeColor,
                               }}
                             >
-                              ~{item.daysLeft} day
-                              {item.daysLeft === 1 ? "" : "s"} until stockout
+                              {Number.isFinite(item.daysLeft)
+                                ? `~${item.daysLeft} day${item.daysLeft === 1 ? "" : "s"} until stockout`
+                                : "Stock well above demand"}
                             </p>
                           </div>
                           <div style={{ textAlign: "right" }}>
