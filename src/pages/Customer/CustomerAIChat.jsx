@@ -1184,7 +1184,7 @@ const FollowUpChat = ({
     if (violentPattern.test(text)) return true;
 
     const petRelatedPattern =
-      /\b(pet|dog|cat|puppy|kitten|vet|animal|symptom|vomit|diarrhea|cough|sneeze|limp|itch|scratch|hair|fur|swelling|breath|drink|thirst|seizure|bleed|eat|appetite|lethargy|energy|pain|fever|skin|ear|eye|nose|paw|tail|stomach|vaccine|medicine|medication|recovery|activity|contagious|feed|food|diet)\b/i;
+      /\b(pet|dog|cat|puppy|kitten|vet|animal|symptom|vomit|diarrhea|cough|sneeze|limp|itch|scratch|hair|fur|swelling|breath|drink|thirst|seizure|bleed|eat|appetite|lethargy|energy|pain|fever|skin|ear|eye|nose|paw|tail|stomach|vaccine|medicine|medication|recover|treat|cure|heal|manage|care|help|worse|better|okay|ok|fine|home|rest|clinic|hospital|doctor|check|visit|activity|contagious|feed|food|diet)/i;
     if (!petRelatedPattern.test(text)) return true;
 
     return false;
