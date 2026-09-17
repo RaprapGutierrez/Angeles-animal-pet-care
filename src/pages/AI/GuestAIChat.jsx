@@ -404,9 +404,37 @@ const GuestFollowUpChat = ({
     "Should I restrict activity?",
   ];
 
+  const isOffTopicOrUnsafe = (text) => {
+    const violentPattern =
+      /\b(kill|murder|suicide|bomb|weapon|attack|torture|rape|abuse someone|hurt (a |the )?(person|human|people))\b/i;
+    if (violentPattern.test(text)) return true;
+
+    const petRelatedPattern =
+      /\b(pet|dog|cat|puppy|kitten|vet|animal|symptom|vomit|diarrhea|cough|sneeze|limp|itch|scratch|hair|fur|swelling|breath|drink|thirst|seizure|bleed|eat|appetite|lethargy|energy|pain|fever|skin|ear|eye|nose|paw|tail|stomach|vaccine|medicine|medication|recovery|activity|contagious|feed|food|diet)\b/i;
+    if (!petRelatedPattern.test(text)) return true;
+
+    return false;
+  };
+
   const sendMessage = async (text) => {
     const userText = text || input.trim();
     if (!userText || chatLoading || limitReached) return;
+
+    if (isOffTopicOrUnsafe(userText)) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", text: userText, time: new Date() },
+        {
+          role: "assistant",
+          text: `I can only help with questions about ${petName}'s symptoms, condition, or care. Could you rephrase your question around that?`,
+          time: new Date(),
+          isError: true,
+        },
+      ]);
+      setInput("");
+      return;
+    }
+
     setInput("");
     setMessages((prev) => [
       ...prev,
@@ -607,7 +635,7 @@ const GuestAIChat = () => {
   const [error, setError] = useState("");
   const [assessment, setAssessment] = useState(null);
   const [showChat, setShowChat] = useState(false);
-
+  const [hasOpenedChat, setHasOpenedChat] = useState(false);
   const [form, setForm] = useState({
     petName: "",
     petType: "",
@@ -1207,17 +1235,23 @@ const GuestAIChat = () => {
                       </p>
                     </div>
                     <button
-                      onClick={() => setShowChat(true)}
+                      onClick={() => {
+                        setHasOpenedChat(true);
+                        setShowChat(true);
+                      }}
                       className="g-chat-toggle-btn"
                     >
-                      Ask AI
+                      {hasOpenedChat ? "Continue Chat" : "Ask AI"}
                     </button>
                   </div>
                 )}
 
                 {/* ── Follow-up chat (fullscreen) ── */}
-                {showChat && (
-                  <div className="g-chat-fullscreen">
+                {hasOpenedChat && (
+                  <div
+                    className="g-chat-fullscreen"
+                    style={{ display: showChat ? undefined : "none" }}
+                  >
                     <button
                       onClick={() => setShowChat(false)}
                       aria-label="Close chat"

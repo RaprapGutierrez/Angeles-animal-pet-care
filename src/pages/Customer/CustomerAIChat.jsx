@@ -1178,15 +1178,42 @@ const FollowUpChat = ({
     "Should I restrict activity?",
   ];
 
+  const isOffTopicOrUnsafe = (text) => {
+    const violentPattern =
+      /\b(kill|murder|suicide|bomb|weapon|attack|torture|rape|abuse someone|hurt (a |the )?(person|human|people))\b/i;
+    if (violentPattern.test(text)) return true;
+
+    const petRelatedPattern =
+      /\b(pet|dog|cat|puppy|kitten|vet|animal|symptom|vomit|diarrhea|cough|sneeze|limp|itch|scratch|hair|fur|swelling|breath|drink|thirst|seizure|bleed|eat|appetite|lethargy|energy|pain|fever|skin|ear|eye|nose|paw|tail|stomach|vaccine|medicine|medication|recovery|activity|contagious|feed|food|diet)\b/i;
+    if (!petRelatedPattern.test(text)) return true;
+
+    return false;
+  };
+
   const sendMessage = async (text) => {
     const userText = text || input.trim();
     if (!userText || chatLoading) return;
+
+    if (isOffTopicOrUnsafe(userText)) {
+      setInput("");
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", text: userText, time: new Date() },
+        {
+          role: "assistant",
+          text: `I can only help with questions about ${petName}'s symptoms, condition, or care. Could you rephrase your question around that?`,
+          time: new Date(),
+          isError: true,
+        },
+      ]);
+      return;
+    }
+
     setInput("");
 
     const userMsg = { role: "user", text: userText, time: new Date() };
     setMessages((prev) => [...prev, userMsg]);
     setChatLoading(true);
-
     const contextPrompt = `You are a veterinary assistant AI for Angeles Animal Care Hospital. You have just completed a pre-assessment for a pet.
 
 Pet Details:
@@ -1576,6 +1603,7 @@ const CustomerAIChat = () => {
   const [saved, setSaved] = useState(null);
   const [history, setHistory] = useState([]);
   const [showChat, setShowChat] = useState(false);
+  const [hasOpenedChat, setHasOpenedChat] = useState(false);
   const [petMode, setPetMode] = useState("new");
   const [existingPatients, setExistingPatients] = useState([]);
   const [loadingExistingPatients, setLoadingExistingPatients] = useState(false);
@@ -3121,7 +3149,10 @@ Rules:
                     </p>
                   </div>
                   <button
-                    onClick={() => setShowChat(true)}
+                    onClick={() => {
+                      setHasOpenedChat(true);
+                      setShowChat(true);
+                    }}
                     style={{
                       padding: "8px 16px",
                       borderRadius: 10,
@@ -3136,20 +3167,20 @@ Rules:
                       whiteSpace: "nowrap",
                     }}
                   >
-                    Ask Questions
+                    {hasOpenedChat ? "Continue Chat" : "Ask Questions"}
                   </button>
                 </div>
               )}
 
               {/* ── Follow-up Chat (fullscreen) ── */}
-              {showChat && (
+              {hasOpenedChat && (
                 <div
                   style={{
                     position: "fixed",
                     inset: 0,
                     zIndex: 99999,
                     background: "var(--bg)",
-                    display: "flex",
+                    display: showChat ? "flex" : "none",
                     flexDirection: "column",
                   }}
                   className="ai-enter"
