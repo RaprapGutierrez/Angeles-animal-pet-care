@@ -1769,6 +1769,36 @@ const CustomerAppointment = () => {
     return h >= 0 && h < 6;
   };
 
+  // ── Automated busy-schedule check — mirrors the staff Appointments page's
+  // vet-availability awareness. After a pet is booked, checks how many other
+  // Pending/Confirmed appointments that vet already has on the same date. If
+  // the vet is close to fully booked, the customer is told their request may
+  // take longer to get approved instead of just "submitted and pending". ──
+  const checkVetBusyNotes = async (petsToCheck) => {
+    const notes = [];
+    for (const pet of petsToCheck) {
+      if (!pet.vet || !pet.date || pet.purpose === "Grooming") continue;
+      const { count, error } = await supabase
+        .from("appointments")
+        .select("id", { count: "exact", head: true })
+        .eq("vet", pet.vet)
+        .eq("date", pet.date)
+        .in("status", ["Pending", "Confirmed"]);
+      if (error) continue;
+      const totalSlots = (vetTimeSchedule[pet.vet] || TIMES).length;
+      if (
+        typeof count === "number" &&
+        totalSlots > 0 &&
+        count >= totalSlots - 1
+      ) {
+        notes.push(
+          `${pet.vet} already has ${count} appointment${count === 1 ? "" : "s"} on ${pet.date} and is almost fully booked, so approval may take a little longer than usual.`,
+        );
+      }
+    }
+    return notes;
+  };
+
   const saveAppt = async () => {
     for (const pet of pets) {
       if (pet.mode === "existing" && !pet.existingId) {
@@ -1921,15 +1951,20 @@ const CustomerAppointment = () => {
         }
       }
 
+      const busyNotes = await checkVetBusyNotes(pets);
+      const busySuffix = busyNotes.length
+        ? ` ${busyNotes.join(" ")} Thank you for your patience — please wait for staff to confirm.`
+        : "";
+
       if (isMidnightBookingHour()) {
         showAlert(
           "Request Submitted!",
-          `Your appointment request${pets.length > 1 ? "s have" : " has"} been submitted. Since it's currently outside clinic hours (12:00 AM–6:00 AM), our staff will review and approve ${pets.length > 1 ? "them" : "it"} once the clinic opens in the morning. You will be notified as soon as ${pets.length > 1 ? "they are" : "it is"} confirmed.`,
+          `Your appointment request${pets.length > 1 ? "s have" : " has"} been submitted. Since it's currently outside clinic hours (12:00 AM–6:00 AM), our staff will review and approve ${pets.length > 1 ? "them" : "it"} once the clinic opens in the morning. You will be notified as soon as ${pets.length > 1 ? "they are" : "it is"} confirmed.${busySuffix}`,
         );
       } else {
         showAlert(
           "Request Submitted!",
-          `Your appointment request${pets.length > 1 ? "s have" : " has"} been submitted and ${pets.length > 1 ? "are" : "is"} now pending approval. You will be notified once a staff member confirms ${pets.length > 1 ? "them" : "it"}.`,
+          `Your appointment request${pets.length > 1 ? "s have" : " has"} been submitted and ${pets.length > 1 ? "are" : "is"} now pending approval. You will be notified once a staff member confirms ${pets.length > 1 ? "them" : "it"}.${busySuffix}`,
         );
       }
       setShowModal(false);
@@ -4043,6 +4078,36 @@ const CustomerAppointment = () => {
                               {vetTimeSchedule[pet.vet].join(", ")}
                             </p>
                           )}
+                          {pet.vet &&
+                            pet.date &&
+                            (() => {
+                              const key = `${pet.vet}|${pet.date}`;
+                              const taken = (vetBookedTimes[key] || []).length;
+                              const totalSlots = (
+                                vetTimeSchedule[pet.vet] || TIMES
+                              ).length;
+                              if (
+                                pet.purpose !== "Grooming" &&
+                                totalSlots > 0 &&
+                                taken >= totalSlots - 1
+                              ) {
+                                return (
+                                  <p
+                                    style={{
+                                      margin: "6px 0 0",
+                                      fontSize: 11,
+                                      color: "#d97706",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    {pet.vet} is almost fully booked on{" "}
+                                    {pet.date} — your request may take a little
+                                    longer for staff to approve.
+                                  </p>
+                                );
+                              }
+                              return null;
+                            })()}
                         </div>
                       </div>
 

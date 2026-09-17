@@ -1366,6 +1366,28 @@ const Appointment = () => {
     return sched.includes(time);
   };
 
+  // ── Automated busy-schedule detection — flags when a vet is close to fully
+  // booked on a given date, using the vet's live schedule (falls back to the
+  // full TIMES list if none is set) against currently Pending/Confirmed
+  // appointments. Lets staff spot an overloaded day at a glance instead of
+  // clicking through each time slot. ──
+  const getVetBusyInfo = (vet, dateStr, excludeId = null) => {
+    if (!vet || !dateStr) return null;
+    const totalSlots = (vetTimeSchedule[vet] || TIMES).length;
+    if (totalSlots === 0) return null;
+    const taken = appts.filter(
+      (a) =>
+        a.vet === vet &&
+        a.date === dateStr &&
+        ["Pending", "Confirmed"].includes(a.status) &&
+        a.id !== excludeId,
+    ).length;
+    if (taken >= totalSlots - 1) {
+      return { taken, totalSlots };
+    }
+    return null;
+  };
+
   const openVetSchedule = () => {
     setVetScheduleDraft({
       days: JSON.parse(JSON.stringify(vetSchedule)),
@@ -4875,6 +4897,21 @@ const Appointment = () => {
                   filter: "Cancelled",
                   sub: "Cancelled visits",
                 },
+                {
+                  label: "Busy Vets Today",
+                  value: vets.filter((v) => getVetBusyInfo(v, today)).length,
+                  icon: "/icon/pending.webp",
+                  color: "yellow",
+                  filter: "",
+                  sub:
+                    vets.filter((v) => getVetBusyInfo(v, today)).length > 0
+                      ? "Nearly fully booked"
+                      : "All vets have room",
+                  subColor:
+                    vets.filter((v) => getVetBusyInfo(v, today)).length > 0
+                      ? "#d97706"
+                      : undefined,
+                },
               ].map((sc, i) => (
                 <div
                   key={i}
@@ -7314,6 +7351,45 @@ const Appointment = () => {
                             {vetTimeSchedule[form.vet].join(", ")}
                           </p>
                         )}
+                        {form.vet &&
+                          form.date &&
+                          (() => {
+                            const busy = getVetBusyInfo(
+                              form.vet,
+                              form.date,
+                              editMode ? selectedAppt?.id : null,
+                            );
+                            if (!busy) return null;
+                            return (
+                              <p
+                                style={{
+                                  margin: "8px 0 0",
+                                  fontSize: 11,
+                                  color: "#d97706",
+                                  fontWeight: 700,
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: 5,
+                                }}
+                              >
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                >
+                                  <circle cx="12" cy="12" r="10" />
+                                  <polyline points="12 6 12 12 16 14" />
+                                </svg>
+                                {form.vet} is almost fully booked on {form.date}{" "}
+                                ({busy.taken}/{busy.totalSlots} slots taken).
+                                Double-check availability before confirming.
+                              </p>
+                            );
+                          })()}
                         {form.purpose === "Imaging" && (
                           <>
                             <div
@@ -7666,6 +7742,25 @@ const Appointment = () => {
                               options={vets}
                               placeholder="— Select Veterinarian —"
                             />
+                            {p.vet &&
+                              p.date &&
+                              (() => {
+                                const busy = getVetBusyInfo(p.vet, p.date);
+                                if (!busy) return null;
+                                return (
+                                  <p
+                                    style={{
+                                      margin: "8px 0 0",
+                                      fontSize: 11,
+                                      color: "#d97706",
+                                      fontWeight: 700,
+                                    }}
+                                  >
+                                    {p.vet} is almost fully booked on {p.date} (
+                                    {busy.taken}/{busy.totalSlots} slots taken).
+                                  </p>
+                                );
+                              })()}
                             {p.purpose === "Imaging" && (
                               <>
                                 <div

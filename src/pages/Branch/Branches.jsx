@@ -793,20 +793,24 @@ const ROLE_LABELS = {
   customer: "Customer",
 };
 
+// "dashboard" is first in every ALL_MODULES role array already, so mapping
+// keys naturally keeps it included — kept explicit here since defaultModules
+// doubles as the "Select All" / preset source of truth.
 const defaultModules = () => ({
   admin: ALL_MODULES.admin.map((m) => m.key),
   manager: ALL_MODULES.manager.map((m) => m.key),
-  employee: [],
-  customer: [],
+  employee: ALL_MODULES.employee.map((m) => m.key),
+  customer: ALL_MODULES.customer.map((m) => m.key),
 });
 
-// Used when opening the Add Branch form — nothing pre-checked; the person
-// creating the branch decides which modules each role should have.
+// Used when opening the Add Branch form. Dashboard is pre-checked for every
+// role since every account needs a landing page — the person creating the
+// branch decides the rest.
 const emptyModules = () => ({
-  admin: [],
-  manager: [],
-  employee: [],
-  customer: [],
+  admin: ["dashboard"],
+  manager: ["dashboard"],
+  employee: ["dashboard"],
+  customer: ["dashboard"],
 });
 
 // ── Branch form validation ──────────────────────────────────────────────────
@@ -912,17 +916,33 @@ const ModuleSelector = ({ modules, onChange }) => {
   const [activeRole, setActiveRole] = useState("admin");
   const roleModules = ALL_MODULES[activeRole];
   const selected = modules[activeRole] || [];
+  const allKeys = roleModules.map((m) => m.key);
+  const allSelected = allKeys.every((k) => selected.includes(k));
 
   const toggleModule = (key) => {
+    // Dashboard is always on — every account needs a landing page, so it
+    // can't be unchecked from here.
+    if (key === "dashboard") return;
     const next = selected.includes(key)
       ? selected.filter((k) => k !== key)
       : [...selected, key];
     onChange({ ...modules, [activeRole]: next });
   };
 
+  const toggleSelectAll = () => {
+    onChange({
+      ...modules,
+      [activeRole]: allSelected ? ["dashboard"] : allKeys,
+    });
+  };
+
   const showServices = SERVICE_TRIGGER_MODULES.some((k) =>
     selected.includes(k),
   );
+
+  const applyStandardPreset = () => {
+    onChange(defaultModules());
+  };
 
   return (
     <div
@@ -981,28 +1001,134 @@ const ModuleSelector = ({ modules, onChange }) => {
         })}
       </div>
 
-      {/* Module chips */}
-      <div style={{ padding: "12px 14px", background: "#fff" }}>
-        <p
+      {/* Quick presets */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          padding: "8px 14px",
+          background: "#f8fafc",
+          borderBottom: "1px solid var(--border)",
+        }}
+      >
+        <span style={{ fontSize: 11, color: "var(--muted)" }}>
+          Auto-fill every role with the standard module set
+        </span>
+        <button
+          type="button"
+          onClick={applyStandardPreset}
           style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
             fontSize: 11,
             fontWeight: 700,
-            color: "var(--muted)",
-            textTransform: "uppercase",
-            letterSpacing: "0.05em",
-            margin: "0 0 10px",
+            color: "#4338ca",
+            background: "#eef2ff",
+            border: "1px solid #c7d2fe",
+            borderRadius: 20,
+            padding: "4px 10px",
+            cursor: "pointer",
+            fontFamily: "inherit",
+            flexShrink: 0,
           }}
         >
-          Select modules for {ROLE_LABELS[activeRole]}
-        </p>
+          <svg
+            width="11"
+            height="11"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+          </svg>
+          Use Standard Setup
+        </button>
+      </div>
+
+      {/* Module chips */}
+      <div style={{ padding: "12px 14px", background: "#fff" }}>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 8,
+            marginBottom: 10,
+          }}
+        >
+          <p
+            style={{
+              fontSize: 11,
+              fontWeight: 700,
+              color: "var(--muted)",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              margin: 0,
+            }}
+          >
+            Select modules for {ROLE_LABELS[activeRole]}
+          </p>
+          <div
+            onClick={toggleSelectAll}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 4,
+              fontSize: 11,
+              fontWeight: 700,
+              color: ROLE_COLORS[activeRole].badge,
+              cursor: "pointer",
+              userSelect: "none",
+              flexShrink: 0,
+            }}
+          >
+            <div
+              style={{
+                width: 14,
+                height: 14,
+                borderRadius: 4,
+                border: `1.5px solid ${ROLE_COLORS[activeRole].badge}`,
+                background: allSelected
+                  ? ROLE_COLORS[activeRole].badge
+                  : "transparent",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                flexShrink: 0,
+              }}
+            >
+              {allSelected && (
+                <svg
+                  width="9"
+                  height="9"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="#fff"
+                  strokeWidth="3.5"
+                  strokeLinecap="round"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+              )}
+            </div>
+            {allSelected ? "Deselect All" : "Select All"}
+          </div>
+        </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {roleModules.map((mod) => {
             const isOn = selected.includes(mod.key);
+            const isLocked = mod.key === "dashboard";
             const c = ROLE_COLORS[activeRole];
             return (
               <div
                 key={mod.key}
                 onClick={() => toggleModule(mod.key)}
+                title={isLocked ? "Dashboard is always available" : undefined}
                 style={{
                   display: "flex",
                   alignItems: "center",
@@ -1011,12 +1137,13 @@ const ModuleSelector = ({ modules, onChange }) => {
                   borderRadius: 99,
                   fontSize: 12,
                   fontWeight: 600,
-                  cursor: "pointer",
+                  cursor: isLocked ? "default" : "pointer",
                   transition: "all 0.15s",
                   userSelect: "none",
                   background: isOn ? c.badge : "#f1f5f9",
                   color: isOn ? "#fff" : "var(--muted)",
                   border: `1.5px solid ${isOn ? c.badge : "var(--border)"}`,
+                  opacity: isLocked ? 0.85 : 1,
                 }}
               >
                 <span
@@ -1029,18 +1156,33 @@ const ModuleSelector = ({ modules, onChange }) => {
                   {MODULE_ICONS[mod.key]}
                 </span>
                 {mod.label}
-                {isOn && (
+                {isLocked ? (
                   <svg
                     width="10"
                     height="10"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
-                    strokeWidth="3"
+                    strokeWidth="2.5"
                     strokeLinecap="round"
                   >
-                    <polyline points="20 6 9 17 4 12" />
+                    <rect x="5" y="11" width="14" height="9" rx="2" />
+                    <path d="M8 11V7a4 4 0 0 1 8 0v4" />
                   </svg>
+                ) : (
+                  isOn && (
+                    <svg
+                      width="10"
+                      height="10"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                      strokeLinecap="round"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )
                 )}
               </div>
             );
@@ -1774,6 +1916,23 @@ const Branches = () => {
           branchName: editBranch.name,
         });
         await fetchBranchAccountsList(editBranch.id);
+        // Auto-enable this role's standard modules on the branch form —
+        // creating a Manager account usually means the branch should grant
+        // Manager module access too. Staged in the form (won't overwrite an
+        // already-configured role); click "Save Branch" to persist it.
+        const moduleRoleKey = accountForm.role.toLowerCase();
+        setFormDirty(true);
+        setForm((prev) => ({
+          ...prev,
+          modules:
+            ALL_MODULES[moduleRoleKey] &&
+            (prev.modules[moduleRoleKey] || []).length === 0
+              ? {
+                  ...prev.modules,
+                  [moduleRoleKey]: defaultModules()[moduleRoleKey] || [],
+                }
+              : prev.modules,
+        }));
         setEditingAccountIndex(null);
         setAccountModalMode("list");
       } catch (err) {
@@ -1803,12 +1962,26 @@ const Branches = () => {
       return [...prev, draft];
     });
     setFormDirty(true);
+    // Auto-enable this role's standard modules — adding a Manager account
+    // almost always means the branch should grant Manager module access
+    // too, so it's pre-filled instead of requiring a second manual trip
+    // through the Module Access selector. Only fills in if that role's
+    // modules are still empty, so it never overwrites a manual choice.
+    const moduleRoleKey = draft.role.toLowerCase();
     setForm((prev) => ({
       ...prev,
       ...(draft.role === "Manager" && !prev.manager
         ? { manager: `${draft.first_name} ${draft.last_name}` }
         : {}),
       ...(!prev.email ? { email: draft.email } : {}),
+      modules:
+        ALL_MODULES[moduleRoleKey] &&
+        (prev.modules[moduleRoleKey] || []).length === 0
+          ? {
+              ...prev.modules,
+              [moduleRoleKey]: defaultModules()[moduleRoleKey] || [],
+            }
+          : prev.modules,
     }));
     setEditingAccountIndex(null);
     setAccountModalMode("list");
@@ -4330,8 +4503,75 @@ const Branches = () => {
                         flexWrap: "wrap",
                         gap: 8,
                         marginTop: 6,
+                        alignItems: "center",
                       }}
                     >
+                      <div
+                        onClick={() => {
+                          setFormDirty(true);
+                          const allOn = SERVICES_LIST.every((s) =>
+                            form.services.includes(s),
+                          );
+                          setForm((prev) => ({
+                            ...prev,
+                            services: allOn ? [] : [...SERVICES_LIST],
+                          }));
+                        }}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 4,
+                          padding: "5px 12px",
+                          borderRadius: 99,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          userSelect: "none",
+                          background: SERVICES_LIST.every((s) =>
+                            form.services.includes(s),
+                          )
+                            ? "var(--royal)"
+                            : "#eef2ff",
+                          color: SERVICES_LIST.every((s) =>
+                            form.services.includes(s),
+                          )
+                            ? "#fff"
+                            : "var(--royal)",
+                          border: "1.5px solid var(--royal)",
+                        }}
+                      >
+                        {SERVICES_LIST.every((s) =>
+                          form.services.includes(s),
+                        ) ? (
+                          <svg
+                            width="10"
+                            height="10"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        ) : (
+                          <svg
+                            width="10"
+                            height="10"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                          >
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                          </svg>
+                        )}
+                        {SERVICES_LIST.every((s) => form.services.includes(s))
+                          ? "All Selected"
+                          : "Select All"}
+                      </div>
                       {SERVICES_LIST.map((svc) => (
                         <div
                           key={svc}

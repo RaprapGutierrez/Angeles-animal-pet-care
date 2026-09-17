@@ -310,8 +310,8 @@ const CustomSelect = ({
 };
 
 /* ────────────────────────────────────────────
-   MINI SPARKLINE — pure SVG, zero deps
-──────────────────────────────────────────── */
+    MINI SPARKLINE — pure SVG, zero deps
+  ──────────────────────────────────────────── */
 const Sparkline = ({ data = [], color = C.indigo, h = 40, filled = true }) => {
   if (!data.length) return null;
   const w = 120;
@@ -643,6 +643,159 @@ const BarChart = ({ labels, values, color = C.indigo, height = 120 }) => {
     </div>
   );
 };
+
+/* ── shared icons + 4-card visits block, reused per-branch ── */
+const VISIT_ICONS = {
+  bar: (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    >
+      <line x1="18" y1="20" x2="18" y2="10" />
+      <line x1="12" y1="20" x2="12" y2="4" />
+      <line x1="6" y1="20" x2="6" y2="14" />
+    </svg>
+  ),
+  clock: (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    >
+      <circle cx="12" cy="12" r="10" />
+      <polyline points="12 6 12 12 16 14" />
+    </svg>
+  ),
+  cal: (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    >
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+    </svg>
+  ),
+  star: (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2.5"
+      strokeLinecap="round"
+    >
+      <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+    </svg>
+  ),
+};
+
+const VisitsQuad = ({
+  cardStyle,
+  dowValues,
+  hourValues,
+  hourLabels,
+  heatData,
+  busyDays,
+  subtitlePrefix = "",
+}) => (
+  <div
+    className="pa-visits-grid"
+    style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+      gap: 16,
+      alignItems: "start",
+    }}
+  >
+    <div className="pa-card" style={cardStyle}>
+      <SectionHeader
+        icon={VISIT_ICONS.bar}
+        title="Busiest Days of the Week"
+        subtitle={`${subtitlePrefix}Aggregate visits over the past 90 days`}
+      />
+      <BarChart
+        labels={DAYS}
+        values={dowValues || Array(7).fill(0)}
+        color={C.indigo}
+        height={140}
+      />
+    </div>
+    <div className="pa-card" style={cardStyle}>
+      <SectionHeader
+        icon={VISIT_ICONS.clock}
+        title="Visits by Time Slot"
+        subtitle={`${subtitlePrefix}Which hours see the most traffic`}
+      />
+      <BarChart
+        labels={hourLabels || []}
+        values={hourValues || []}
+        color={C.teal}
+        height={140}
+      />
+    </div>
+    <div className="pa-card" style={cardStyle}>
+      <SectionHeader
+        icon={VISIT_ICONS.cal}
+        title="Visit Activity Heatmap"
+        subtitle="Last 20 days + upcoming week"
+      />
+      <CalHeatmap data={heatData || {}} />
+      <div
+        style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 10 }}
+      >
+        <span style={{ fontSize: 11, color: "#94a3b8" }}>Less</span>
+        {[0.1, 0.3, 0.55, 0.75, 1].map((op) => (
+          <div
+            key={op}
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: 3,
+              background: `rgba(79,70,229,${op})`,
+            }}
+          />
+        ))}
+        <span style={{ fontSize: 11, color: "#94a3b8" }}>More</span>
+      </div>
+    </div>
+    <div className="pa-card" style={cardStyle}>
+      <SectionHeader
+        icon={VISIT_ICONS.star}
+        title="Predicted Busy Days"
+        subtitle="Next 14 days — based on day-of-week patterns"
+      />
+      <div>
+        {(busyDays || []).map((d, i) => (
+          <HBar
+            key={d.date}
+            label={d.label}
+            value={d.predicted}
+            max={Math.max(...(busyDays || []).map((x) => x.predicted), 1)}
+            color={i === 0 ? C.rose : i < 3 ? C.amber : C.indigo}
+            sublabel="est. visits"
+          />
+        ))}
+      </div>
+    </div>
+  </div>
+);
 
 /* ────────────────────────────────────────────
    MAIN PAGE
@@ -1154,6 +1307,34 @@ const PredictiveAnalytics = () => {
           (i) => i.stock <= (i.reorder_level || 10),
         );
 
+        const bHourBuckets = Array(8).fill(0);
+        bAppts.forEach((a) => {
+          const idx = HOUR_MAP[a.time];
+          if (idx !== undefined) bHourBuckets[idx]++;
+        });
+
+        const bHeatData = {};
+        bAppts.forEach((a) => {
+          bHeatData[a.date] = (bHeatData[a.date] || 0) + 1;
+        });
+        bWalkins.forEach((w) => {
+          const dKey = isoDate(new Date(w.arrived_at));
+          bHeatData[dKey] = (bHeatData[dKey] || 0) + 1;
+        });
+
+        const bBusyDays = Array.from({ length: 14 }, (_, i) => {
+          const d = addDays(today, i + 1);
+          const dow = d.getDay();
+          const predicted = Math.round(bDow[dow] / 13);
+          return {
+            date: isoDate(d),
+            label: `${DAYS[dow]} ${d.getDate()}`,
+            predicted,
+          };
+        })
+          .sort((a, b) => b.predicted - a.predicted)
+          .slice(0, 7);
+
         // predicted problems + suggested solutions, per branch
         const problems = [];
         if (bLowStock.length > 0) {
@@ -1193,6 +1374,10 @@ const PredictiveAnalytics = () => {
           totalPatients: bPatients.length,
           peakDay: DAYS[bPeakDow],
           lowStockCount: bLowStock.length,
+          dowAppt: bDow,
+          hourBuckets: bHourBuckets,
+          heatData: bHeatData,
+          busyDays: bBusyDays,
           problems,
         };
       });
@@ -1286,15 +1471,21 @@ const PredictiveAnalytics = () => {
           background: "#fff",
         }}
       >
-        <div className="topbar-title">
+        <div className="topbar-title" style={{ minWidth: 0 }}>
           <img
             src="/icon/predictive-analytics.webp"
             alt=""
-            style={{ width: 28, opacity: 0.9 }}
+            style={{ width: 28, opacity: 0.9, flexShrink: 0 }}
           />
-          <div>
+          <div style={{ minWidth: 0 }}>
             <h1>Predictive Analytics</h1>
-            <p>
+            <p
+              style={{
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+            >
               {seeAllBranches
                 ? branchFilter
                   ? `Forecasting for ${
@@ -1302,12 +1493,12 @@ const PredictiveAnalytics = () => {
                         (b) => String(b.id) === String(branchFilter),
                       )?.name || "selected branch"
                     }`
-                  : 'AI-assisted forecasting · patient trends · inventory intelligence — All Branches combined. Use "Compare Branches" for a per-branch breakdown.'
+                  : "AI-assisted forecasting · patient trends · inventory intelligence — showing all branches"
                 : "AI-assisted forecasting · patient trends · inventory intelligence"}
             </p>
           </div>
         </div>
-        <div className="topbar-actions">
+        <div className="topbar-actions" style={{ flexShrink: 0 }}>
           {seeAllBranches && branches.length > 0 && (
             <div style={{ width: 180 }}>
               <CustomSelect
@@ -1633,187 +1824,67 @@ const PredictiveAnalytics = () => {
 
         {/* ══ VISITS TAB ══ */}
         {tab === "visits" && (
-          <div
-            className="pa-visits-grid"
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
-              gap: 16,
-              alignItems: "start",
-            }}
-          >
-            {/* Day-of-week chart */}
-            <div
-              className="pa-card"
-              style={{ ...card, animationDelay: "0.1s" }}
-            >
-              <SectionHeader
-                icon={
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  >
-                    <line x1="18" y1="20" x2="18" y2="10" />
-                    <line x1="12" y1="20" x2="12" y2="4" />
-                    <line x1="6" y1="20" x2="6" y2="14" />
-                  </svg>
-                }
-                title="Busiest Days of the Week"
-                subtitle="Aggregate visits over the past 90 days"
-              />
-              {loading ? (
-                <Skel h={140} />
-              ) : (
-                <BarChart
-                  labels={DAYS}
-                  values={analytics?.dowAppt || Array(7).fill(0)}
-                  color={C.indigo}
-                  height={140}
-                />
-              )}
-            </div>
-
-            {/* Hour distribution */}
-            <div
-              className="pa-card"
-              style={{ ...card, animationDelay: "0.15s" }}
-            >
-              <SectionHeader
-                icon={
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  >
-                    <circle cx="12" cy="12" r="10" />
-                    <polyline points="12 6 12 12 16 14" />
-                  </svg>
-                }
-                title="Visits by Time Slot"
-                subtitle="Which hours see the most traffic"
-              />
-              {loading ? (
-                <Skel h={140} />
-              ) : (
-                <BarChart
-                  labels={analytics?.HOUR_LABELS || []}
-                  values={analytics?.hourBuckets || []}
-                  color={C.teal}
-                  height={140}
-                />
-              )}
-            </div>
-
-            {/* Heatmap */}
-            <div
-              className="pa-card"
-              style={{ ...card, animationDelay: "0.2s" }}
-            >
-              <SectionHeader
-                icon={
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
-                  >
-                    <rect x="3" y="4" width="18" height="18" rx="2" />
-                    <line x1="16" y1="2" x2="16" y2="6" />
-                    <line x1="8" y1="2" x2="8" y2="6" />
-                    <line x1="3" y1="10" x2="21" y2="10" />
-                  </svg>
-                }
-                title="Visit Activity Heatmap"
-                subtitle="Last 20 days + upcoming week"
-              />
-              {loading ? (
-                <Skel h={100} />
-              ) : (
-                <CalHeatmap data={analytics?.heatData || {}} />
-              )}
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginTop: 10,
-                }}
-              >
-                <span style={{ fontSize: 11, color: "#94a3b8" }}>Less</span>
-                {[0.1, 0.3, 0.55, 0.75, 1].map((op) => (
-                  <div
-                    key={op}
+          <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+            {seeAllBranches && !branchFilter && branches.length > 0 ? (
+              /* One aligned quad (Busiest Days / Time Slot / Heatmap / Predicted) per branch */
+              (analytics?.branchComparison || []).map((b, bi) => (
+                <div key={b.id}>
+                  <h3
                     style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: 3,
-                      background: `rgba(79,70,229,${op})`,
+                      margin: "0 0 10px",
+                      fontSize: 13,
+                      fontWeight: 800,
+                      color: "var(--text)",
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
                     }}
-                  />
-                ))}
-                <span style={{ fontSize: 11, color: "#94a3b8" }}>More</span>
-              </div>
-            </div>
-
-            {/* Predicted busy days */}
-            <div
-              className="pa-card"
-              style={{ ...card, animationDelay: "0.25s" }}
-            >
-              <SectionHeader
-                icon={
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2.5"
-                    strokeLinecap="round"
                   >
-                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
-                  </svg>
-                }
-                title="Predicted Busy Days"
-                subtitle="Next 14 days — based on day-of-week patterns"
-              />
-              {loading ? (
-                <Skel h={160} />
-              ) : (
-                <div>
-                  {(analytics?.busyDays || []).map((d, i) => (
-                    <HBar
-                      key={d.date}
-                      label={d.label}
-                      value={d.predicted}
-                      max={Math.max(
-                        ...(analytics?.busyDays || []).map((b) => b.predicted),
-                        1,
-                      )}
-                      color={i === 0 ? C.rose : i < 3 ? C.amber : C.indigo}
-                      sublabel="est. visits"
+                    <span
+                      style={{
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: C.violet,
+                        display: "inline-block",
+                        flexShrink: 0,
+                      }}
                     />
-                  ))}
+                    {b.name}
+                  </h3>
+                  {loading ? (
+                    <Skel h={160} />
+                  ) : (
+                    <VisitsQuad
+                      cardStyle={{
+                        ...card,
+                        animationDelay: `${0.1 + bi * 0.05}s`,
+                      }}
+                      dowValues={b.dowAppt}
+                      hourValues={b.hourBuckets}
+                      hourLabels={analytics?.HOUR_LABELS || []}
+                      heatData={b.heatData}
+                      busyDays={b.busyDays}
+                      subtitlePrefix={`${b.name} — `}
+                    />
+                  )}
                 </div>
-              )}
-            </div>
+              ))
+            ) : (
+              <VisitsQuad
+                cardStyle={{ ...card, animationDelay: "0.1s" }}
+                dowValues={analytics?.dowAppt}
+                hourValues={analytics?.hourBuckets}
+                hourLabels={analytics?.HOUR_LABELS || []}
+                heatData={analytics?.heatData}
+                busyDays={analytics?.busyDays}
+              />
+            )}
 
             {/* Service breakdown */}
             <div
               className="pa-card"
-              style={{ ...card, gridColumn: "1 / -1", animationDelay: "0.3s" }}
+              style={{ ...card, animationDelay: "0.3s" }}
             >
               <SectionHeader
                 icon={
