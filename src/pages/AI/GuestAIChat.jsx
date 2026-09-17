@@ -377,6 +377,7 @@ const GuestFollowUpChat = ({
   petType,
   petAge,
   symptoms,
+  additionalNotes,
   onDone,
   onCreateAccount,
 }) => {
@@ -449,6 +450,7 @@ Pet Details:
 - Type: ${petType}
 - Age: ${petAge}
 - Reported Symptoms: ${symptoms}
+${additionalNotes ? `- Additional Notes from Owner: ${additionalNotes}` : ""}
 
 Assessment Results:
 - Possible Conditions: ${assessment.conditions?.join(", ")}
@@ -456,7 +458,7 @@ Assessment Results:
 - Recommended Service: ${assessment.recommendedService}
 - Summary: ${assessment.summary}
 
-Answer the owner's follow-up question helpfully and concisely. Do NOT repeat the full assessment. Always recommend consulting a vet for definitive diagnosis. IMPORTANT: Always reply in the SAME language the owner used in their question (English, Tagalog/Filipino, Taglish, Bisaya, or any other language) — detect it from their message and match it naturally.
+Answer the owner's follow-up question helpfully and concisely. Take the additional notes above into account if provided (e.g. medications, diet changes, allergies, when symptoms started) — they are often directly relevant to the question.. Do NOT repeat the full assessment. Always recommend consulting a vet for definitive diagnosis. IMPORTANT: Always reply in the SAME language the owner used in their question (English, Tagalog/Filipino, Taglish, Bisaya, or any other language) — detect it from their message and match it naturally.
 
 Owner's question: ${userText}`;
 
@@ -1277,6 +1279,7 @@ const GuestAIChat = () => {
                           petType={form.petType}
                           petAge={form.petAge}
                           symptoms={form.symptoms}
+                          additionalNotes={form.additionalNotes}
                           onDone={() => {
                             setShowChat(false);
                             handleBooking();
