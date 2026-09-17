@@ -753,7 +753,7 @@ const GuestAIChat = () => {
         <div className={`g-topbar${isMobile ? " mobile" : ""}`}>
           <div className="g-topbar-brand">
             <img
-              src="/image/446805041_881106557364617_1125518808684788316_n.jpg"
+              src="/image/446805041_881106557364617_1125518808684788316_n.webp"
               alt="Logo"
               className={`g-topbar-logo${isMobile ? " mobile" : ""}`}
             />
@@ -930,6 +930,9 @@ const GuestAIChat = () => {
                 <button
                   onClick={() => setStep(2)}
                   disabled={!canStep2}
+                  title={
+                    !canStep2 ? "Please fill in pet name, type, and age" : ""
+                  }
                   className={`g-continue-btn${canStep2 ? " enabled g-btn" : ""}`}
                 >
                   Continue to Symptoms →
@@ -966,19 +969,14 @@ const GuestAIChat = () => {
                           key={s}
                           className={`g-symptom-chip${active ? " active" : ""}`}
                           onClick={() => {
-                            const curr = form.symptoms;
-                            set(
-                              "symptoms",
-                              active
-                                ? curr
-                                    .replace(s + ", ", "")
-                                    .replace(", " + s, "")
-                                    .replace(s, "")
-                                    .trim()
-                                : curr
-                                  ? curr + ", " + s
-                                  : s,
-                            );
+                            const parts = form.symptoms
+                              .split(",")
+                              .map((p) => p.trim())
+                              .filter(Boolean);
+                            const next = active
+                              ? parts.filter((p) => p !== s)
+                              : [...parts, s];
+                            set("symptoms", next.join(", "));
                           }}
                         >
                           {active && (
@@ -1089,6 +1087,16 @@ const GuestAIChat = () => {
                   <strong style={{ color: "#fff" }}>{form.petName}</strong>
                 </p>
                 <TypingDots light />
+                <button
+                  onClick={() => {
+                    setLoading(false);
+                    setStep(2);
+                  }}
+                  className="g-back-btn"
+                  style={{ marginTop: 12, marginBottom: 4 }}
+                >
+                  Cancel
+                </button>
                 <div className="g-analyzing-tags">
                   {[
                     "Checking possible conditions",

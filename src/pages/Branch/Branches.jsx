@@ -1061,18 +1061,30 @@ const ModuleSelector = ({ modules, onChange }) => {
             marginBottom: 10,
           }}
         >
-          <p
-            style={{
-              fontSize: 11,
-              fontWeight: 700,
-              color: "var(--muted)",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              margin: 0,
-            }}
-          >
-            Select modules for {ROLE_LABELS[activeRole]}
-          </p>
+          <div>
+            <p
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "var(--muted)",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                margin: 0,
+              }}
+            >
+              Select modules for {ROLE_LABELS[activeRole]}
+            </p>
+            <p
+              style={{
+                fontSize: 10,
+                color: "#94a3b8",
+                margin: "2px 0 0",
+                fontWeight: 500,
+              }}
+            >
+              Dashboard is locked on for every role
+            </p>
+          </div>
           <div
             onClick={toggleSelectAll}
             style={{
@@ -1614,6 +1626,50 @@ const Branches = () => {
   const [creatingBranchAccount, setCreatingBranchAccount] = useState(false);
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeStatus, setGeocodeStatus] = useState(null); // {type:'ok'|'error', message}
+  const accountFormSnapshotRef = useRef(null);
+
+  const isAccountFormDirty = () =>
+    accountModalMode === "form" &&
+    accountFormSnapshotRef.current !== null &&
+    JSON.stringify(accountForm) !== accountFormSnapshotRef.current;
+
+  const closeAccountModal = () => {
+    if (isAccountFormDirty()) {
+      setConfirm({
+        show: true,
+        title: "Discard This Account?",
+        message:
+          "You've entered account details that haven't been saved. Close anyway?",
+        accent: "#f59e0b",
+        confirmText: "Discard",
+        onConfirm: () => {
+          setConfirm((c) => ({ ...c, show: false }));
+          setShowAccountModal(false);
+        },
+      });
+    } else {
+      setShowAccountModal(false);
+    }
+  };
+
+  const backFromAccountForm = () => {
+    if (isAccountFormDirty()) {
+      setConfirm({
+        show: true,
+        title: "Discard This Account?",
+        message:
+          "You've entered account details that haven't been saved. Go back anyway?",
+        accent: "#f59e0b",
+        confirmText: "Discard",
+        onConfirm: () => {
+          setConfirm((c) => ({ ...c, show: false }));
+          setAccountModalMode("list");
+        },
+      });
+    } else {
+      setAccountModalMode("list");
+    }
+  };
 
   const showToast = (message, type = "success") => {
     const id = ++toastIdRef.current;
@@ -1820,8 +1876,7 @@ const Branches = () => {
 
   const openAccountModal = (index = null) => {
     const existing = index !== null ? accountDrafts[index] : null;
-    setEditingAccountIndex(index);
-    setAccountForm({
+    const initialForm = {
       first_name: existing?.first_name || "",
       last_name: existing?.last_name || "",
       sex: existing?.sex || "",
@@ -1829,7 +1884,10 @@ const Branches = () => {
       email: existing?.email || "",
       password: existing?.password || generatePassword(),
       role: existing?.role || "",
-    });
+    };
+    setEditingAccountIndex(index);
+    setAccountForm(initialForm);
+    accountFormSnapshotRef.current = JSON.stringify(initialForm);
     setAccountErrors({});
     setShowAccountPassword(false);
     setAccountModalMode("form");
@@ -2108,11 +2166,8 @@ const Branches = () => {
     }
   };
 
-  const doDelete = async () => {
-    const { error } = await supabase
-      .from("branches")
-      .delete()
-      .eq("id", deleteId);
+  const doDelete = async (id) => {
+    const { error } = await supabase.from("branches").delete().eq("id", id);
     if (error) {
       showToast("Error deleting branch: " + error.message, "error");
       return;
@@ -2165,7 +2220,7 @@ const Branches = () => {
       onConfirm: () => {
         setConfirm((c) => ({ ...c, show: false }));
         setDeleteId(id);
-        doDelete();
+        doDelete(id);
       },
     });
   };
@@ -4600,36 +4655,67 @@ const Branches = () => {
                 )}
               </div>
             </div>
-            <div className="modal-footer">
-              <button
-                className="btn btn-ghost branches-btn-auto"
-                onClick={handleModalClose}
-              >
-                Cancel
-              </button>
-              <button
-                className="btn btn-primary branches-btn-auto"
-                onClick={saveBranch}
-                disabled={
-                  creating || !validateBranchForm(form, !!editBranch).valid
-                }
+            <div
+              className="modal-footer"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              {!validateBranchForm(form, !!editBranch).valid && (
+                <p
+                  style={{
+                    margin: 0,
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: "#dc2626",
+                    flex: 1,
+                    minWidth: 0,
+                  }}
+                >
+                  {validateBranchForm(form, !!editBranch).message}
+                </p>
+              )}
+              <div
                 style={{
-                  opacity:
-                    creating || !validateBranchForm(form, !!editBranch).valid
-                      ? 0.5
-                      : 1,
-                  cursor:
-                    creating || !validateBranchForm(form, !!editBranch).valid
-                      ? "not-allowed"
-                      : "pointer",
+                  display: "flex",
+                  gap: 10,
+                  flexShrink: 0,
+                  marginLeft: "auto",
                 }}
               >
-                {creating
-                  ? "Saving…"
-                  : editBranch
-                    ? "Save Branch"
-                    : "Add Branch & Create Account"}
-              </button>
+                <button
+                  className="btn btn-ghost branches-btn-auto"
+                  onClick={handleModalClose}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="btn btn-primary branches-btn-auto"
+                  onClick={saveBranch}
+                  disabled={
+                    creating || !validateBranchForm(form, !!editBranch).valid
+                  }
+                  style={{
+                    opacity:
+                      creating || !validateBranchForm(form, !!editBranch).valid
+                        ? 0.5
+                        : 1,
+                    cursor:
+                      creating || !validateBranchForm(form, !!editBranch).valid
+                        ? "not-allowed"
+                        : "pointer",
+                  }}
+                >
+                  {creating
+                    ? "Saving…"
+                    : editBranch
+                      ? "Save Branch"
+                      : "Add Branch & Create Account"}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -4902,7 +4988,7 @@ const Branches = () => {
               </h3>
               <button
                 className="btn btn-ghost btn-icon branches-btn-auto"
-                onClick={() => setShowAccountModal(false)}
+                onClick={closeAccountModal}
               >
                 ✕
               </button>
@@ -5462,7 +5548,7 @@ const Branches = () => {
                 <>
                   <button
                     className="btn btn-ghost branches-btn-auto"
-                    onClick={() => setAccountModalMode("list")}
+                    onClick={backFromAccountForm}
                   >
                     Back
                   </button>

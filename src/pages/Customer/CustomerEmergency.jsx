@@ -694,6 +694,25 @@ const isLocationTooFar = (branch, province, city) => {
   const dist = distanceToBranchKm(branch, province, city);
   return dist !== null && dist > MAX_BRANCH_DISTANCE_KM;
 };
+
+// ── Auto-suggest the nearest branch for a given location. Checks distance
+// against every branch (not just ones in the same province), so any address
+// naturally resolves to whichever branch is actually closest. ──
+const findNearestBranch = (province, city) => {
+  const locCoords = getLocationCoords(province, city);
+  if (!locCoords) return null;
+  let best = null;
+  let bestDist = Infinity;
+  Object.entries(BRANCH_COORDS).forEach(([branch, coords]) => {
+    const d = haversineKm(locCoords, coords);
+    if (d < bestDist) {
+      bestDist = d;
+      best = branch;
+    }
+  });
+  return best;
+};
+
 const OTHER_LOCATION = "__other__";
 const OTHER_TYPE = "Other";
 
@@ -1228,14 +1247,19 @@ const ReportForm = memo(
           try {
             const { latitude, longitude } = pos.coords;
             const result = await reverseGeocode(latitude, longitude);
+            const nearestBranch = result.matched
+              ? findNearestBranch(result.province, result.city)
+              : null;
             setForm((f) => ({
               ...f,
               province: result.province || f.province,
               city: result.city || f.city,
               barangay: result.barangay || f.barangay,
               street: result.street || f.street,
+              branch: nearestBranch || f.branch,
             }));
             setDescErr("");
+            setBranchErr("");
             setLocateStatus(
               result.matched
                 ? {
@@ -1750,15 +1774,19 @@ const ReportForm = memo(
               <CustomSelect
                 value={form.city}
                 onChange={(val) => {
+                  const prov = CITY_TO_PROVINCE[val] || "";
+                  const nearest = findNearestBranch(prov, val);
                   setForm((p) => ({
                     ...p,
                     city: val,
-                    province: CITY_TO_PROVINCE[val] || "",
+                    province: prov,
                     barangay: BARANGAYS_BY_CITY[val]?.includes(p.barangay)
                       ? p.barangay
                       : "",
+                    branch: nearest || p.branch,
                   }));
                   setDescErr("");
+                  setBranchErr("");
                 }}
                 options={(form.province
                   ? [...(CITIES_BY_PROVINCE[form.province] || [])].sort()
@@ -1796,12 +1824,16 @@ const ReportForm = memo(
                   setForm((p) => ({ ...p, barangay: val }));
                 } else {
                   const [brgy, city] = val.split("||");
+                  const prov = CITY_TO_PROVINCE[city] || "";
+                  const nearest = findNearestBranch(prov, city);
                   setForm((p) => ({
                     ...p,
                     barangay: brgy,
                     city,
-                    province: CITY_TO_PROVINCE[city] || "",
+                    province: prov,
+                    branch: nearest || p.branch,
                   }));
+                  setBranchErr("");
                 }
                 setDescErr("");
               }}
@@ -1882,7 +1914,7 @@ const ReportForm = memo(
             })}
             placeholder="— Select Branch —"
             accent="#dc2626"
-            disabled={!form.barangay}
+            disabled={!form.city}
             searchable
           />{" "}
           {rateLimitErr && (

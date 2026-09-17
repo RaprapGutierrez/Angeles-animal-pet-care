@@ -483,7 +483,9 @@ const LiveGreeting = () => {
     const t = setInterval(() => setHour(new Date().getHours()), 30000);
     return () => clearInterval(t);
   }, []);
-  return hour < 12 ? "Good day" : "Good night";
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 };
 
 const LiveDateTime = () => {
@@ -579,6 +581,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [branchFilter, setBranchFilter] = useState("");
   const [branches, setBranches] = useState([]);
+  const [fetchError, setFetchError] = useState(null);
 
   // ── Fetch branches ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -592,10 +595,13 @@ const Dashboard = () => {
   const today = new Date().toISOString().split("T")[0];
 
   // ── Fetch dashboard data ───────────────────────────────────────────────────
+  const hasLoggedViewRef = React.useRef(false);
   useEffect(() => {
-    if (user)
+    if (user && !hasLoggedViewRef.current) {
+      hasLoggedViewRef.current = true;
       logActivity(user, "Viewed dashboard", "Opened the main dashboard");
-  }, []);
+    }
+  }, [user]);
 
   const fetchDashboard = async () => {
     if (!user) return;
@@ -680,8 +686,12 @@ const Dashboard = () => {
         pendingAppts: apptList.filter((a) => a.status === "Pending").length,
         walkins: walkinList.length,
       });
+      setFetchError(null);
     } catch (err) {
       console.error("Dashboard fetch error:", err);
+      setFetchError(
+        "Some dashboard data couldn't be loaded. Showing the last known values.",
+      );
     }
     setLoading(false);
   };
@@ -1185,6 +1195,41 @@ const Dashboard = () => {
             <LiveDateTime />
           </div>
 
+          {fetchError && (
+            <div
+              className="dash-fade-in"
+              style={{
+                background: "#fef2f2",
+                border: "1.5px solid #fca5a5",
+                borderRadius: 12,
+                padding: "10px 16px",
+                marginBottom: 18,
+                fontSize: 12,
+                fontWeight: 600,
+                color: "#991b1b",
+                display: "flex",
+                alignItems: "center",
+                gap: 8,
+              }}
+            >
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="#991b1b"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                style={{ flexShrink: 0 }}
+              >
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="8" x2="12" y2="12" />
+                <line x1="12" y1="16" x2="12.01" y2="16" />
+              </svg>
+              {fetchError}
+            </div>
+          )}
+
           {/* ── Pending appointments banner (always rendered to prevent CLS) ── */}
           <div
             className="dash-fade-in dash-pending-banner"
@@ -1299,6 +1344,50 @@ const Dashboard = () => {
               </Link>
             )}
           </div>
+
+          {/* ── Branch filter (only shown to users who can see all branches) ── */}
+          {seeAllBranches && branches.length > 0 && (
+            <div
+              className="dash-fade-in"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 10,
+                marginBottom: 18,
+              }}
+            >
+              <label
+                style={{
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--muted)",
+                }}
+              >
+                Branch:
+              </label>
+              <select
+                value={branchFilter}
+                onChange={(e) => setBranchFilter(e.target.value)}
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  padding: "6px 12px",
+                  borderRadius: 9,
+                  border: "1.5px solid var(--border)",
+                  background: "var(--card)",
+                  color: "var(--text)",
+                  cursor: "pointer",
+                }}
+              >
+                <option value="">All Branches</option>
+                {branches.map((b) => (
+                  <option key={b.id} value={b.id}>
+                    {b.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* ── Overview ──────────────────────────────────────────────────── */}
           <p className="dash-section-label">Overview</p>

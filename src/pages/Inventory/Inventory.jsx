@@ -1989,7 +1989,9 @@ const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
               }}
             >
               <div
-                onClick={() => imageInputRef.current?.click()}
+                onClick={() =>
+                  !uploadingImage && imageInputRef.current?.click()
+                }
                 style={{
                   width: 72,
                   height: 72,
@@ -1999,10 +2001,11 @@ const ItemFormModal = ({ item, onClose, onSave, saving, canEditPrice }) => {
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  cursor: "pointer",
+                  cursor: uploadingImage ? "default" : "pointer",
                   flexShrink: 0,
                   overflow: "hidden",
                   position: "relative",
+                  opacity: uploadingImage ? 0.7 : 1,
                 }}
               >
                 {uploadingImage ? (
@@ -2948,6 +2951,13 @@ const Inventory = () => {
     );
   };
 
+  // Any change to filters, search, or sort invalidates the current page —
+  // jump back to page 1 so the person doesn't land on a stale, possibly
+  // out-of-range page that shows "No items found" for no real reason.
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [catFilter, stockFilter, debouncedSearch, expiryFilter, sortConfig]);
+
   const showToast = (message, type = "success") => {
     const id = Date.now() + Math.random();
     setToasts((prev) => [...prev, { id, message, type, show: true }]);
@@ -3209,6 +3219,13 @@ const Inventory = () => {
   const totalPages = Math.max(1, Math.ceil(totalItemCount / ROWS_PER_PAGE));
   const safePage = currentPage;
   const paginated = items;
+
+  // Deleting the last item(s) on a page (or a filter shrinking the result
+  // set) can leave currentPage pointing past the end — clamp it back so the
+  // table never silently renders an empty page while earlier pages have data.
+  useEffect(() => {
+    if (currentPage > totalPages) setCurrentPage(totalPages);
+  }, [totalPages]);
 
   const openAdd = () =>
     perms.canAdd &&
@@ -3859,6 +3876,9 @@ const Inventory = () => {
         {lowStock.length > 0 && (
           <div
             onClick={() => {
+              // Clear any leftover search text so it can't hide matching
+              // low-stock items behind an empty-looking table.
+              setSearch("");
               setStockFilter((f) => (f === "low" ? "" : "low"));
               setExpiryFilter(false);
             }}
@@ -4005,6 +4025,7 @@ const Inventory = () => {
                   sub: "All inventory items",
                   active: !catFilter && !stockFilter && !expiryFilter,
                   onClick: () => {
+                    setSearch("");
                     setCatFilter("");
                     setStockFilter("");
                     setExpiryFilter(false);
@@ -4018,6 +4039,7 @@ const Inventory = () => {
                   sub: lowStock.length > 0 ? "Reorder needed" : "All stocked",
                   active: stockFilter === "low",
                   onClick: () => {
+                    setSearch("");
                     setStockFilter((f) => (f === "low" ? "" : "low"));
                     setExpiryFilter(false);
                   },
@@ -4033,6 +4055,7 @@ const Inventory = () => {
                       : "None expiring",
                   active: expiryFilter,
                   onClick: () => {
+                    setSearch("");
                     setExpiryFilter((f) => !f);
                     setStockFilter("");
                   },
@@ -4045,6 +4068,7 @@ const Inventory = () => {
                   sub: "Distinct categories",
                   active: false,
                   onClick: () => {
+                    setSearch("");
                     setCatFilter("");
                     setStockFilter("");
                     setExpiryFilter(false);

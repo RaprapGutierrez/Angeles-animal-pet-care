@@ -1157,19 +1157,27 @@ const isLocationTooFar = (branch, province, city) => {
 // ── Auto-suggest the nearest branch for a given location. This checks
 // distance against every branch (not just ones in the same province), so a
 // Pampanga address naturally resolves to the closest Pampanga branch. ──
-const findNearestBranch = (province, city) => {
+const findNearestBranch = (province, city, availability = {}) => {
   const locCoords = getLocationCoords(province, city);
   if (!locCoords) return null;
   let best = null;
   let bestDist = Infinity;
+  let bestAvailable = null;
+  let bestAvailableDist = Infinity;
   Object.entries(BRANCH_COORDS).forEach(([branch, coords]) => {
     const d = haversineKm(locCoords, coords);
     if (d < bestDist) {
       bestDist = d;
       best = branch;
     }
+    if (availability[branch] !== false && d < bestAvailableDist) {
+      bestAvailableDist = d;
+      bestAvailable = branch;
+    }
   });
-  return best;
+  // Prefer the nearest branch that's actually available, so geolocation
+  // never silently hands the person a branch they can't submit to.
+  return bestAvailable || best;
 };
 const OTHER_LOCATION = "__other__";
 const OTHER_TYPE = "Other";
@@ -1429,10 +1437,14 @@ const AlertCard = ({
   const [actionLock, setActionLock] = useState(false);
   const [lightboxSrc, setLightboxSrc] = useState(null);
 
-  const handleAction = (id, nextStatus) => {
+  const handleAction = async (id, nextStatus) => {
     if (actionLock) return;
     setActionLock(true);
-    onUpdateStatus(id, nextStatus);
+    try {
+      await onUpdateStatus(id, nextStatus);
+    } finally {
+      setActionLock(false);
+    }
   };
 
   if (compact) {
@@ -1939,7 +1951,11 @@ const EmergencyForm = memo(
             const result = await reverseGeocode(latitude, longitude);
             const prefix = guestMode ? "guest_" : "location_";
             const nearestBranch = result.matched
-              ? findNearestBranch(result.province, result.city)
+              ? findNearestBranch(
+                  result.province,
+                  result.city,
+                  branchAvailability,
+                )
               : null;
             setForm((f) => ({
               ...f,
@@ -2161,6 +2177,7 @@ const EmergencyForm = memo(
           guest_barangay: "",
           guest_street: "",
           patient_name: "",
+          pet_photo_url: "",
         });
         setErrors({});
       }
@@ -2432,7 +2449,11 @@ const EmergencyForm = memo(
                             )
                           )
                             set("guest_barangay", "");
-                          const nearest = findNearestBranch(prov, val);
+                          const nearest = findNearestBranch(
+                            prov,
+                            val,
+                            branchAvailability,
+                          );
                           if (nearest) set("branch", nearest);
                         }}
                         options={(form.guest_province
@@ -2478,7 +2499,11 @@ const EmergencyForm = memo(
                           set("guest_barangay", brgy);
                           set("guest_city", city);
                           set("guest_province", prov);
-                          const nearest = findNearestBranch(prov, city);
+                          const nearest = findNearestBranch(
+                            prov,
+                            city,
+                            branchAvailability,
+                          );
                           if (nearest) set("branch", nearest);
                         }
                       }}
@@ -2906,7 +2931,11 @@ const EmergencyForm = memo(
                           )
                         )
                           set("location_barangay", "");
-                        const nearest = findNearestBranch(prov, val);
+                        const nearest = findNearestBranch(
+                          prov,
+                          val,
+                          branchAvailability,
+                        );
                         if (nearest) set("branch", nearest);
                       }}
                       options={(form.location_province
@@ -2952,7 +2981,11 @@ const EmergencyForm = memo(
                         set("location_barangay", brgy);
                         set("location_city", city);
                         set("location_province", prov);
-                        const nearest = findNearestBranch(prov, city);
+                        const nearest = findNearestBranch(
+                          prov,
+                          city,
+                          branchAvailability,
+                        );
                         if (nearest) set("branch", nearest);
                       }
                     }}
@@ -3136,12 +3169,11 @@ const AdminView = ({
   branchAvailable,
   onToggleAvailability,
 }) => {
-  const visibleAlerts = userBranch
-    ? alerts.filter(
-        (a) =>
-          normalizeBranchName(a.branch) === normalizeBranchName(userBranch),
-      )
-    : alerts;
+  // AdminView is only ever rendered for actual Admins (see Emergency's
+  // render switch — Managers/Employees get StaffView instead), so it should
+  // always show alerts across every branch rather than being scoped to the
+  // logged-in admin's own branch.
+  const visibleAlerts = alerts;
   const pending = visibleAlerts.filter((a) =>
     ["pending", "responding"].includes(a.status || "pending"),
   );
@@ -3151,10 +3183,8 @@ const AdminView = ({
   const responding = visibleAlerts.filter(
     (a) => (a.status || "pending") === "responding",
   );
-  const historyAlerts = alerts.filter(
-    (a) =>
-      ["responding", "resolved"].includes(a.status || "pending") &&
-      normalizeBranchName(a.branch) === normalizeBranchName(userBranch),
+  const historyAlerts = alerts.filter((a) =>
+    ["responding", "resolved"].includes(a.status || "pending"),
   );
 
   const printSummaryReport = () => {

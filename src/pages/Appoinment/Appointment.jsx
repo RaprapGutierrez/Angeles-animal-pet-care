@@ -2327,7 +2327,9 @@ const Appointment = () => {
     return h >= 0 && h < 6;
   };
 
+  const [savingAppointment, setSavingAppointment] = useState(false);
   const saveAppointment = async () => {
+    if (savingAppointment) return;
     if (!form.patient || !form.owner || !form.date || !form.time) {
       showAlert("Missing Fields", "Please fill in all required fields.");
       return;
@@ -2347,6 +2349,7 @@ const Appointment = () => {
       showAlert("Time Slot Unavailable", "This time slot is already booked.");
       return;
     }
+    setSavingAppointment(true);
 
     if (!editMode) {
       for (const p of extraPets) {
@@ -2390,6 +2393,7 @@ const Appointment = () => {
             "Time Slot Unavailable",
             `The slot on ${p.date} at ${p.time} is already booked.`,
           );
+          setSavingAppointment(false);
           return;
         }
       }
@@ -2417,6 +2421,7 @@ const Appointment = () => {
         "This slot was just booked by someone else.",
       );
       await fetchAppts();
+      setSavingAppointment(false);
       return;
     }
 
@@ -2475,6 +2480,7 @@ const Appointment = () => {
         .eq("id", selectedAppt.id);
       if (error) {
         showAlert("Error", error.message);
+        setSavingAppointment(false);
         return;
       }
       logActivity(
@@ -2482,6 +2488,7 @@ const Appointment = () => {
         "Updated appointment",
         `Edited appointment for: ${form.patient}`,
       );
+      setSavingAppointment(false);
       setShowBook(false);
       showToast("✓ Appointment updated successfully", "success");
       return;
@@ -2494,6 +2501,7 @@ const Appointment = () => {
       .single();
     if (error) {
       showAlert("Error", error.message);
+      setSavingAppointment(false);
       return;
     }
     logActivity(
@@ -2615,6 +2623,7 @@ const Appointment = () => {
       }
     }
 
+    setSavingAppointment(false);
     setShowBook(false);
     const total = 1 + extraPets.length;
     if (isAdmin || isEmployee) {
@@ -6518,7 +6527,24 @@ const Appointment = () => {
                 }}
               >
                 <button
-                  onClick={() => setShowBook(false)}
+                  onClick={() => {
+                    const hasData =
+                      form.patient.trim() ||
+                      form.owner.trim() ||
+                      form.date ||
+                      form.time;
+                    if (hasData) {
+                      showConfirm(
+                        "Discard Appointment?",
+                        "You have unsaved changes to this appointment. Discard them and close?",
+                        () => setShowBook(false),
+                        "Discard",
+                        "#dc2626",
+                      );
+                    } else {
+                      setShowBook(false);
+                    }
+                  }}
                   style={{
                     background: "none",
                     border: "none",
@@ -8354,7 +8380,24 @@ const Appointment = () => {
                   <button
                     className="btn btn-ghost"
                     style={S.btn}
-                    onClick={() => setShowBook(false)}
+                    onClick={() => {
+                      const hasData =
+                        form.patient.trim() ||
+                        form.owner.trim() ||
+                        form.date ||
+                        form.time;
+                      if (hasData) {
+                        showConfirm(
+                          "Discard Appointment?",
+                          "You have unsaved changes to this appointment. Discard them and close?",
+                          () => setShowBook(false),
+                          "Discard",
+                          "#dc2626",
+                        );
+                      } else {
+                        setShowBook(false);
+                      }
+                    }}
                   >
                     Cancel
                   </button>
@@ -8376,9 +8419,11 @@ const Appointment = () => {
                         pointerEvents: canSubmitAppointment ? "auto" : "none",
                       }}
                       onClick={saveAppointment}
-                      disabled={!canSubmitAppointment}
+                      disabled={!canSubmitAppointment || savingAppointment}
                     >
-                      {editMode ? (
+                      {savingAppointment ? (
+                        "Saving…"
+                      ) : editMode ? (
                         "Save Changes"
                       ) : isAdmin ? (
                         <>

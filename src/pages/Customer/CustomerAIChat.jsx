@@ -2448,6 +2448,13 @@ Rules:
               <button
                 onClick={() => setStep(2)}
                 disabled={!canStep2 || !form.ownerName.trim()}
+                title={
+                  !form.ownerName.trim()
+                    ? "Please enter your name"
+                    : !canStep2
+                      ? "Please fill in pet name, type, and age"
+                      : ""
+                }
                 style={{
                   padding: 14,
                   borderRadius: 12,
@@ -2522,19 +2529,14 @@ Rules:
                         key={s}
                         className="chip-btn"
                         onClick={() => {
-                          const curr = form.symptoms;
-                          set(
-                            "symptoms",
-                            active
-                              ? curr
-                                  .replace(s + ", ", "")
-                                  .replace(", " + s, "")
-                                  .replace(s, "")
-                                  .trim()
-                              : curr
-                                ? curr + ", " + s
-                                : s,
-                          );
+                          const parts = form.symptoms
+                            .split(",")
+                            .map((p) => p.trim())
+                            .filter(Boolean);
+                          const next = active
+                            ? parts.filter((p) => p !== s)
+                            : [...parts, s];
+                          set("symptoms", next.join(", "));
                         }}
                         style={{
                           padding: "6px 12px",
@@ -2740,6 +2742,25 @@ Rules:
                 <strong>{form.petName}</strong>
               </p>
               <TypingDots />
+              <button
+                onClick={() => {
+                  setAssessing(false);
+                  setStep(2);
+                }}
+                style={{
+                  marginTop: 12,
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  border: "1.5px solid var(--border)",
+                  background: "transparent",
+                  fontSize: 12,
+                  fontWeight: 700,
+                  color: "var(--muted)",
+                  cursor: "pointer",
+                }}
+              >
+                Cancel
+              </button>
               <div
                 style={{
                   display: "flex",

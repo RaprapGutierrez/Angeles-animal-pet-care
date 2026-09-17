@@ -3318,8 +3318,8 @@ const PatientRecord = () => {
     if (statusFilter === "Critical") q = q.eq("health", "Critical");
     else if (statusFilter !== "all") q = q.eq("status", statusFilter);
     if (speciesFilter !== "all") q = q.eq("species", speciesFilter);
-    if (search.trim()) {
-      const s = search.trim();
+    if (debouncedSearch.trim()) {
+      const s = debouncedSearch.trim();
       q = q.or(
         `name.ilike.%${s}%,owner.ilike.%${s}%,species.ilike.%${s}%,breed.ilike.%${s}%,condition.ilike.%${s}%`,
       );
@@ -3448,7 +3448,7 @@ const PatientRecord = () => {
     currentPage,
     statusFilter,
     speciesFilter,
-    search,
+    debouncedSearch,
     sortField,
     sortDir,
   ]);
@@ -3564,7 +3564,7 @@ const PatientRecord = () => {
     setCurrentPage(1);
     setSelectedIds([]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, statusFilter, speciesFilter, sortField, sortDir]);
+  }, [debouncedSearch, statusFilter, speciesFilter, sortField, sortDir]);
 
   useEffect(() => {
     if (ownerStep !== OWNER_STEPS.SEARCH) return;
@@ -3609,6 +3609,41 @@ const PatientRecord = () => {
       f.owner_email === generated ? f : { ...f, owner_email: generated },
     );
   }, [form.owner_first, form.owner_last, ownerStep]);
+
+  // Escape closes whichever overlay is on top, respecting the same
+  // "discard unsaved changes?" confirmation as clicking the X would.
+  useEffect(() => {
+    const handleKey = (e) => {
+      if (e.key !== "Escape") return;
+      if (previewFile) {
+        setPreviewFile(null);
+      } else if (createdCredentials) {
+        setCreatedCredentials(null);
+      } else if (typeDeleteModal.show) {
+        closeTypeDeleteModal();
+      } else if (existingAccModal.show) {
+        setExistingAccModal((m) => ({ ...m, show: false }));
+      } else if (editingPatient) {
+        attemptCloseEditPatient();
+      } else if (showDeletedModal) {
+        setShowDeletedModal(false);
+      } else if (activeModal === "add") {
+        attemptCloseAddPatient();
+      } else if (activeModal) {
+        closeModal();
+      }
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [
+    previewFile,
+    createdCredentials,
+    typeDeleteModal.show,
+    existingAccModal.show,
+    editingPatient,
+    showDeletedModal,
+    activeModal,
+  ]);
 
   if (userLoading) {
     return (
@@ -3715,12 +3750,17 @@ const PatientRecord = () => {
       date_given: new Date().toISOString().slice(0, 10),
       next_due: "",
       given_by: "",
+      doses: "",
+      lot_number: "",
     });
     setAddTreatForm({
       date: new Date().toISOString().slice(0, 10),
       diagnosis: "",
       notes: "",
       vet: "",
+      temp: "",
+      heart_rate: "",
+      weight: "",
     });
     setShowAddVaxForm(false);
     setShowAddTreatForm(false);
@@ -3770,12 +3810,20 @@ const PatientRecord = () => {
       showAlert("Missing Fields", "Vaccine name and date given are required.");
       return;
     }
-    setPendingVax((prev) => [...prev, { ...addVaxForm, _key: Date.now() }]);
+    setPendingVax((prev) => [
+      ...prev,
+      {
+        ...addVaxForm,
+        _key: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      },
+    ]);
     setAddVaxForm({
       name: "",
       date_given: new Date().toISOString().slice(0, 10),
       next_due: "",
       given_by: "",
+      doses: "",
+      lot_number: "",
     });
     setShowAddVaxForm(false);
   };
@@ -3786,12 +3834,21 @@ const PatientRecord = () => {
       showAlert("Missing Fields", "Diagnosis is required.");
       return;
     }
-    setPendingTreat((prev) => [...prev, { ...addTreatForm, _key: Date.now() }]);
+    setPendingTreat((prev) => [
+      ...prev,
+      {
+        ...addTreatForm,
+        _key: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      },
+    ]);
     setAddTreatForm({
       date: new Date().toISOString().slice(0, 10),
       diagnosis: "",
       notes: "",
       vet: "",
+      temp: "",
+      heart_rate: "",
+      weight: "",
     });
     setShowAddTreatForm(false);
   };
@@ -4341,6 +4398,31 @@ const PatientRecord = () => {
       );
     } else {
       closeEditPatient();
+    }
+  };
+
+  const isAddPatientDirty = () =>
+    !!(
+      form.name.trim() ||
+      form.owner.trim() ||
+      form.owner_first.trim() ||
+      form.owner_last.trim() ||
+      form.condition.trim() ||
+      pendingVax.length > 0 ||
+      pendingTreat.length > 0 ||
+      ownerStep !== OWNER_STEPS.ASK
+    );
+
+  const attemptCloseAddPatient = () => {
+    if (isAddPatientDirty()) {
+      showConfirm(
+        "Discard New Patient?",
+        "You have unsaved information for this new patient. Do you want to discard it?",
+        () => closeModal(),
+        "#dc2626",
+      );
+    } else {
+      closeModal();
     }
   };
 
@@ -7405,7 +7487,7 @@ const PatientRecord = () => {
                   }}
                 >
                   <button
-                    onClick={closeModal}
+                    onClick={attemptCloseAddPatient}
                     aria-label="Close"
                     style={{
                       background: "none",
@@ -8528,7 +8610,7 @@ const PatientRecord = () => {
                 <div style={{ flex: 1 }} />
                 <button
                   className="btn btn-ghost pr-btn-auto"
-                  onClick={closeModal}
+                  onClick={attemptCloseAddPatient}
                 >
                   Cancel
                 </button>

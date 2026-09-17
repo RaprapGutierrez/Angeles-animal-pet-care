@@ -2342,7 +2342,7 @@ const AdminSecurity = () => {
             .update({ deleted_at: null })
             .eq("id", u.id);
           if (error) {
-            alert("Error: " + error.message);
+            showToast("Error: " + error.message, "error");
             return;
           }
 
@@ -2537,15 +2537,21 @@ const AdminSecurity = () => {
   const handleDeactivate = (u) => {
     setConfirm({
       title: "Deactivate User",
-      message: `Deactivate ${fullName(u)}?`,
+      message: `Deactivate ${fullName(u)}? They won't be able to log in until reactivated.`,
       type: "danger",
       confirmLabel: "Deactivate",
       onConfirm: async () => {
-        await supabase
+        setConfirm(null);
+        const { error } = await supabase
           .from("profiles")
           .update({ status: "Inactive" })
           .eq("id", u.id);
-        setConfirm(null);
+        if (error) {
+          showToast("Error: " + error.message, "error");
+          return;
+        }
+        showToast(`${fullName(u)} deactivated`, "info");
+        setViewUser((v) => (v?.id === u.id ? { ...v, status: "Inactive" } : v));
       },
     });
   };
@@ -3305,6 +3311,35 @@ const AdminSecurity = () => {
                         minWidth: 0,
                       }}
                     />
+                    {search && (
+                      <button
+                        type="button"
+                        onClick={() => setSearch("")}
+                        title="Clear search"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          cursor: "pointer",
+                          color: "#94a3b8",
+                          padding: 0,
+                          display: "flex",
+                          flexShrink: 0,
+                        }}
+                      >
+                        <svg
+                          width="12"
+                          height="12"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                        >
+                          <line x1="18" y1="6" x2="6" y2="18" />
+                          <line x1="6" y1="6" x2="18" y2="18" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                   <div style={{ width: 150, flex: "0 1 150px" }}>
                     <CustomSelect
@@ -5486,7 +5521,27 @@ const AdminSecurity = () => {
                 </span>
               </div>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  const hasData =
+                    addForm.first_name.trim() ||
+                    addForm.last_name.trim() ||
+                    addForm.email.trim();
+                  if (hasData) {
+                    setConfirm({
+                      title: "Discard New User?",
+                      message:
+                        "You've entered information for this account. Discard it and close?",
+                      type: "danger",
+                      confirmLabel: "Discard",
+                      onConfirm: () => {
+                        setConfirm(null);
+                        setShowAddModal(false);
+                      },
+                    });
+                  } else {
+                    setShowAddModal(false);
+                  }
+                }}
                 style={{
                   background: "none",
                   border: "none",

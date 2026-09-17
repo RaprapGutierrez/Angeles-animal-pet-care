@@ -184,6 +184,15 @@ const Modal = ({
   confirmText,
   cancelText,
 }) => {
+  useEffect(() => {
+    if (!show) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [show, onClose]);
+
   if (!show) return null;
   const colors = {
     error: {
@@ -331,6 +340,7 @@ const AddClientModal = ({
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState(null);
+  const searchReqIdRef = useRef(0);
 
   useEffect(() => {
     if (!show) {
@@ -342,6 +352,10 @@ const AddClientModal = ({
   useEffect(() => {
     if (!show || !currentUser) return;
     const run = async () => {
+      // Tag this run so a slower, older search can't clobber a faster newer
+      // one that already landed — without this, results could flicker back
+      // to stale data after the user kept typing.
+      const reqId = ++searchReqIdRef.current;
       setLoading(true);
 
       const role = normRole(currentUser.role);
@@ -372,8 +386,10 @@ const AddClientModal = ({
       });
 
       if (orParts.length === 0) {
-        setResults([]);
-        setLoading(false);
+        if (searchReqIdRef.current === reqId) {
+          setResults([]);
+          setLoading(false);
+        }
         return;
       }
 
@@ -424,6 +440,9 @@ const AddClientModal = ({
           branch: normBranch(p.branch_id || ""),
         }));
 
+      // A newer keystroke already kicked off another request — drop this
+      // stale response instead of overwriting the fresher results on screen.
+      if (searchReqIdRef.current !== reqId) return;
       setResults(filtered);
       setLoading(false);
     };
@@ -440,6 +459,16 @@ const AddClientModal = ({
     await onAdd(profile);
     setAdding(null);
   };
+
+  useEffect(() => {
+    if (!show) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [show, onClose]);
+
   if (!show) return null;
 
   // ── Helper hint text per role ─────────────────────────────────────────────
@@ -882,6 +911,7 @@ const Messages = () => {
   const [previewFile, setPreviewFile] = useState(null);
   const [previewZoom, setPreviewZoom] = useState(1);
   const [downloadingPreview, setDownloadingPreview] = useState(false);
+  const [showJumpToLatest, setShowJumpToLatest] = useState(false);
 
   const bottomRef = useRef(null);
   const inputRef = useRef(null);
@@ -951,6 +981,15 @@ const Messages = () => {
       cancelText,
     });
   const closeModal = () => setModal((m) => ({ ...m, show: false }));
+
+  useEffect(() => {
+    if (!previewFile) return;
+    const handleKey = (e) => {
+      if (e.key === "Escape") setPreviewFile(null);
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [previewFile]);
 
   const currentUser = useMemo(
     () =>
@@ -1273,6 +1312,11 @@ const Messages = () => {
           () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
           80,
         );
+      } else if (keepOptimistic) {
+        // A background refresh landed new messages while the reader was
+        // scrolled up — don't yank them down, but let them know there's
+        // something new instead of leaving it silently off-screen.
+        setShowJumpToLatest(true);
       }
     },
     [currentUser],
@@ -1315,6 +1359,42 @@ const Messages = () => {
           }
         },
       )
+      // Same-branch messages had no equivalent global listener, so a brand
+      // new conversation (or a message from a contact not yet in the
+      // sidebar) only ever showed up after a manual refresh — unlike
+      // cross-branch messages, which refreshed instantly.
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: MESSAGES_TABLE,
+        },
+        (payload) => {
+          const msg = payload.new;
+          if (!msg) return;
+          if (
+            msg.receiver_id === currentUser.id ||
+            msg.sender_id === currentUser.id
+          ) {
+            if (fetchClientsTimer.current)
+              clearTimeout(fetchClientsTimer.current);
+            fetchClientsTimer.current = setTimeout(() => {
+              fetchClientsRunning.current = false;
+              fetchClients();
+            }, 300);
+            setSelected((prev) => {
+              if (
+                prev &&
+                (prev.id === msg.sender_id || prev.id === msg.receiver_id)
+              ) {
+                fetchMessages(prev, true);
+              }
+              return prev;
+            });
+          }
+        },
+      )
       .subscribe();
     return () => supabase.removeChannel(globalCh);
   }, [currentUser?.id, fetchClients, fetchMessages]);
@@ -1331,6 +1411,13 @@ const Messages = () => {
     // the reader's current scroll position rather than yanking them down.
     const isNewConversation = prevSelectedIdRef.current !== selected.id;
     prevSelectedIdRef.current = selected.id;
+    if (isNewConversation) {
+      // A draft or attachment left over from the previous conversation used
+      // to silently follow the user here and could get sent to the wrong person.
+      setNewMsg("");
+      setPendingFile(null);
+      setShowJumpToLatest(false);
+    }
     fetchMessages(selected, !isNewConversation);
 
     // Always mark both tables — ensures super_admin → manager messages get marked read.
@@ -1526,6 +1613,7 @@ const Messages = () => {
     setMessages((prev) => [...prev, optimistic]);
     setNewMsg("");
     setPendingFile(null);
+    setShowJumpToLatest(false);
     setTimeout(
       () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
       80,
@@ -1755,11 +1843,20 @@ const Messages = () => {
   // Selecting the conversation here triggers fetchMessages + the mark-as-read
   // calls in the "subscribe to active conversation" effect above, which is what
   // actually clears the unread badge/count everywhere else in the app.
-  const openWithHandled = useRef(false);
+  const openWithHandled = useRef(null);
   useEffect(() => {
     const openWithId = location.state?.openWith;
-    if (!openWithId || openWithHandled.current || !currentUser?.id) return;
-    openWithHandled.current = true;
+    // Track which id was already handled instead of a one-shot boolean —
+    // otherwise clicking a second notification for a different conversation
+    // later in the same session was silently ignored, since this route
+    // doesn't remount between notification clicks.
+    if (
+      !openWithId ||
+      openWithHandled.current === openWithId ||
+      !currentUser?.id
+    )
+      return;
+    openWithHandled.current = openWithId;
 
     const existing = mergedContacts.find((c) => c.id === openWithId);
     if (existing) {
@@ -2352,270 +2449,308 @@ const Messages = () => {
                 </div>
               )}
 
-              <div
-                ref={chatScrollRef}
-                className="chat-scroll msg-chat-bg"
-                style={{
-                  flex: 1,
-                  overflowY: "auto",
-                  overflowX: "hidden",
-                  padding: "20px 24px",
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 2,
-                  background: "#f4f6fb",
-                  minHeight: 0,
-                }}
-              >
-                {messages.length === 0 && !deleting && (
-                  <div style={{ margin: "auto", textAlign: "center" }}>
-                    <svg
-                      width="32"
-                      height="32"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#c7d2fe"
-                      strokeWidth="1.5"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      style={{ marginBottom: 8 }}
-                    >
-                      <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
-                      <line x1="12" y1="2" x2="12" y2="12" />
-                    </svg>
-                    <div style={{ fontSize: 14, color: "#9ca3af" }}>
-                      No messages yet. Say hello!
-                    </div>
-                  </div>
-                )}
-                {grouped.map((item, i) => {
-                  if (item.type === "divider")
-                    return (
-                      <div
-                        key={`d-${i}`}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 10,
-                          margin: "18px 0 8px",
-                        }}
+              <div style={{ position: "relative", flex: 1, minHeight: 0 }}>
+                <div
+                  ref={chatScrollRef}
+                  className="chat-scroll msg-chat-bg"
+                  onScroll={() => {
+                    if (isNearBottom()) setShowJumpToLatest(false);
+                  }}
+                  style={{
+                    height: "100%",
+                    overflowY: "auto",
+                    overflowX: "hidden",
+                    padding: "20px 24px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: 2,
+                    background: "#f4f6fb",
+                    minHeight: 0,
+                  }}
+                >
+                  {messages.length === 0 && !deleting && (
+                    <div style={{ margin: "auto", textAlign: "center" }}>
+                      <svg
+                        width="32"
+                        height="32"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="#c7d2fe"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        style={{ marginBottom: 8 }}
                       >
-                        <div
-                          style={{ flex: 1, height: 1, background: "#e5e7eb" }}
-                        />
-                        <span
-                          style={{
-                            fontSize: 11,
-                            color: "#9ca3af",
-                            fontWeight: 600,
-                            background: "#f4f6fb",
-                            padding: "2px 12px",
-                            borderRadius: 99,
-                            border: "1px solid #e5e7eb",
-                          }}
-                        >
-                          {item.label}
-                        </span>
-                        <div
-                          style={{ flex: 1, height: 1, background: "#e5e7eb" }}
-                        />
+                        <path d="M18.36 6.64a9 9 0 1 1-12.73 0" />
+                        <line x1="12" y1="2" x2="12" y2="12" />
+                      </svg>
+                      <div style={{ fontSize: 14, color: "#9ca3af" }}>
+                        No messages yet. Say hello!
                       </div>
-                    );
-                  const me = item.sender_id === currentUser?.id;
-                  return (
-                    <div
-                      key={item.id}
-                      className="bubble"
-                      style={{
-                        display: "flex",
-                        justifyContent: me ? "flex-end" : "flex-start",
-                        alignItems: "flex-end",
-                        gap: 8,
-                        marginTop: 3,
-                      }}
-                    >
-                      {!me && (
-                        <Avatar
-                          name={selected.full_name || selected.email || "?"}
-                          size={28}
-                        />
-                      )}
-                      <div style={{ maxWidth: "62%" }}>
+                    </div>
+                  )}
+                  {grouped.map((item, i) => {
+                    if (item.type === "divider")
+                      return (
                         <div
-                          className={me ? "" : "msg-bubble-incoming"}
+                          key={`d-${i}`}
                           style={{
-                            background: me
-                              ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
-                              : "#fff",
-                            color: me ? "#fff" : "#111827",
-                            padding: "10px 14px",
-                            borderRadius: me
-                              ? "18px 18px 4px 18px"
-                              : "18px 18px 18px 4px",
-                            fontSize: 14,
-                            lineHeight: 1.55,
-                            opacity: item._pending ? 0.55 : 1,
-                            boxShadow: me
-                              ? "0 3px 14px rgba(99,102,241,0.3)"
-                              : "0 1px 4px rgba(0,0,0,0.08)",
-                            wordBreak: "break-word",
-                            whiteSpace: "pre-wrap",
-                          }}
-                        >
-                          {item.attachment_url &&
-                            (item.attachment_type?.startsWith("image/") ||
-                            /\.(jpe?g|png|gif|webp)$/i.test(
-                              item.attachment_name || "",
-                            ) ? (
-                              <img
-                                src={item.attachment_url}
-                                alt={item.attachment_name || "attachment"}
-                                loading="lazy"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setPreviewZoom(1);
-                                  setPreviewFile({
-                                    url: item.attachment_url,
-                                    name: item.attachment_name,
-                                    type:
-                                      item.attachment_type ||
-                                      (/\.pdf$/i.test(
-                                        item.attachment_name || "",
-                                      )
-                                        ? "application/pdf"
-                                        : /\.docx?$/i.test(
-                                              item.attachment_name || "",
-                                            )
-                                          ? "application/msword"
-                                          : ""),
-                                  });
-                                }}
-                                style={{
-                                  maxWidth: 320,
-                                  maxHeight: 320,
-                                  width: "auto",
-                                  height: "auto",
-                                  borderRadius: 10,
-                                  display: "block",
-                                  marginBottom: item.message ? 6 : 0,
-                                  cursor: "pointer",
-                                  imageRendering: "auto",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            ) : (
-                              <div
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  setPreviewZoom(1);
-                                  setPreviewFile({
-                                    url: item.attachment_url,
-                                    name: item.attachment_name,
-                                    type:
-                                      item.attachment_type ||
-                                      (/\.pdf$/i.test(
-                                        item.attachment_name || "",
-                                      )
-                                        ? "application/pdf"
-                                        : /\.docx?$/i.test(
-                                              item.attachment_name || "",
-                                            )
-                                          ? "application/msword"
-                                          : ""),
-                                  });
-                                }}
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  gap: 10,
-                                  padding: "10px 12px",
-                                  borderRadius: 10,
-                                  cursor: "pointer",
-                                  marginBottom: item.message ? 6 : 0,
-                                  background: me
-                                    ? "rgba(255,255,255,0.15)"
-                                    : "#f4f6fb",
-                                  border: `1px solid ${me ? "rgba(255,255,255,0.25)" : "#e5e7eb"}`,
-                                }}
-                              >
-                                <span
-                                  style={{
-                                    width: 34,
-                                    height: 34,
-                                    borderRadius: 8,
-                                    background: me
-                                      ? "rgba(255,255,255,0.2)"
-                                      : "#eef0fe",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    flexShrink: 0,
-                                    fontSize: 16,
-                                  }}
-                                >
-                                  📄
-                                </span>
-                                <span
-                                  style={{
-                                    fontSize: 13,
-                                    fontWeight: 600,
-                                    color: me ? "#fff" : "#374151",
-                                    overflow: "hidden",
-                                    textOverflow: "ellipsis",
-                                    whiteSpace: "nowrap",
-                                    maxWidth: 160,
-                                  }}
-                                >
-                                  {item.attachment_name || "File"}
-                                </span>
-                              </div>
-                            ))}
-                          {item.message}
-                        </div>
-                        <div
-                          style={{
-                            fontSize: 10.5,
-                            color: "#9ca3af",
-                            marginTop: 4,
                             display: "flex",
                             alignItems: "center",
-                            gap: 4,
-                            justifyContent: me ? "flex-end" : "flex-start",
+                            gap: 10,
+                            margin: "18px 0 8px",
                           }}
                         >
-                          {fmtTime(item.created_at)}
-                          {item._pending && (
-                            <span style={{ fontStyle: "italic" }}>
-                              sending…
-                            </span>
-                          )}
-                          {me &&
-                            !item._pending &&
-                            (item.is_read ? (
-                              <span
-                                style={{ color: "#6366f1", fontWeight: 600 }}
-                              >
-                                Seen
-                              </span>
-                            ) : (
-                              <svg
-                                width="12"
-                                height="12"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="#9ca3af"
-                                strokeWidth="2.5"
-                              >
-                                <path d="M20 6 9 17l-5-5" />
-                              </svg>
-                            ))}
+                          <div
+                            style={{
+                              flex: 1,
+                              height: 1,
+                              background: "#e5e7eb",
+                            }}
+                          />
+                          <span
+                            style={{
+                              fontSize: 11,
+                              color: "#9ca3af",
+                              fontWeight: 600,
+                              background: "#f4f6fb",
+                              padding: "2px 12px",
+                              borderRadius: 99,
+                              border: "1px solid #e5e7eb",
+                            }}
+                          >
+                            {item.label}
+                          </span>
+                          <div
+                            style={{
+                              flex: 1,
+                              height: 1,
+                              background: "#e5e7eb",
+                            }}
+                          />
                         </div>
+                      );
+                    const me = item.sender_id === currentUser?.id;
+                    return (
+                      <div
+                        key={item.id}
+                        className="bubble"
+                        style={{
+                          display: "flex",
+                          justifyContent: me ? "flex-end" : "flex-start",
+                          alignItems: "flex-end",
+                          gap: 8,
+                          marginTop: 3,
+                        }}
+                      >
+                        {!me && (
+                          <Avatar
+                            name={selected.full_name || selected.email || "?"}
+                            size={28}
+                          />
+                        )}
+                        <div style={{ maxWidth: "62%" }}>
+                          <div
+                            className={me ? "" : "msg-bubble-incoming"}
+                            style={{
+                              background: me
+                                ? "linear-gradient(135deg,#6366f1,#8b5cf6)"
+                                : "#fff",
+                              color: me ? "#fff" : "#111827",
+                              padding: "10px 14px",
+                              borderRadius: me
+                                ? "18px 18px 4px 18px"
+                                : "18px 18px 18px 4px",
+                              fontSize: 14,
+                              lineHeight: 1.55,
+                              opacity: item._pending ? 0.55 : 1,
+                              boxShadow: me
+                                ? "0 3px 14px rgba(99,102,241,0.3)"
+                                : "0 1px 4px rgba(0,0,0,0.08)",
+                              wordBreak: "break-word",
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {item.attachment_url &&
+                              (item.attachment_type?.startsWith("image/") ||
+                              /\.(jpe?g|png|gif|webp)$/i.test(
+                                item.attachment_name || "",
+                              ) ? (
+                                <img
+                                  src={item.attachment_url}
+                                  alt={item.attachment_name || "attachment"}
+                                  loading="lazy"
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setPreviewZoom(1);
+                                    setPreviewFile({
+                                      url: item.attachment_url,
+                                      name: item.attachment_name,
+                                      type:
+                                        item.attachment_type ||
+                                        (/\.pdf$/i.test(
+                                          item.attachment_name || "",
+                                        )
+                                          ? "application/pdf"
+                                          : /\.docx?$/i.test(
+                                                item.attachment_name || "",
+                                              )
+                                            ? "application/msword"
+                                            : ""),
+                                    });
+                                  }}
+                                  style={{
+                                    maxWidth: 320,
+                                    maxHeight: 320,
+                                    width: "auto",
+                                    height: "auto",
+                                    borderRadius: 10,
+                                    display: "block",
+                                    marginBottom: item.message ? 6 : 0,
+                                    cursor: "pointer",
+                                    imageRendering: "auto",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              ) : (
+                                <div
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    setPreviewZoom(1);
+                                    setPreviewFile({
+                                      url: item.attachment_url,
+                                      name: item.attachment_name,
+                                      type:
+                                        item.attachment_type ||
+                                        (/\.pdf$/i.test(
+                                          item.attachment_name || "",
+                                        )
+                                          ? "application/pdf"
+                                          : /\.docx?$/i.test(
+                                                item.attachment_name || "",
+                                              )
+                                            ? "application/msword"
+                                            : ""),
+                                    });
+                                  }}
+                                  style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 10,
+                                    padding: "10px 12px",
+                                    borderRadius: 10,
+                                    cursor: "pointer",
+                                    marginBottom: item.message ? 6 : 0,
+                                    background: me
+                                      ? "rgba(255,255,255,0.15)"
+                                      : "#f4f6fb",
+                                    border: `1px solid ${me ? "rgba(255,255,255,0.25)" : "#e5e7eb"}`,
+                                  }}
+                                >
+                                  <span
+                                    style={{
+                                      width: 34,
+                                      height: 34,
+                                      borderRadius: 8,
+                                      background: me
+                                        ? "rgba(255,255,255,0.2)"
+                                        : "#eef0fe",
+                                      display: "flex",
+                                      alignItems: "center",
+                                      justifyContent: "center",
+                                      flexShrink: 0,
+                                      fontSize: 16,
+                                    }}
+                                  >
+                                    📄
+                                  </span>
+                                  <span
+                                    style={{
+                                      fontSize: 13,
+                                      fontWeight: 600,
+                                      color: me ? "#fff" : "#374151",
+                                      overflow: "hidden",
+                                      textOverflow: "ellipsis",
+                                      whiteSpace: "nowrap",
+                                      maxWidth: 160,
+                                    }}
+                                  >
+                                    {item.attachment_name || "File"}
+                                  </span>
+                                </div>
+                              ))}
+                            {item.message}
+                          </div>
+                          <div
+                            style={{
+                              fontSize: 10.5,
+                              color: "#9ca3af",
+                              marginTop: 4,
+                              display: "flex",
+                              alignItems: "center",
+                              gap: 4,
+                              justifyContent: me ? "flex-end" : "flex-start",
+                            }}
+                          >
+                            {fmtTime(item.created_at)}
+                            {item._pending && (
+                              <span style={{ fontStyle: "italic" }}>
+                                sending…
+                              </span>
+                            )}
+                            {me &&
+                              !item._pending &&
+                              (item.is_read ? (
+                                <span
+                                  style={{ color: "#6366f1", fontWeight: 600 }}
+                                >
+                                  Seen
+                                </span>
+                              ) : (
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="#9ca3af"
+                                  strokeWidth="2.5"
+                                >
+                                  <path d="M20 6 9 17l-5-5" />
+                                </svg>
+                              ))}
+                          </div>
+                        </div>
+                        {me && <Avatar name={currentUser.name} size={28} me />}
                       </div>
-                      {me && <Avatar name={currentUser.name} size={28} me />}
-                    </div>
-                  );
-                })}
-                <div ref={bottomRef} />
+                    );
+                  })}
+                  <div ref={bottomRef} />
+                </div>
+                {showJumpToLatest && (
+                  <button
+                    onClick={() => {
+                      setShowJumpToLatest(false);
+                      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+                    }}
+                    style={{
+                      position: "absolute",
+                      bottom: 16,
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      padding: "8px 16px",
+                      borderRadius: 20,
+                      border: "none",
+                      background: "#6366f1",
+                      color: "#fff",
+                      fontSize: 12,
+                      fontWeight: 700,
+                      cursor: "pointer",
+                      boxShadow: "0 4px 14px rgba(99,102,241,0.4)",
+                    }}
+                  >
+                    ↓ New messages
+                  </button>
+                )}
               </div>
 
               <div
@@ -2661,17 +2796,24 @@ const Messages = () => {
                       }}
                     >
                       {pendingFile.name}
+                      {uploadingFile && (
+                        <span style={{ marginLeft: 6, fontStyle: "italic" }}>
+                          — uploading…
+                        </span>
+                      )}
                     </span>
-                    <span
-                      onClick={() => setPendingFile(null)}
-                      style={{
-                        cursor: "pointer",
-                        fontWeight: 700,
-                        color: "#6366f1",
-                      }}
-                    >
-                      ✕
-                    </span>
+                    {!uploadingFile && (
+                      <span
+                        onClick={() => setPendingFile(null)}
+                        style={{
+                          cursor: "pointer",
+                          fontWeight: 700,
+                          color: "#6366f1",
+                        }}
+                      >
+                        ✕
+                      </span>
+                    )}
                   </div>
                 )}
                 {(normRole(currentUser?.role) === "manager" ||
@@ -2858,7 +3000,11 @@ const Messages = () => {
                       height="18"
                       viewBox="0 0 24 24"
                       fill="none"
-                      stroke={sending || !newMsg.trim() ? "#9ca3af" : "#fff"}
+                      stroke={
+                        sending || (!newMsg.trim() && !pendingFile)
+                          ? "#9ca3af"
+                          : "#fff"
+                      }
                       strokeWidth="2.2"
                       strokeLinecap="round"
                       strokeLinejoin="round"
