@@ -1266,6 +1266,23 @@ const Register = () => {
             >
               Already have an account? <Link to="/login">Sign In</Link>
             </p>
+            <p
+              style={{
+                fontSize: 11,
+                color: "#94a3b8",
+                textAlign: "center",
+                marginTop: 10,
+                marginBottom: 0,
+              }}
+            >
+              By creating an account, you agree to our{" "}
+              <Link
+                to="/privacy-policy"
+                style={{ color: "#2563eb", fontWeight: 700 }}
+              >
+                Data Privacy Notice
+              </Link>
+            </p>
 
             <Link
               to="/guest-ai-chat"

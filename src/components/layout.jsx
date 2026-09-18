@@ -2165,6 +2165,48 @@ const AvatarDropdown = ({ user, onLogout, onClose, avatarUrl }) => {
           View Profile
         </Link>
 
+        {/* Privacy Policy */}
+        <Link
+          to="/privacy-policy"
+          onClick={onClose}
+          style={{
+            width: "100%",
+            padding: "9px 12px",
+            borderRadius: 9,
+            background: "transparent",
+            color: "var(--text)",
+            fontSize: 13,
+            fontWeight: 600,
+            cursor: "pointer",
+            fontFamily: "inherit",
+            textAlign: "left",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            transition: "background 0.12s",
+            textDecoration: "none",
+          }}
+          onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg)")}
+          onMouseLeave={(e) =>
+            (e.currentTarget.style.background = "transparent")
+          }
+        >
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          </svg>
+          Privacy Policy
+        </Link>
+
         {/* Dark Mode Toggle */}
         <button
           onClick={toggleDark}
