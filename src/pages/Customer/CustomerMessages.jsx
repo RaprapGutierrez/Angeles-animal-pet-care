@@ -457,7 +457,7 @@ const VET_FAQ = [
   },
   {
     keys: ["service", "offer", "do you"],
-    a: "We offer checkups, vaccinations, grooming, surgery, dental care, diagnostics, and boarding. Let me know if you'd like details on any specific service.",
+    a: "We offer Consultation, Vaccination, Deworming, Imaging, Diagnostics, and Grooming. Let me know if you'd like details on any specific service.",
   },
   {
     keys: ["location", "address", "where"],
@@ -510,30 +510,94 @@ const VetBot = () => {
 
   return (
     <>
-      <button
-        onClick={() => setOpen((o) => !o)}
-        title="Ask VetBot"
+      <div
         style={{
           position: "fixed",
           bottom: 24,
           right: 24,
           zIndex: 99997,
-          width: 56,
-          height: 56,
-          borderRadius: "50%",
-          border: "none",
-          background: "linear-gradient(135deg,#22c55e,#16a34a)",
-          color: "#fff",
-          fontSize: 24,
-          cursor: "pointer",
-          boxShadow: "0 6px 20px rgba(34,197,94,0.4)",
           display: "flex",
           alignItems: "center",
-          justifyContent: "center",
+          gap: 10,
+        }}
+        onMouseEnter={(e) => {
+          const tip = e.currentTarget.querySelector(".vetbot-tooltip");
+          if (tip) {
+            tip.style.opacity = "1";
+            tip.style.transform = "translateX(0)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          const tip = e.currentTarget.querySelector(".vetbot-tooltip");
+          if (tip) {
+            tip.style.opacity = "0";
+            tip.style.transform = "translateX(8px)";
+          }
         }}
       >
-        {open ? "✕" : "🐾"}
-      </button>
+        <span
+          className="vetbot-tooltip"
+          style={{
+            opacity: 0,
+            transform: "translateX(8px)",
+            transition: "opacity 0.2s ease, transform 0.2s ease",
+            background: "linear-gradient(135deg,#0f172a,#1e3a8a)",
+            color: "#fff",
+            fontSize: 12,
+            fontWeight: 700,
+            padding: "8px 14px",
+            borderRadius: 10,
+            whiteSpace: "nowrap",
+            pointerEvents: "none",
+            boxShadow:
+              "0 8px 24px rgba(30,58,138,0.35), 0 2px 8px rgba(0,0,0,0.2)",
+            border: "1px solid rgba(255,255,255,0.12)",
+          }}
+        >
+          {open ? "Close VetBot" : "Ask VetBot"}
+        </span>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          title="Ask VetBot"
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: "50%",
+            border: "none",
+            background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
+            color: "#fff",
+            cursor: "pointer",
+            boxShadow: "0 6px 20px rgba(99,102,241,0.4)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexShrink: 0,
+          }}
+        >
+          {open ? (
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#fff"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+            >
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          ) : (
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff">
+              <ellipse cx="12" cy="16" rx="5" ry="4.2" />
+              <ellipse cx="5.5" cy="9" rx="2.1" ry="2.6" />
+              <ellipse cx="10" cy="5.5" rx="2.1" ry="2.6" />
+              <ellipse cx="14" cy="5.5" rx="2.1" ry="2.6" />
+              <ellipse cx="18.5" cy="9" rx="2.1" ry="2.6" />
+            </svg>
+          )}
+        </button>
+      </div>
       {open && (
         <div
           style={{
@@ -555,7 +619,7 @@ const VetBot = () => {
           <div
             style={{
               padding: "12px 16px",
-              background: "linear-gradient(135deg,#22c55e,#16a34a)",
+              background: "linear-gradient(135deg,#6366f1,#8b5cf6)",
               color: "#fff",
               fontWeight: 700,
               fontSize: 14,
@@ -579,7 +643,7 @@ const VetBot = () => {
                 key={i}
                 style={{
                   alignSelf: m.from === "bot" ? "flex-start" : "flex-end",
-                  background: m.from === "bot" ? "#fff" : "#22c55e",
+                  background: m.from === "bot" ? "#fff" : "#6366f1",
                   color: m.from === "bot" ? "#111827" : "#fff",
                   padding: "8px 12px",
                   borderRadius: 12,
@@ -783,7 +847,11 @@ const CustomerMessages = () => {
           "Super Admin",
         ])
         .eq("status", "Active")
-        .or(`branch_id.eq.${user?.branchId ?? null},role.ilike.super_admin`)
+        .or(
+          user?.branchId
+            ? `branch_id.eq.${user.branchId},role.ilike.super_admin`
+            : `branch_id.is.null,role.ilike.super_admin`,
+        )
         .order("first_name");
 
       const mapped = (data || []).map((p) => ({
