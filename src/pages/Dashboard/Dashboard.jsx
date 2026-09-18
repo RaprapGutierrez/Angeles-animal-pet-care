@@ -564,7 +564,321 @@ const CustomSelect = ({
   accent = "#6366f1",
   searchable = false,
 }) => {
-  // ...paste full body from Appointments.jsx here...
+  const [open, setOpen] = React.useState(false);
+  const [dropPos, setDropPos] = React.useState({ top: 0, left: 0, width: 0 });
+  const [searchTerm, setSearchTerm] = React.useState("");
+  const triggerRef = React.useRef(null);
+  const ref = React.useRef(null);
+  const selected = options.find((o) => (o.value ?? o) === value);
+  const label = selected ? (selected.label ?? selected) : placeholder;
+  const filteredOptions =
+    searchable && searchTerm
+      ? options.filter((o) =>
+          String(o.label ?? o)
+            .toLowerCase()
+            .includes(searchTerm.toLowerCase()),
+        )
+      : options;
+
+  React.useEffect(() => {
+    const handler = (e) => {
+      if (
+        ref.current &&
+        !ref.current.contains(e.target) &&
+        triggerRef.current &&
+        !triggerRef.current.contains(e.target)
+      )
+        setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const handleOpen = () => {
+    if (!open) setSearchTerm("");
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const dropHeight = Math.min((options.length + 1) * 38, 240);
+      const showAbove = spaceBelow < dropHeight + 10;
+      let left = rect.left + window.scrollX;
+      const maxLeft = window.scrollX + window.innerWidth - rect.width - 8;
+      const minLeft = window.scrollX + 8;
+      if (left > maxLeft) left = maxLeft;
+      if (left < minLeft) left = minLeft;
+      setDropPos({
+        top: showAbove
+          ? rect.top + window.scrollY - dropHeight - 6
+          : rect.bottom + window.scrollY + 6,
+        left,
+        width: rect.width,
+      });
+    }
+    setOpen((o) => !o);
+  };
+
+  const portal =
+    open && typeof document !== "undefined"
+      ? ReactDOM.createPortal(
+          <div
+            ref={ref}
+            style={{
+              position: "absolute",
+              top: dropPos.top,
+              left: dropPos.left,
+              width: dropPos.width,
+              background: "var(--card)",
+              borderRadius: 12,
+              zIndex: 99999,
+              boxShadow:
+                "0 16px 40px rgba(0,0,0,0.13), 0 4px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06)",
+              border: "1.5px solid #e8edf4",
+              maxHeight: 300,
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+            }}
+          >
+            {searchable && (
+              <div
+                style={{
+                  padding: "6px 6px 4px",
+                  borderBottom: "1px solid #f1f5f9",
+                  flexShrink: 0,
+                }}
+              >
+                <input
+                  autoFocus
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                  placeholder="Search…"
+                  style={{
+                    width: "100%",
+                    padding: "7px 10px",
+                    borderRadius: 8,
+                    border: "1.5px solid #e2e8f0",
+                    fontSize: 13,
+                    outline: "none",
+                    fontFamily: "inherit",
+                    boxSizing: "border-box",
+                    color: "var(--text)",
+                    background: "var(--card)",
+                  }}
+                />
+              </div>
+            )}
+            <div style={{ overflowY: "auto", padding: "5px" }}>
+              {[{ value: "", label: placeholder }, ...filteredOptions].map(
+                (opt, i) => {
+                  const optVal = opt.value ?? opt;
+                  const optLabel = opt.label ?? opt;
+                  const isSelected = optVal === value;
+                  const isEmpty = optVal === "";
+                  return (
+                    <div
+                      key={i}
+                      onClick={() => {
+                        if ((!opt.disabled && optVal !== "") || optVal === "") {
+                          onChange(optVal);
+                          setOpen(false);
+                        }
+                      }}
+                      style={{
+                        padding: "8px 10px",
+                        fontSize: 13,
+                        fontWeight: isSelected ? 700 : 500,
+                        color: opt.disabled
+                          ? "#cbd5e1"
+                          : isEmpty
+                            ? "#b0bac9"
+                            : isSelected
+                              ? accent
+                              : "var(--text)",
+                        cursor: opt.disabled
+                          ? "not-allowed"
+                          : isEmpty
+                            ? "default"
+                            : "pointer",
+                        transition: "background 0.12s, color 0.12s",
+                        background: isSelected ? `${accent}12` : "transparent",
+                        borderRadius: 8,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        gap: 8,
+                        opacity: opt.disabled ? 0.45 : 1,
+                        marginBottom: 1,
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!isSelected && !opt.disabled && !isEmpty)
+                          e.currentTarget.style.background = "var(--bg)";
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!isSelected)
+                          e.currentTarget.style.background = isSelected
+                            ? `${accent}12`
+                            : "transparent";
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 8,
+                          minWidth: 0,
+                        }}
+                      >
+                        {!isEmpty && (
+                          <div
+                            style={{
+                              width: 6,
+                              height: 6,
+                              borderRadius: "50%",
+                              flexShrink: 0,
+                              background: isSelected ? accent : "transparent",
+                              border: `1.5px solid ${isSelected ? accent : opt.disabled ? "#e2e8f0" : "#cbd5e1"}`,
+                              transition:
+                                "background 0.15s, border-color 0.15s",
+                            }}
+                          />
+                        )}
+                        <span
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {optLabel}
+                        </span>
+                      </div>
+                      {isSelected && !isEmpty && (
+                        <div
+                          style={{
+                            width: 18,
+                            height: 18,
+                            borderRadius: 5,
+                            background: accent,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            flexShrink: 0,
+                          }}
+                        >
+                          <svg
+                            width="9"
+                            height="9"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="#fff"
+                            strokeWidth="3.5"
+                            strokeLinecap="round"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                  );
+                },
+              )}
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
+
+  return (
+    <div style={{ position: "relative", width: "100%" }}>
+      <div
+        ref={triggerRef}
+        onClick={handleOpen}
+        style={{
+          width: "100%",
+          padding: "8px 34px 8px 12px",
+          border: "1.5px solid",
+          borderRadius: 9,
+          background: "var(--card)",
+          fontSize: 13,
+          fontWeight: 600,
+          color: value ? "var(--text)" : "#94a3b8",
+          cursor: "pointer",
+          userSelect: "none",
+          boxSizing: "border-box",
+          boxShadow: open
+            ? `0 0 0 3px ${accent}22, 0 2px 8px rgba(0,0,0,0.08)`
+            : "0 1px 3px rgba(0,0,0,0.06)",
+          borderColor: open ? accent : "var(--border)",
+          transition: "border-color 0.18s, box-shadow 0.18s, background 0.18s",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 8,
+          position: "relative",
+          minHeight: 36,
+        }}
+        onMouseEnter={(e) => {
+          if (!open) {
+            e.currentTarget.style.borderColor = "#a5b4fc";
+            e.currentTarget.style.boxShadow = "0 2px 8px rgba(99,102,241,0.10)";
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!open) {
+            e.currentTarget.style.borderColor = "var(--border)";
+            e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.06)";
+          }
+        }}
+      >
+        <span
+          style={{
+            overflow: "hidden",
+            textOverflow: "ellipsis",
+            whiteSpace: "nowrap",
+            flex: 1,
+          }}
+        >
+          {label}
+        </span>
+        <div
+          style={{
+            position: "absolute",
+            right: 10,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 20,
+            height: 20,
+            borderRadius: 6,
+            background: open ? accent : "var(--bg)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "background 0.18s",
+            flexShrink: 0,
+          }}
+        >
+          <svg
+            width="9"
+            height="9"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke={open ? "#fff" : "#94a3b8"}
+            strokeWidth="3"
+            strokeLinecap="round"
+            style={{
+              transition: "transform 0.2s, stroke 0.18s",
+              transform: open ? "rotate(180deg)" : "rotate(0deg)",
+            }}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </div>
+      </div>
+      {portal}
+    </div>
+  );
 };
 
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
