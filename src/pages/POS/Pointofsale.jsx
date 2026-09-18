@@ -583,28 +583,20 @@ const PointOfSale = () => {
   } = useCurrentUser();
   const canVoid = isAdmin || isManager || isSuperAdmin;
   const { applyFilter } = useBranchFilter();
-  const logActivityRef = React.useRef(null);
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      import("../../js/Utils/logActivity").then((m) => {
-        logActivityRef.current = m.logActivity;
-      });
-    }
-  }, []);
-
   const [isMobile, setIsMobile] = useState(
     typeof window !== "undefined" && window.innerWidth <= 1024,
   );
   const [products, setProducts] = useState([]);
   const [cart, setCart] = useState([]);
   const DISCOUNT_OPTIONS = [
-    { value: 0, label: "No Discount" },
-    { value: 5, label: "Employee (5%)" },
-    { value: 10, label: "Senior Citizen (10%)" },
-    { value: 10, label: "PWD (10%)" },
-    { value: 15, label: "Loyalty Member (15%)" },
+    { id: "none", value: 0, label: "No Discount" },
+    { id: "employee", value: 5, label: "Employee (5%)" },
+    { id: "senior", value: 10, label: "Senior Citizen (10%)" },
+    { id: "pwd", value: 10, label: "PWD (10%)" },
+    { id: "loyalty", value: 15, label: "Loyalty Member (15%)" },
   ];
   const [discount, setDiscount] = useState(0);
+  const [discountId, setDiscountId] = useState("none");
   const [discountLabel, setDiscountLabel] = useState("No Discount");
   const [overrideMode, setOverrideMode] = useState(false);
   const [overrideReason, setOverrideReason] = useState("");
@@ -691,10 +683,11 @@ const PointOfSale = () => {
     </style></head><body>${html}</body></html>`);
     w.document.close();
     w.focus();
-    w.print();
-    w.close();
+    w.onafterprint = () => w.close();
+    setTimeout(() => {
+      w.print();
+    }, 250);
   };
-
   const [toasts, setToasts] = useState([]);
   const showToast = (message, type = "success") => {
     const id = Date.now() + Math.random();
@@ -898,10 +891,19 @@ const PointOfSale = () => {
   const addToCart = (product) => {
     setCart((prev) => {
       const ex = prev.find((i) => i.id === product.id);
-      if (ex)
+      const available = product.qty ?? Infinity;
+      if (ex) {
+        if (!product.isCustom && ex.qty >= available) {
+          showToast(
+            `Only ${available} ${product.unit || "in"} stock`,
+            "warning",
+          );
+          return prev;
+        }
         return prev.map((i) =>
           i.id === product.id ? { ...i, qty: i.qty + 1 } : i,
         );
+      }
       return [...prev, { ...product, qty: 1 }];
     });
   };
@@ -909,9 +911,17 @@ const PointOfSale = () => {
   const updateQty = (id, delta) => {
     setCart((prev) =>
       prev
-        .map((i) =>
-          i.id === id ? { ...i, qty: Math.max(0, i.qty + delta) } : i,
-        )
+        .map((i) => {
+          if (i.id !== id) return i;
+          const product = products.find((p) => p.id === id);
+          const max = i.isCustom || !product ? Infinity : product.qty;
+          const nextQty = Math.max(0, i.qty + delta);
+          if (delta > 0 && nextQty > max) {
+            showToast(`Only ${max} ${product?.unit || "in"} stock`, "warning");
+            return i;
+          }
+          return { ...i, qty: nextQty };
+        })
         .filter((i) => i.qty > 0),
     );
   };
@@ -960,7 +970,9 @@ const PointOfSale = () => {
     );
   };
 
+  const [isProcessing, setIsProcessing] = useState(false);
   const processPayment = async () => {
+    if (isProcessing) return;
     if (cart.length === 0) {
       showToast("Cart is empty", "error");
       return;
@@ -980,6 +992,7 @@ const PointOfSale = () => {
       return;
     }
 
+    setIsProcessing(true);
     const cartSnapshot = [...cart];
     const items = cartSnapshot.map((i) => ({
       id: i.id,
@@ -1018,10 +1031,12 @@ const PointOfSale = () => {
       .select();
     if (error) {
       showToast("Error: " + error.message, "error");
+      setIsProcessing(false);
       return;
     }
     if (!data?.length) {
       showToast("Transaction failed — check RLS policies", "error");
+      setIsProcessing(false);
       return;
     }
 
@@ -1070,10 +1085,12 @@ const PointOfSale = () => {
     setWalkinContact("");
     setClientType("registered");
     setDiscount(0);
+    setDiscountId("none");
     setDiscountLabel("No Discount");
     setOverrideMode(false);
     setOverrideReason("");
     setAmountGiven("");
+    setIsProcessing(false);
   };
 
   const voidTransaction = (txId) => {
@@ -1087,6 +1104,7 @@ const PointOfSale = () => {
   const confirmVoidTransaction = async () => {
     const txId = confirmVoid.txId;
     setConfirmVoid({ show: false, txId: null });
+    const tx = transactions.find((t) => t.id === txId);
     const { error } = await supabase
       .from("transactions")
       .update({
@@ -1099,11 +1117,27 @@ const PointOfSale = () => {
       showToast("Error voiding transaction: " + error.message, "error");
       return;
     }
+    // Restore stock for non-custom items so voided sales don't leave
+    // inventory permanently short.
+    for (const item of tx?.items || []) {
+      if (item.isCustom) continue;
+      const { data: invRow } = await supabase
+        .from("inventory")
+        .select("qty")
+        .eq("id", item.id)
+        .maybeSingle();
+      if (invRow) {
+        await supabase
+          .from("inventory")
+          .update({ qty: invRow.qty + item.qty })
+          .eq("id", item.id);
+      }
+    }
     logActivity(user, "Voided transaction", `Voided transaction ID: ${txId}`);
-    showToast("Transaction voided", "info");
+    showToast("Transaction voided — stock restored", "info");
     fetchTransactions();
+    fetchProducts();
   };
-
   const selectClient = (client) => {
     setSelectedClient(client);
     setClientSearch(client.full_name);
@@ -1465,7 +1499,25 @@ const PointOfSale = () => {
                     width: "100%",
                   }}
                 />
-              </div>
+                {search && (
+                  <button
+                    onClick={() => setSearch("")}
+                    style={{
+                      background: "none",
+                      border: "none",
+                      cursor: "pointer",
+                      color: "var(--muted)",
+                      fontSize: 14,
+                      padding: 0,
+                      lineHeight: 1,
+                      width: "auto",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>{" "}
               <div
                 className="fade-in"
                 style={{
@@ -1764,7 +1816,11 @@ const PointOfSale = () => {
               </div>
               {cart.length > 0 && (
                 <button
-                  onClick={() => setCart([])}
+                  onClick={() => {
+                    if (window.confirm("Clear all items from the cart?")) {
+                      setCart([]);
+                    }
+                  }}
                   style={{
                     background: "none",
                     border: "none",
@@ -1777,7 +1833,7 @@ const PointOfSale = () => {
                 >
                   Clear all
                 </button>
-              )}
+              )}{" "}
             </div>
 
             {/* ── Client selector ── */}
@@ -2464,6 +2520,13 @@ const PointOfSale = () => {
                           value={item.qty}
                           onChange={(e) => {
                             const val = e.target.value;
+                            const product = products.find(
+                              (p) => p.id === item.id,
+                            );
+                            const max =
+                              item.isCustom || !product
+                                ? Infinity
+                                : product.qty;
                             setCart((prev) =>
                               prev.map((i) =>
                                 i.id === item.id
@@ -2472,7 +2535,13 @@ const PointOfSale = () => {
                                       qty:
                                         val === ""
                                           ? ""
-                                          : Math.max(1, parseInt(val, 10) || 1),
+                                          : Math.min(
+                                              max,
+                                              Math.max(
+                                                1,
+                                                parseInt(val, 10) || 1,
+                                              ),
+                                            ),
                                     }
                                   : i,
                               ),
@@ -2581,17 +2650,16 @@ const PointOfSale = () => {
                 {!overrideMode ? (
                   <div style={{ marginTop: 6 }}>
                     <CustomSelect
-                      value={discount}
+                      value={discountId}
                       accent="#6366f1"
                       options={DISCOUNT_OPTIONS.map((o) => ({
-                        value: o.value,
+                        value: o.id,
                         label: o.label,
                       }))}
-                      onChange={(val) => {
-                        const opt = DISCOUNT_OPTIONS.find(
-                          (o) => o.value === val,
-                        );
-                        setDiscount(val);
+                      onChange={(id) => {
+                        const opt = DISCOUNT_OPTIONS.find((o) => o.id === id);
+                        setDiscountId(id);
+                        setDiscount(opt?.value ?? 0);
                         setDiscountLabel(opt?.label || "No Discount");
                       }}
                     />
@@ -2662,6 +2730,7 @@ const PointOfSale = () => {
                       onClick={() => {
                         setOverrideMode(false);
                         setDiscount(0);
+                        setDiscountId("none");
                         setOverrideReason("");
                         setDiscountLabel("No Discount");
                       }}
@@ -2842,6 +2911,12 @@ const PointOfSale = () => {
                     placeholder="0.00"
                     value={amountGiven}
                     onChange={(e) => setAmountGiven(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        processPayment();
+                      }
+                    }}
                     style={{
                       width: "100%",
                       padding: "10px 12px 10px 26px",
@@ -2856,6 +2931,50 @@ const PointOfSale = () => {
                     }}
                   />
                 </div>
+                {total > 0 && (
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 6,
+                      marginTop: 8,
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {[
+                      { label: "Exact", val: total },
+                      ...[100, 200, 500, 1000]
+                        .filter((v) => v >= total)
+                        .slice(0, 3)
+                        .map((v) => ({ label: `₱${v}`, val: v })),
+                    ].map((q) => (
+                      <button
+                        key={q.label}
+                        type="button"
+                        onClick={() => setAmountGiven(String(q.val))}
+                        style={{
+                          padding: "5px 10px",
+                          borderRadius: 6,
+                          border: "1.5px solid var(--border)",
+                          background:
+                            Number(amountGiven) === q.val
+                              ? "var(--royal)"
+                              : "var(--bg)",
+                          color:
+                            Number(amountGiven) === q.val
+                              ? "#fff"
+                              : "var(--text)",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          cursor: "pointer",
+                          fontFamily: "inherit",
+                          width: "auto",
+                        }}
+                      >
+                        {q.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {amountGiven !== "" &&
                   Number(amountGiven) >= total &&
                   total > 0 && (
@@ -2899,7 +3018,7 @@ const PointOfSale = () => {
                   clientType === "registered"
                     ? !!selectedClient
                     : !!walkinName.trim() && contactValid;
-                const canPay = cart.length > 0 && clientReady;
+                const canPay = cart.length > 0 && clientReady && !isProcessing;
                 return (
                   <>
                     <button
@@ -2920,13 +3039,15 @@ const PointOfSale = () => {
                         letterSpacing: "0.3px",
                       }}
                     >
-                      {!clientReady
-                        ? clientType === "registered"
-                          ? "Select a client first"
-                          : "Enter client name first"
-                        : cart.length === 0
-                          ? "Add items to cart"
-                          : "Process Payment"}
+                      {isProcessing
+                        ? "Processing…"
+                        : !clientReady
+                          ? clientType === "registered"
+                            ? "Select a client first"
+                            : "Enter client name first"
+                          : cart.length === 0
+                            ? "Add items to cart"
+                            : "Process Payment"}
                     </button>
                   </>
                 );

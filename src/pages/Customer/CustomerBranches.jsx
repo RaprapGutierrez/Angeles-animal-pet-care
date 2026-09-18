@@ -489,6 +489,34 @@ const CustomerBranches = () => {
                 </div>
               ))}
             </div>
+          ) : branches.length === 0 ? (
+            <div
+              style={{
+                textAlign: "center",
+                padding: "48px 16px",
+                color: "var(--muted)",
+                background: "var(--card)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius-lg)",
+              }}
+            >
+              <img
+                src="/icon/branches.webp"
+                alt=""
+                style={{
+                  width: 40,
+                  height: 40,
+                  opacity: 0.35,
+                  marginBottom: 10,
+                }}
+              />
+              <p style={{ fontSize: 14, fontWeight: 700, margin: "0 0 4px" }}>
+                No branches available right now
+              </p>
+              <p style={{ fontSize: 12, margin: 0 }}>
+                Please check back later or contact support.
+              </p>
+            </div>
           ) : (
             <div
               style={{
@@ -619,16 +647,36 @@ const CustomerBranches = () => {
                       >
                         <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 21 16z" />
                       </svg>
-                      <p
-                        style={{
-                          fontSize: 12,
-                          color: "var(--muted)",
-                          margin: 0,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        {b.phone}
-                      </p>
+                      {b.phone ? (
+                        <a
+                          href={`tel:${b.phone}`}
+                          style={{
+                            fontSize: 12,
+                            color: "var(--muted)",
+                            margin: 0,
+                            whiteSpace: "nowrap",
+                            textDecoration: "none",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.textDecoration = "underline")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.textDecoration = "none")
+                          }
+                        >
+                          {b.phone}
+                        </a>
+                      ) : (
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: "var(--muted)",
+                            margin: 0,
+                          }}
+                        >
+                          —
+                        </p>
+                      )}
                     </div>
                     <div
                       style={{
@@ -652,51 +700,73 @@ const CustomerBranches = () => {
                         <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
                         <polyline points="22,6 12,13 2,6" />
                       </svg>
-                      <p
+                      {b.email ? (
+                        <a
+                          href={`mailto:${b.email}`}
+                          style={{
+                            fontSize: 12,
+                            color: "var(--muted)",
+                            margin: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            minWidth: 0,
+                            textDecoration: "none",
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.textDecoration = "underline")
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.textDecoration = "none")
+                          }
+                        >
+                          {b.email}
+                        </a>
+                      ) : (
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: "var(--muted)",
+                            margin: 0,
+                          }}
+                        >
+                          —
+                        </p>
+                      )}
+                    </div>
+                    {b.manager && (
+                      <div
                         style={{
-                          fontSize: 12,
-                          color: "var(--muted)",
-                          margin: 0,
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          minWidth: 0,
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          marginBottom: 10,
                         }}
                       >
-                        {b.email}
-                      </p>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 6,
-                        marginBottom: 10,
-                      }}
-                    >
-                      <svg
-                        width="13"
-                        height="13"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#64748b"
-                        strokeWidth="2.5"
-                        strokeLinecap="round"
-                        style={{ flexShrink: 0 }}
-                      >
-                        <circle cx="12" cy="8" r="4" />
-                        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-                      </svg>
-                      <p
-                        style={{
-                          fontSize: 12,
-                          color: "var(--muted)",
-                          margin: 0,
-                        }}
-                      >
-                        Manager: <strong>{b.manager}</strong>
-                      </p>
-                    </div>
+                        <svg
+                          width="13"
+                          height="13"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#64748b"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                          style={{ flexShrink: 0 }}
+                        >
+                          <circle cx="12" cy="8" r="4" />
+                          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+                        </svg>
+                        <p
+                          style={{
+                            fontSize: 12,
+                            color: "var(--muted)",
+                            margin: 0,
+                          }}
+                        >
+                          Manager: <strong>{b.manager}</strong>
+                        </p>
+                      </div>
+                    )}
                     {b.services && b.services.length > 0 && (
                       <div
                         style={{ display: "flex", flexWrap: "wrap", gap: 4 }}

@@ -2343,6 +2343,15 @@ export const Layout = ({ children }) => {
   const [activeTab, setActiveTab] = useState("emergency");
   const [custActiveTab, setCustActiveTab] = useState("appointments");
   const [selectedAlert, setSelectedAlert] = useState(null);
+  const [layoutDarkMode, setLayoutDarkMode] = useState(
+    () => localStorage.getItem("darkMode") === "1",
+  );
+  const toggleLayoutDarkMode = () => {
+    const next = !layoutDarkMode;
+    setLayoutDarkMode(next);
+    document.documentElement.classList.toggle("dark", next);
+    localStorage.setItem("darkMode", next ? "1" : "0");
+  };
 
   // ── Sidebar: hover-to-expand ──
   const [sidebarExpanded, setSidebarExpanded] = useState(false);
@@ -2624,9 +2633,9 @@ export const Layout = ({ children }) => {
         data.forEach((acc) => {
           if (!prevApprovedIds.current.has(acc.id)) {
             setApprovedModal(acc);
+            prevApprovedIds.current.add(acc.id);
           }
         });
-        prevApprovedIds.current = new Set();
       }
     } catch (e) {
       console.error("Approved fetch error:", e);
@@ -4033,12 +4042,7 @@ export const Layout = ({ children }) => {
                   </Link>
 
                   <button
-                    onClick={() => {
-                      const next =
-                        !document.documentElement.classList.contains("dark");
-                      document.documentElement.classList.toggle("dark", next);
-                      localStorage.setItem("darkMode", next ? "1" : "0");
-                    }}
+                    onClick={toggleLayoutDarkMode}
                     style={{
                       width: "100%",
                       display: "flex",
@@ -4068,7 +4072,7 @@ export const Layout = ({ children }) => {
                     <span
                       style={{ display: "flex", alignItems: "center", gap: 9 }}
                     >
-                      {document.documentElement.classList.contains("dark") ? (
+                      {layoutDarkMode ? (
                         <svg
                           width="14"
                           height="14"
@@ -4101,18 +4105,14 @@ export const Layout = ({ children }) => {
                           <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
                         </svg>
                       )}
-                      {document.documentElement.classList.contains("dark")
-                        ? "Light Mode"
-                        : "Dark Mode"}
+                      {layoutDarkMode ? "Light Mode" : "Dark Mode"}
                     </span>
                     <div
                       style={{
                         width: 36,
                         height: 20,
                         borderRadius: 99,
-                        background: document.documentElement.classList.contains(
-                          "dark",
-                        )
+                        background: layoutDarkMode
                           ? accentColor
                           : "rgba(255,255,255,0.2)",
                         position: "relative",
@@ -4124,11 +4124,7 @@ export const Layout = ({ children }) => {
                         style={{
                           position: "absolute",
                           top: 2,
-                          left: document.documentElement.classList.contains(
-                            "dark",
-                          )
-                            ? 18
-                            : 2,
+                          left: layoutDarkMode ? 18 : 2,
                           width: 16,
                           height: 16,
                           borderRadius: "50%",
@@ -4409,9 +4405,7 @@ export const Layout = ({ children }) => {
               {/* Go to Info Site */}
               <button
                 className="info-site-btn"
-                onClick={() => {
-                  window.location.href = "/info";
-                }}
+                onClick={() => navigate("/info")}
                 title="View the public Information System site"
                 style={{
                   display: "flex",

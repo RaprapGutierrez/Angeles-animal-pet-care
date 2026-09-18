@@ -2734,6 +2734,27 @@ const Appointment = () => {
       showAlert("Error", error.message);
       return;
     }
+
+    // Auto-notify the owner that their pet's visit is done and ready for
+    // pickup — only for registered customers (user_id set); walk-in guests
+    // with no account have nowhere to receive the message.
+    const appt =
+      appts.find((a) => a.id === id) || calendarAppts.find((a) => a.id === id);
+    if (appt?.user_id && user?.id) {
+      const pickupMessage = `Good news — ${appt.patient}'s ${appt.purpose || "visit"} is complete! They're ready to be picked up whenever it's convenient for you.`;
+      const { error: msgErr } = await supabase.from("messages").insert([
+        {
+          sender_id: user.id,
+          receiver_id: appt.user_id,
+          message: pickupMessage,
+          is_read: false,
+          branch_id: appt.branch_id || user?.branchId || null,
+        },
+      ]);
+      if (msgErr)
+        console.error("Ready-for-pickup message failed:", msgErr.message);
+    }
+
     showToast("✓ Appointment marked as completed", "info");
   };
 

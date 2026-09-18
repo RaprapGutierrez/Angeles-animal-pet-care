@@ -818,6 +818,8 @@ const Walkin = () => {
       ...prev,
       purpose: val,
       imagingType: "",
+      vet: "",
+      time: "",
       price: val === "Imaging" ? "" : looked != null ? looked : "",
     }));
     setBookStep("form");
@@ -902,20 +904,16 @@ const Walkin = () => {
     "03:00 PM",
     "04:00 PM",
   ];
-  const getNearestTimeSlot = () => {
-    const now = new Date();
-    const totalMin = now.getHours() * 60 + now.getMinutes();
-    const slotMinutes = [480, 540, 600, 660, 780, 840, 900, 960];
-    let closest = TIME_SLOTS[0];
-    let closestDiff = Infinity;
-    slotMinutes.forEach((sm, i) => {
-      const diff = Math.abs(sm - totalMin);
-      if (diff < closestDiff) {
-        closestDiff = diff;
-        closest = TIME_SLOTS[i];
-      }
-    });
-    return closest;
+  // Converts a "hh:mm AM/PM" label to minutes-since-midnight so time
+  // comparisons don't break across the AM/PM boundary (plain string
+  // comparison wrongly treats "08:00 AM" as later than "04:00 PM").
+  const timeToMinutes = (label) => {
+    if (!label) return -1;
+    const [time, meridiem] = label.split(" ");
+    let [h, m] = time.split(":").map(Number);
+    if (meridiem === "PM" && h !== 12) h += 12;
+    if (meridiem === "AM" && h === 12) h = 0;
+    return h * 60 + m;
   };
   const getAvailableVets = () => {
     const todayDow = new Date().getDay();
@@ -1096,21 +1094,6 @@ const Walkin = () => {
     fetchWalkins,
   ]);
 
-  if (!userLoading && !user) {
-    return (
-      <Layout>
-        <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
-            Please log in
-          </h2>
-          <p style={{ fontSize: 13 }}>
-            Your branch could not be detected. Please sign in again.
-          </p>
-        </div>
-      </Layout>
-    );
-  }
-
   useEffect(() => {
     if (form.purpose !== "Grooming") {
       setConflictType(null);
@@ -1128,6 +1111,21 @@ const Walkin = () => {
     setGroomingUsed(used);
     setConflictType(used >= MAX_GROOMERS ? "grooming" : null);
   }, [form.purpose, walkins, editItem]);
+
+  if (!userLoading && !user) {
+    return (
+      <Layout>
+        <div style={{ padding: 40, textAlign: "center", color: "#64748b" }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+            Please log in
+          </h2>
+          <p style={{ fontSize: 13 }}>
+            Your branch could not be detected. Please sign in again.
+          </p>
+        </div>
+      </Layout>
+    );
+  }
 
   const todayWalkins = walkins.filter((w) => w.arrived_at?.startsWith(today));
 
@@ -1241,8 +1239,8 @@ const Walkin = () => {
   };
 
   // ── Modal open/close ──────────────────────────────────────────────────────
-  const snapshotWalkinState = (f, ot) =>
-    JSON.stringify({ form: f, ownerType: ot });
+  const snapshotWalkinState = (f, ot, pets = []) =>
+    JSON.stringify({ form: f, ownerType: ot, extraPets: pets });
 
   const openAdd = () => {
     setEditItem(null);
@@ -1254,7 +1252,7 @@ const Walkin = () => {
     setOwnerSearch("");
     setExtraPets([]);
     setExistingPatients([]);
-    setFormOriginal(snapshotWalkinState(EMPTY_FORM, "walkin"));
+    setFormOriginal(snapshotWalkinState(EMPTY_FORM, "walkin", []));
     setBookStep("service");
     setShowModal(true);
   };
@@ -1265,11 +1263,13 @@ const Walkin = () => {
     setEditItem(w);
     const initialOwnerType = w.owner_id ? "registered" : "walkin";
     const initialForm = {
+      ...EMPTY_FORM,
       mode: "new",
       existingId: null,
       patient: w.patient || "",
       species: w.species || "Dog",
-      room: w.room || "", // <-- Add this line
+      sex: w.sex || "Unknown",
+      room: w.room || "",
       owner: w.owner || "",
       owner_id: w.owner_id || null,
       contact: w.contact || "",
@@ -1277,6 +1277,8 @@ const Walkin = () => {
       vet: w.vet || "",
       notes: w.notes || "",
       status: w.status || "Waiting",
+      price: w.price != null ? String(w.price) : "",
+      time: w.time || "",
     };
     setOwnerType(initialOwnerType);
     setForm(initialForm);
@@ -1287,7 +1289,7 @@ const Walkin = () => {
       (c) => c.id === w.owner_id || c.full_name === w.owner,
     );
     setSelectedClient(matched || null);
-    setFormOriginal(snapshotWalkinState(initialForm, initialOwnerType));
+    setFormOriginal(snapshotWalkinState(initialForm, initialOwnerType, []));
     setBookStep("form"); // editing skips the service-picker step
     setShowModal(true);
   };
@@ -1308,7 +1310,7 @@ const Walkin = () => {
   };
   const hasUnsavedWalkinEdits = () => {
     if (!formOriginal) return false;
-    return snapshotWalkinState(form, ownerType) !== formOriginal;
+    return snapshotWalkinState(form, ownerType, extraPets) !== formOriginal;
   };
 
   const attemptCloseModal = () => {
@@ -1413,7 +1415,10 @@ const Walkin = () => {
 
   const getGroomingUsedForExtra = (excludeIdx) => {
     const usedFromExisting = walkins.filter(
-      (w) => w.purpose === "Grooming" && w.status === "Waiting",
+      (w) =>
+        w.purpose === "Grooming" &&
+        (w.status === "Waiting" || w.status === "Attended") &&
+        w.arrived_at?.startsWith(today),
     ).length;
     const usedFromMain = form.purpose === "Grooming" ? 1 : 0;
     const usedFromBatch = extraPets.filter(
@@ -1779,388 +1784,6 @@ const Walkin = () => {
     },
   };
 
-  {
-    /* Walk-in Guest — plain text inputs */
-  }
-  {
-    ownerType === "walkin" && (
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-        <div>
-          <label
-            style={{
-              fontSize: 11,
-              color: "var(--muted)",
-              fontWeight: 700,
-              display: "block",
-              marginBottom: 4,
-            }}
-          >
-            Full Name *
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. Juan dela Cruz"
-            value={form.owner}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                owner: e.target.value,
-                owner_id: null,
-              }))
-            }
-            style={S.textInput}
-          />
-        </div>
-        <div>
-          <label
-            style={{
-              fontSize: 11,
-              color: "var(--muted)",
-              fontWeight: 700,
-              display: "block",
-              marginBottom: 4,
-            }}
-          >
-            Contact
-          </label>
-          <input
-            type="text"
-            placeholder="e.g. 09xx-xxx-xxxx"
-            value={form.contact}
-            onChange={(e) =>
-              setForm((prev) => ({ ...prev, contact: e.target.value }))
-            }
-            style={S.textInput}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  {
-    /* Registered Client — searchable dropdown */
-  }
-  {
-    ownerType === "registered" && (
-      <div ref={ownerRef} style={{ position: "relative" }}>
-        {selectedClient ? (
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 10,
-              background: "#f0fdf4",
-              border: "1.5px solid #bbf7d0",
-              borderRadius: 8,
-              padding: "9px 12px",
-            }}
-          >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: "50%",
-                background: "var(--royal)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#fff",
-                fontSize: 13,
-                fontWeight: 700,
-                flexShrink: 0,
-              }}
-            >
-              {(selectedClient.first_name?.[0] || "?").toUpperCase()}
-            </div>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 13,
-                  fontWeight: 700,
-                  color: "#166534",
-                }}
-              >
-                {selectedClient.full_name}
-              </p>
-              <p
-                style={{
-                  margin: 0,
-                  fontSize: 11,
-                  color: "#16a34a",
-                  overflow: "hidden",
-                  textOverflow: "ellipsis",
-                  whiteSpace: "nowrap",
-                }}
-              >
-                {selectedClient.email || ""}
-                {selectedClient.phone ? ` · ${selectedClient.phone}` : ""}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={clearOwner}
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                color: "#dc2626",
-                fontSize: 14,
-                fontWeight: 700,
-                padding: 0,
-                width: "auto",
-              }}
-            >
-              ✕
-            </button>
-          </div>
-        ) : (
-          <>
-            <div
-              onClick={() => setShowOwnerDrop(true)}
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                padding: "9px 12px",
-                border: `1.5px solid ${showOwnerDrop ? "var(--royal)" : "var(--border)"}`,
-                borderRadius: 8,
-                background: "var(--card)",
-                cursor: "text",
-                boxSizing: "border-box",
-                transition: "border-color 0.15s",
-              }}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#9ca3af"
-                strokeWidth="2.5"
-                style={{ flexShrink: 0 }}
-              >
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.35-4.35" />
-              </svg>
-              <input
-                type="text"
-                placeholder="Search registered client name, email or phone..."
-                value={ownerSearch}
-                onChange={(e) => {
-                  setOwnerSearch(e.target.value);
-                  setShowOwnerDrop(true);
-                }}
-                onFocus={() => setShowOwnerDrop(true)}
-                style={{
-                  border: "none",
-                  background: "transparent",
-                  fontSize: 13,
-                  color: "var(--text)",
-                  outline: "none",
-                  fontFamily: "inherit",
-                  width: "100%",
-                }}
-              />
-              {ownerSearch && (
-                <button
-                  type="button"
-                  onClick={clearOwner}
-                  style={{
-                    background: "none",
-                    border: "none",
-                    cursor: "pointer",
-                    color: "var(--muted)",
-                    fontSize: 14,
-                    padding: 0,
-                    width: "auto",
-                  }}
-                >
-                  ✕
-                </button>
-              )}
-            </div>
-
-            {showOwnerDrop && (
-              <div
-                style={{
-                  position: "absolute",
-                  top: "100%",
-                  left: 0,
-                  right: 0,
-                  background: "#fff",
-                  border: "1.5px solid var(--border)",
-                  borderRadius: 10,
-                  boxShadow: "0 8px 24px rgba(0,0,0,0.12)",
-                  zIndex: 9999,
-                  maxHeight: 220,
-                  overflowY: "auto",
-                  marginTop: 4,
-                }}
-              >
-                <div
-                  style={{
-                    padding: "7px 12px 5px",
-                    borderBottom: "1px solid var(--border)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: 10,
-                      fontWeight: 700,
-                      color: "var(--muted)",
-                      textTransform: "uppercase",
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    {branchLabel} Clients
-                  </span>
-                  <span style={{ fontSize: 10, color: "var(--muted)" }}>
-                    {filteredClients.length} found
-                  </span>
-                </div>
-                {clients.length === 0 ? (
-                  <div
-                    style={{
-                      padding: "14px 16px",
-                      textAlign: "center",
-                      color: "var(--muted)",
-                      fontSize: 13,
-                    }}
-                  >
-                    <div style={{ marginBottom: 4 }}>
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#cbd5e1"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      >
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="m21 21-4.35-4.35" />
-                      </svg>
-                    </div>
-                    No clients in {branchLabel} yet.
-                  </div>
-                ) : filteredClients.length === 0 ? (
-                  <div
-                    style={{
-                      padding: "14px 16px",
-                      textAlign: "center",
-                      color: "var(--muted)",
-                      fontSize: 13,
-                    }}
-                  >
-                    <div style={{ marginBottom: 4 }}>
-                      <svg
-                        width="20"
-                        height="20"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#cbd5e1"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      >
-                        <circle cx="11" cy="11" r="8" />
-                        <path d="m21 21-4.35-4.35" />
-                      </svg>
-                    </div>
-                    No client matching "{ownerSearch}"
-                  </div>
-                ) : (
-                  filteredClients.map((c) => (
-                    <div
-                      key={c.id}
-                      onClick={() => selectOwner(c)}
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 10,
-                        padding: "9px 12px",
-                        cursor: "pointer",
-                        borderBottom: "1px solid var(--border)",
-                        transition: "background 0.12s",
-                      }}
-                      onMouseEnter={(e) =>
-                        (e.currentTarget.style.background = "var(--light-blue)")
-                      }
-                      onMouseLeave={(e) =>
-                        (e.currentTarget.style.background = "")
-                      }
-                    >
-                      <div
-                        style={{
-                          width: 32,
-                          height: 32,
-                          borderRadius: "50%",
-                          background: "var(--royal)",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          color: "#fff",
-                          fontSize: 12,
-                          fontWeight: 700,
-                          flexShrink: 0,
-                        }}
-                      >
-                        {(c.first_name?.[0] || "?").toUpperCase()}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p
-                          style={{
-                            margin: 0,
-                            fontSize: 13,
-                            fontWeight: 600,
-                            color: "var(--text)",
-                          }}
-                        >
-                          {c.full_name}
-                        </p>
-                        <p
-                          style={{
-                            margin: 0,
-                            fontSize: 11,
-                            color: "var(--muted)",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            whiteSpace: "nowrap",
-                          }}
-                        >
-                          {c.email || ""}
-                          {c.phone ? ` · ${c.phone}` : ""}
-                        </p>
-                      </div>
-                      {c.role && (
-                        <span
-                          style={{
-                            fontSize: 9,
-                            background: "#dbeafe",
-                            color: "#1e40af",
-                            borderRadius: 4,
-                            padding: "2px 5px",
-                            fontWeight: 700,
-                            flexShrink: 0,
-                          }}
-                        >
-                          {c.role.toUpperCase()}
-                        </span>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    );
-  }
-
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <Layout>
@@ -2329,6 +1952,7 @@ const Walkin = () => {
                   navigator.clipboard?.writeText(
                     `Name: ${walkinCredentials.fullName}\nEmail: ${walkinCredentials.email}\nPassword: ${walkinCredentials.password}`,
                   );
+                  showToast("Credentials copied to clipboard", "info");
                 }}
               >
                 Copy All
@@ -2748,8 +2372,8 @@ const Walkin = () => {
                     }}
                   >
                     {isFull
-                      ? `Grooming Fully Booked — Both groomers (${MAX_GROOMERS}/${MAX_GROOMERS}) are currently busy`
-                      : `Grooming — ${gw}/${MAX_GROOMERS} groomer${gw > 1 ? "s" : ""} currently occupied`}
+                      ? `Grooming Fully Booked — All groomer slots (${MAX_GROOMERS}/${MAX_GROOMERS}) are currently taken`
+                      : `Grooming — ${gw}/${MAX_GROOMERS} groomer slot${gw > 1 ? "s" : ""} currently occupied`}
                   </p>
                   <p
                     style={{
@@ -6252,18 +5876,20 @@ const Walkin = () => {
                               options={GROOMERS}
                               placeholder="— Select Groomer —"
                             />
-                            {form.time && form.time > GROOMING_CUTOFF_TIME && (
-                              <p
-                                style={{
-                                  margin: "6px 0 0",
-                                  fontSize: 11,
-                                  color: "#dc2626",
-                                  fontWeight: 700,
-                                }}
-                              >
-                                Grooming cut-off is {GROOMING_CUTOFF_TIME}.
-                              </p>
-                            )}
+                            {form.time &&
+                              timeToMinutes(form.time) >
+                                timeToMinutes(GROOMING_CUTOFF_TIME) && (
+                                <p
+                                  style={{
+                                    margin: "6px 0 0",
+                                    fontSize: 11,
+                                    color: "#dc2626",
+                                    fontWeight: 700,
+                                  }}
+                                >
+                                  Grooming cut-off is {GROOMING_CUTOFF_TIME}.
+                                </p>
+                              )}
                           </div>
                         )}
                       </div>
@@ -6401,8 +6027,8 @@ const Walkin = () => {
                         Grooming Fully Booked Right Now
                       </p>
                       <p style={{ margin: "4px 0 0", color: "#b45309" }}>
-                        Both groomers ({MAX_GROOMERS}/{MAX_GROOMERS}) are
-                        currently busy.
+                        All groomer slots ({MAX_GROOMERS}/{MAX_GROOMERS}) are
+                        currently taken.
                       </p>
                     </div>
                   )}

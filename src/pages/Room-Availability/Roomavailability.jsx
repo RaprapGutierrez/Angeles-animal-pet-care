@@ -14,7 +14,6 @@ const Skel = ({ w = "100%", h = 16 }) => (
 
 const statusKey = (s) => (s || "available").toLowerCase().replace(/\s+/g, "");
 const CLEANING_DURATION_MS = 15 * 60 * 1000; // 15 minutes in Cleaning before auto-Available
-const sanitizeName = (v) => v.replace(/[^a-zA-Z\s'-]/g, "");
 
 const STATUS_LABEL = {
   Available: "Available",
@@ -1509,7 +1508,13 @@ const RoomFormModal = ({
                 </div>
                 <CustomSelect
                   value={form.type}
-                  onChange={(val) => setForm({ ...form, type: val })}
+                  onChange={(val) =>
+                    setForm({
+                      ...form,
+                      type: val,
+                      infected: val === "Isolation" ? true : form.infected,
+                    })
+                  }
                   placeholder="Select type"
                   options={["General", "Isolation", "ICU", "Recovery"]}
                 />
@@ -1595,7 +1600,7 @@ const RoomFormModal = ({
                 Current Occupant
               </span>
             </div>
-            {isEdit && (
+            {(isEdit || form.status === "Occupied") && (
               <div
                 style={{
                   padding: "10px 16px",
@@ -1691,8 +1696,13 @@ const RoomFormModal = ({
         >
           <button
             className="btn btn-ghost"
-            style={{ width: "auto" }}
+            style={{
+              width: "auto",
+              opacity: saving ? 0.5 : 1,
+              cursor: saving ? "not-allowed" : "pointer",
+            }}
             onClick={onClose}
+            disabled={saving}
           >
             Cancel
           </button>
@@ -2343,7 +2353,7 @@ const RoomAvailability = () => {
   }, [user, userLoading, seeAllBranches, branchFilter]);
 
   const openCreate = () => {
-    setForm({
+    const blank = {
       number: "",
       type: "General",
       status: "Available",
@@ -2351,9 +2361,11 @@ const RoomAvailability = () => {
       diagnosis: "",
       infected: false,
       discharge_date: "",
-    });
-    setFormOriginal(null);
+    };
+    setForm(blank);
+    setFormOriginal(blank);
     setFormRoom(false); // false = new
+    fetchUnassignedPatients();
   };
   const openEdit = (room) => {
     setViewRoom(null);
@@ -2422,6 +2434,14 @@ const RoomAvailability = () => {
       infected: form.infected,
       discharge_date:
         form.status === "Available" ? null : form.discharge_date || null,
+      cleaning_started_at:
+        form.status === "Cleaning"
+          ? formRoom &&
+            formRoom.status === "Cleaning" &&
+            formRoom.cleaning_started_at
+            ? formRoom.cleaning_started_at
+            : new Date().toISOString()
+          : null,
     };
     if (formRoom) {
       // Edit

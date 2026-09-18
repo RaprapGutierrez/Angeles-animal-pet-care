@@ -1230,6 +1230,7 @@ const ReportForm = memo(
     const [locating, setLocating] = useState(false);
     const [locateStatus, setLocateStatus] = useState(null);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [photoErr, setPhotoErr] = useState("");
     const photoInputRef = React.useRef(null);
 
     const detectLocation = () => {
@@ -1297,8 +1298,9 @@ const ReportForm = memo(
 
     const uploadPetPhoto = async (file) => {
       if (!file) return;
+      setPhotoErr("");
       if (file.size > 5 * 1024 * 1024) {
-        setContactErr("Please choose an image under 5MB.");
+        setPhotoErr("Please choose an image under 5MB.");
         return;
       }
       setUploadingPhoto(true);
@@ -1314,7 +1316,7 @@ const ReportForm = memo(
           .getPublicUrl(path);
         setForm((p) => ({ ...p, pet_photo_url: pub?.publicUrl || "" }));
       } catch (err) {
-        setContactErr("Upload failed: " + err.message);
+        setPhotoErr("Upload failed: " + err.message);
       } finally {
         setUploadingPhoto(false);
       }
@@ -1415,12 +1417,20 @@ const ReportForm = memo(
           branch: defaultBranch || "",
         }));
         setLocateStatus(null);
+        setRateLimitErr("");
+        setTypeErr("");
+        setDescErr("");
+        setBranchErr("");
+        setContactErr("");
+        setPhotoErr("");
       }
     }, [form, onSend, defaultBranch]);
 
     const canSend = !!(
       form.type &&
       (form.type !== OTHER_TYPE || form.customType.trim()) &&
+      form.contact_number.trim() &&
+      form.contact_number.length === 11 &&
       form.province &&
       form.city &&
       form.street.trim() &&
@@ -1485,6 +1495,7 @@ const ReportForm = memo(
             onChange={(val) => {
               setForm((p) => ({ ...p, type: val }));
               setTypeErr("");
+              setRateLimitErr("");
             }}
             options={EMERGENCY_TYPES.map((t) =>
               t === OTHER_TYPE
@@ -1606,6 +1617,11 @@ const ReportForm = memo(
               e.target.value = "";
             }}
           />
+          {photoErr && (
+            <p style={{ fontSize: 11, color: "#dc2626", marginTop: 4 }}>
+              {photoErr}
+            </p>
+          )}
           {form.pet_photo_url ? (
             <div
               style={{
@@ -1685,20 +1701,22 @@ const ReportForm = memo(
             <button
               type="button"
               onClick={detectLocation}
-              disabled={locating}
+              disabled={locating || !form.type}
+              title={!form.type ? "Select an emergency type first" : undefined}
               style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: 5,
                 background: "none",
                 border: "1px solid #fecaca",
-                color: "#dc2626",
+                color: !form.type ? "#fca5a5" : "#dc2626",
                 borderRadius: 20,
                 padding: "3px 10px",
                 fontSize: 11,
                 fontWeight: 700,
-                cursor: locating ? "default" : "pointer",
+                cursor: locating || !form.type ? "not-allowed" : "pointer",
                 fontFamily: "inherit",
+                opacity: !form.type ? 0.6 : 1,
               }}
             >
               {locating ? "Locating..." : "📍 Use my location"}
@@ -1903,6 +1921,7 @@ const ReportForm = memo(
             onChange={(val) => {
               setForm((p) => ({ ...p, branch: val }));
               setBranchErr("");
+              setRateLimitErr("");
             }}
             options={BRANCHES.map((b) => {
               const isAvail = branchAvailability?.[b] !== false;

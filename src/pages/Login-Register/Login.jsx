@@ -1353,6 +1353,7 @@ const Login = () => {
                     type="text"
                     inputMode="numeric"
                     maxLength={1}
+                    autoFocus={i === 0}
                     value={digit}
                     onChange={(e) => {
                       const val = e.target.value.replace(/[^0-9]/g, "");
@@ -1990,6 +1991,7 @@ const Login = () => {
                   onKeyDown={(e) => e.key === "Enter" && handleLogin()}
                   required
                   autoComplete="email"
+                  autoFocus
                   style={inputStyle}
                 />
               </div>
@@ -2051,7 +2053,6 @@ const Login = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword((prev) => !prev)}
-                  tabIndex={-1}
                   aria-label={showPassword ? "Hide password" : "Show password"}
                   style={iconBtnStyle}
                   onMouseEnter={(e) => {
@@ -2072,8 +2073,13 @@ const Login = () => {
               <button
                 type="button"
                 onClick={handleLogin}
-                disabled={loading}
+                disabled={loading || !email || !password}
                 className="auth-btn-text-stroke"
+                style={{
+                  opacity: loading || !email || !password ? 0.65 : 1,
+                  cursor:
+                    loading || !email || !password ? "not-allowed" : "pointer",
+                }}
               >
                 {loading ? "Signing in..." : "Sign In"}
               </button>
@@ -2122,7 +2128,7 @@ const Login = () => {
                 marginTop: 8,
               }}
             >
-              <Link to="/ai-assessment" className="ai-assessment-link">
+              <Link to="/guest-ai-chat" className="ai-assessment-link">
                 <svg
                   width="13"
                   height="13"

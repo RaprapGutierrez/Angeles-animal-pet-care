@@ -113,8 +113,23 @@ const ICONS = {
       <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
   ),
+  warning: (
+    <svg
+      width="15"
+      height="15"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  ),
 };
-
 const T = {
   royal: "var(--royal, #2563eb)",
   royalDark: "#1d4ed8",
@@ -303,6 +318,15 @@ const MODAL_VARIANTS = {
 };
 
 const Modal = ({ modal, onClose }) => {
+  useEffect(() => {
+    if (!modal) return;
+    const onKey = (e) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [modal, onClose]);
+
   if (!modal) return null;
   const v = MODAL_VARIANTS[modal.type] || MODAL_VARIANTS.info;
   return (
@@ -334,6 +358,7 @@ const Modal = ({ modal, onClose }) => {
       >
         <button
           onClick={onClose}
+          aria-label="Close dialog"
           style={{
             position: "absolute",
             top: 14,
@@ -348,7 +373,7 @@ const Modal = ({ modal, onClose }) => {
           }}
         >
           ✕
-        </button>
+        </button>{" "}
         <div
           style={{
             width: 56,
@@ -368,9 +393,11 @@ const Modal = ({ modal, onClose }) => {
               ? ICONS.address
               : modal.type === "success"
                 ? ICONS.calendar
-                : ICONS.email,
+                : modal.type === "warning"
+                  ? ICONS.warning
+                  : ICONS.email,
             { width: 24, height: 24 },
-          )}
+          )}{" "}
         </div>
         <h3
           style={{
@@ -447,6 +474,13 @@ const ImageCropModal = ({ imageSrc, onCancel, onSave }) => {
   const dragStart = useRef(null);
   const SIZE = 280;
 
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key === "Escape") onCancel();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [onCancel]);
   const draw = useCallback(() => {
     const canvas = canvasRef.current;
     const img = imgRef.current;
@@ -540,6 +574,7 @@ const ImageCropModal = ({ imageSrc, onCancel, onSave }) => {
       >
         <button
           onClick={onCancel}
+          aria-label="Close dialog"
           style={{
             position: "absolute",
             top: 14,
@@ -702,6 +737,7 @@ const Avatar = ({
   photoUrl,
   onClick,
   uploading,
+  onImgError,
 }) => {
   const initials =
     [firstName, lastName]
@@ -713,6 +749,18 @@ const Avatar = ({
     <div
       onClick={onClick}
       title={onClick ? "Change profile photo" : undefined}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
       style={{
         width: size,
         height: size,
@@ -738,6 +786,7 @@ const Avatar = ({
         <img
           src={photoUrl}
           alt="Profile"
+          onError={onImgError}
           style={{
             width: "100%",
             height: "100%",
@@ -747,7 +796,7 @@ const Avatar = ({
         />
       ) : (
         initials
-      )}
+      )}{" "}
       {onClick && (
         <div
           style={{
@@ -933,6 +982,15 @@ const Profile = () => {
       ]
         .filter(Boolean)
         .join(" ");
+
+      // Without a name to match on, ilike('%%') would match every
+      // appointment in the branch — bail out instead of leaking other
+      // owners' appointments into this profile.
+      if (!name.trim()) {
+        setAppointments([]);
+        setApptLoading(false);
+        return;
+      }
 
       // ── PATCH: apply branch filter ──────────────────────────────────────────
       let q = supabase
@@ -1121,9 +1179,8 @@ const Profile = () => {
     setSaveMsg("Profile updated successfully!");
     setEditing(false);
     setTimeout(() => setSaveMsg(""), 3000);
-    window.location.reload();
+    fetchProfile();
   };
-
   // ── Derived lists ─────────────────────────────────────────
   const now = new Date();
   const upcoming = appointments.filter((a) => {
@@ -1291,7 +1348,8 @@ const Profile = () => {
                 photoUrl={photoUrl}
                 onClick={() => !uploadingPhoto && fileInputRef.current?.click()}
                 uploading={uploadingPhoto}
-              />
+                onImgError={() => setPhotoUrl(null)}
+              />{" "}
               {!uploadingPhoto && (
                 <div
                   onClick={() => fileInputRef.current?.click()}
@@ -1480,6 +1538,7 @@ const Profile = () => {
                       setEditing(false);
                       fetchProfile();
                     }}
+                    disabled={saving}
                     style={{
                       padding: "9px 16px",
                       background: "rgba(255,255,255,0.1)",
@@ -1488,12 +1547,13 @@ const Profile = () => {
                       color: "rgba(255,255,255,0.7)",
                       fontSize: 13,
                       fontWeight: 600,
-                      cursor: "pointer",
+                      cursor: saving ? "default" : "pointer",
+                      opacity: saving ? 0.5 : 1,
                       fontFamily: "inherit",
                     }}
                   >
                     Cancel
-                  </button>
+                  </button>{" "}
                   <button
                     onClick={saveProfile}
                     disabled={saving}
@@ -1899,8 +1959,7 @@ const Profile = () => {
                     return (
                       <tr
                         key={a.id}
-                        className="profile-schedule-row"
-                        className={isToday ? "profile-today-row" : ""}
+                        className={`profile-schedule-row${isToday ? " profile-today-row" : ""}`}
                         style={{
                           background: isToday
                             ? undefined

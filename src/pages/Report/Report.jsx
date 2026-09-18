@@ -41,11 +41,16 @@ const CustomSelect = ({
       const spaceBelow = window.innerHeight - rect.bottom;
       const dropHeight = Math.min((options.length + 1) * 38, 240);
       const showAbove = spaceBelow < dropHeight + 10;
+      let left = rect.left + window.scrollX;
+      const maxLeft = window.scrollX + window.innerWidth - rect.width - 8;
+      const minLeft = window.scrollX + 8;
+      if (left > maxLeft) left = maxLeft;
+      if (left < minLeft) left = minLeft;
       setDropPos({
         top: showAbove
           ? rect.top + window.scrollY - dropHeight - 6
           : rect.bottom + window.scrollY + 6,
-        left: rect.left + window.scrollX,
+        left,
         width: rect.width,
       });
     }
@@ -192,6 +197,18 @@ const CustomSelect = ({
       <div
         ref={triggerRef}
         onClick={handleOpen}
+        role="button"
+        tabIndex={0}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleOpen();
+          } else if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
         className="report-select-trigger"
         style={{
           width: "100%",
@@ -620,6 +637,11 @@ const Report = () => {
   const [exporting, setExporting] = useState("");
   const [exportProgress, setExportProgress] = useState(0);
   const exportTimerRef = useRef(null);
+  useEffect(() => {
+    return () => {
+      if (exportTimerRef.current) clearInterval(exportTimerRef.current);
+    };
+  }, []);
   const [animKey, setAnimKey] = useState(0);
   const [pdfDownloaded, setPdfDownloaded] = useState(false);
   const [excelDownloaded, setExcelDownloaded] = useState(false);
@@ -647,6 +669,19 @@ const Report = () => {
   const [genDataType, setGenDataType] = useState(""); // appointments | walkins | patients | transactions
   const [genFormat, setGenFormat] = useState(""); // pdf | excel
   const [generating, setGenerating] = useState(false);
+
+  // Let Escape close whichever modal is currently open, without
+  // interrupting a report generation already in progress.
+  useEffect(() => {
+    const onKey = (e) => {
+      if (e.key !== "Escape") return;
+      if (showAllTx) setShowAllTx(false);
+      else if (showGenerateModal && !generating) setShowGenerateModal(false);
+      else if (dialog.show) setDialog((d) => ({ ...d, show: false }));
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [showAllTx, showGenerateModal, generating, dialog.show]);
 
   const fetchBranchComparison = useCallback(async () => {
     if (!isAdminLevel || !seeAllBranches) return;
@@ -701,7 +736,13 @@ const Report = () => {
     if (!seeAllBranches && user?.branchId) q = q.eq("branch_id", user.branchId);
     if (seeAllBranches && branchFilter) q = q.eq("branch_id", branchFilter);
     const { data, error } = await q;
-    if (!error) setAllTransactions(data || []);
+    if (!error) {
+      setAllTransactions(data || []);
+    } else {
+      console.error("fetchAllTransactions error:", error.message);
+      setAllTransactions([]);
+      showToast("Could not load transactions. Please try again.", "error");
+    }
     setTxLoading(false);
   }, [user, seeAllBranches, branchFilter]);
 
@@ -2512,6 +2553,9 @@ const Report = () => {
       {/* ══ All Transactions Modal (incl. voided) ══ */}
       {showAllTx && (
         <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowAllTx(false);
+          }}
           style={{
             position: "fixed",
             inset: 0,
@@ -2552,6 +2596,7 @@ const Report = () => {
                 className="btn btn-ghost btn-icon"
                 style={{ width: "auto" }}
                 onClick={() => setShowAllTx(false)}
+                aria-label="Close dialog"
               >
                 ✕
               </button>
@@ -2716,6 +2761,10 @@ const Report = () => {
       {/* ══ Generate Report Modal ══ */}
       {showGenerateModal && (
         <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget && !generating)
+              setShowGenerateModal(false);
+          }}
           style={{
             position: "fixed",
             inset: 0,
@@ -2770,10 +2819,12 @@ const Report = () => {
               <button
                 className="btn btn-ghost btn-icon"
                 style={{ width: "auto" }}
-                onClick={() => setShowGenerateModal(false)}
+                onClick={() => !generating && setShowGenerateModal(false)}
+                disabled={generating}
+                aria-label="Close dialog"
               >
                 ✕
-              </button>
+              </button>{" "}
             </div>
 
             <div
@@ -3008,8 +3059,13 @@ const Report = () => {
             >
               <button
                 className="btn btn-ghost"
-                style={{ width: "auto" }}
-                onClick={() => setShowGenerateModal(false)}
+                style={{
+                  width: "auto",
+                  opacity: generating ? 0.5 : 1,
+                  cursor: generating ? "not-allowed" : "pointer",
+                }}
+                onClick={() => !generating && setShowGenerateModal(false)}
+                disabled={generating}
               >
                 Cancel
               </button>
@@ -3038,6 +3094,10 @@ const Report = () => {
       {/* ══ Confirm Dialog ══ */}
       {dialog.show && (
         <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget)
+              setDialog((d) => ({ ...d, show: false }));
+          }}
           style={{
             position: "fixed",
             inset: 0,

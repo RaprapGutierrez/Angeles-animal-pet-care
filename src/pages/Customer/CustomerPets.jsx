@@ -98,6 +98,16 @@ const CustomerPets = () => {
     return () => window.removeEventListener("resize", onResize);
   }, []);
 
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (e.key !== "Escape") return;
+      if (previewFile) setPreviewFile(null);
+      else if (selected) setSelected(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [previewFile, selected]);
+
   // ── Fetch pets matching THIS customer ────────────────────────────────────
   // Supports owner_user_id, user_id, and owner_email for backward compat
   const fetchPets = useCallback(async () => {
@@ -504,7 +514,12 @@ const CustomerPets = () => {
               </p>
             </div>
           </div>
-          <button className="btn btn-primary" style={S.btn} onClick={fetchPets}>
+          <button
+            className="btn btn-primary"
+            style={{ ...S.btn, opacity: loading ? 0.7 : 1 }}
+            onClick={fetchPets}
+            disabled={loading}
+          >
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -512,12 +527,17 @@ const CustomerPets = () => {
               strokeWidth="2.5"
               strokeLinecap="round"
               strokeLinejoin="round"
-              style={{ width: 14, height: 14, marginRight: 6 }}
+              style={{
+                width: 14,
+                height: 14,
+                marginRight: 6,
+                animation: loading ? "spin 0.8s linear infinite" : "none",
+              }}
             >
               <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
               <path d="M3 3v5h5" />
             </svg>
-            Refresh
+            {loading ? "Refreshing…" : "Refresh"}
           </button>
         </div>
 
@@ -567,23 +587,38 @@ const CustomerPets = () => {
                 textAlign: "center",
                 padding: "60px 20px",
                 color: "var(--muted)",
+                background: "var(--card)",
+                border: "1.5px dashed var(--border)",
+                borderRadius: 16,
               }}
             >
               <div
                 style={{
-                  marginBottom: 16,
+                  width: 72,
+                  height: 72,
+                  borderRadius: "50%",
+                  background: "var(--light-blue)",
+                  margin: "0 auto 18px",
                   display: "flex",
+                  alignItems: "center",
                   justifyContent: "center",
-                  gap: 10,
+                  gap: 6,
                 }}
               >
-                <DogIcon size={28} color="var(--muted)" />
-                <CatIcon size={28} color="var(--muted)" />
+                <DogIcon size={26} color="var(--royal)" />
+                <CatIcon size={26} color="var(--royal)" />
               </div>
-              <h3 style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+              <h3
+                style={{
+                  fontSize: 18,
+                  fontWeight: 700,
+                  marginBottom: 8,
+                  color: "var(--text)",
+                }}
+              >
                 No pets found
               </h3>
-              <p style={{ fontSize: 14 }}>
+              <p style={{ fontSize: 14, maxWidth: 320, margin: "0 auto" }}>
                 Your pets will appear here once they have been registered at our
                 clinic.
               </p>
@@ -607,7 +642,8 @@ const CustomerPets = () => {
                     borderRadius: 14,
                     padding: 20,
                     cursor: "pointer",
-                    transition: "all 0.2s",
+                    transition:
+                      "transform 0.22s cubic-bezier(0.25,0.8,0.25,1), box-shadow 0.22s ease, border-color 0.22s ease",
                     animationDelay: `${i * 0.06}s`,
                   }}
                   onMouseEnter={(e) => {
@@ -685,17 +721,6 @@ const CustomerPets = () => {
                       </p>
                     </div>
                   </div>
-                  {imageErrors[pet.id] && (
-                    <p
-                      style={{
-                        fontSize: 11,
-                        color: "#dc2626",
-                        margin: "0 0 8px",
-                      }}
-                    >
-                      {imageErrors[pet.id]}
-                    </p>
-                  )}
                   <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                     <span
                       className={`badge ${STATUS_BADGE[pet.status] || "badge-gray"}`}
@@ -704,6 +729,11 @@ const CustomerPets = () => {
                     </span>
                     <span
                       className={`badge ${HEALTH_BADGE[pet.health] || "badge-gray"}`}
+                      style={
+                        pet.health === "Critical"
+                          ? { boxShadow: "0 0 0 3px rgba(239,68,68,0.15)" }
+                          : undefined
+                      }
                     >
                       {pet.health}
                     </span>
@@ -729,6 +759,7 @@ const CustomerPets = () => {
       {/* Pet Detail Modal */}
       {selected && (
         <div
+          onClick={() => setSelected(null)}
           style={{
             display: "flex",
             position: "fixed",
@@ -744,6 +775,7 @@ const CustomerPets = () => {
           }}
         >
           <div
+            onClick={(e) => e.stopPropagation()}
             style={{
               maxWidth: 680,
               width: "100%",
@@ -754,8 +786,10 @@ const CustomerPets = () => {
               boxShadow: "0 24px 64px rgba(0,0,0,0.28)",
               display: "flex",
               flexDirection: "column",
+              animation: "modalIn 0.2s cubic-bezier(0.25,0.8,0.25,1)",
             }}
           >
+            <style>{`@keyframes modalIn { from { opacity:0; transform:scale(0.96) translateY(6px) } to { opacity:1; transform:scale(1) translateY(0) } }`}</style>
             {/* Modal Header */}
             <div
               style={{
@@ -866,12 +900,22 @@ const CustomerPets = () => {
                 style={{
                   background: "none",
                   border: "none",
+                  borderRadius: 8,
                   fontSize: 20,
                   cursor: "pointer",
                   color: "var(--muted)",
                   lineHeight: 1,
-                  padding: "2px 6px",
+                  padding: "4px 8px",
                   flexShrink: 0,
+                  transition: "background 0.15s, color 0.15s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = "var(--border)";
+                  e.currentTarget.style.color = "var(--text)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = "none";
+                  e.currentTarget.style.color = "var(--muted)";
                 }}
               >
                 ✕
@@ -908,6 +952,8 @@ const CustomerPets = () => {
                     whiteSpace: "nowrap",
                     flexShrink: 0,
                     color: tab === t ? "var(--royal)" : "var(--muted)",
+                    background: tab === t ? "var(--light-blue)" : "transparent",
+                    borderRadius: tab === t ? "8px 8px 0 0" : 0,
                     borderBottom:
                       tab === t
                         ? "2px solid var(--royal)"
@@ -1103,6 +1149,16 @@ const CustomerPets = () => {
                               justifyContent: "center",
                               cursor: "pointer",
                               padding: 0,
+                              transition: "transform 0.15s, box-shadow 0.15s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = "scale(1.12)";
+                              e.currentTarget.style.boxShadow =
+                                "0 2px 8px rgba(0,0,0,0.35)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = "scale(1)";
+                              e.currentTarget.style.boxShadow = "none";
                             }}
                           >
                             <svg
@@ -1379,16 +1435,41 @@ const CustomerPets = () => {
                     </div>
                   </div>
                   {vaccinations.length === 0 ? (
-                    <p
-                      style={{
-                        color: "var(--muted)",
-                        fontSize: 13,
-                        textAlign: "center",
-                        padding: "40px 0",
-                      }}
-                    >
-                      No vaccination records.
-                    </p>
+                    <div style={{ textAlign: "center", padding: "48px 0" }}>
+                      <div
+                        style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: "50%",
+                          background: "#f0fdf4",
+                          margin: "0 auto 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <svg
+                          width="22"
+                          height="22"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#86efac"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        >
+                          <path d="M20 6 9 17l-5-5" />
+                        </svg>
+                      </div>
+                      <p
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 13,
+                          margin: 0,
+                        }}
+                      >
+                        No vaccination records.
+                      </p>
+                    </div>
                   ) : (
                     <div
                       style={{
@@ -1416,6 +1497,17 @@ const CustomerPets = () => {
                               padding: "18px 20px",
                               position: "relative",
                               overflow: "hidden",
+                              transition: "box-shadow 0.2s, transform 0.2s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.boxShadow =
+                                "0 8px 22px rgba(22,163,74,0.16)";
+                              e.currentTarget.style.transform =
+                                "translateY(-1px)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.boxShadow = "none";
+                              e.currentTarget.style.transform = "translateY(0)";
                             }}
                           >
                             <div
@@ -1642,16 +1734,42 @@ const CustomerPets = () => {
                     </p>
                   </div>
                   {treatments.length === 0 ? (
-                    <p
-                      style={{
-                        color: "var(--muted)",
-                        fontSize: 13,
-                        textAlign: "center",
-                        padding: "40px 0",
-                      }}
-                    >
-                      No treatment records.
-                    </p>
+                    <div style={{ textAlign: "center", padding: "48px 0" }}>
+                      <div
+                        style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: "50%",
+                          background: "#fffbeb",
+                          margin: "0 auto 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <svg
+                          width="22"
+                          height="22"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#fbbf24"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        >
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      </div>
+                      <p
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 13,
+                          margin: 0,
+                        }}
+                      >
+                        No treatment records.
+                      </p>
+                    </div>
                   ) : (
                     treatments.map((t) => (
                       <div
@@ -1664,6 +1782,17 @@ const CustomerPets = () => {
                           position: "relative",
                           boxShadow: "2px 3px 8px rgba(0,0,0,0.08)",
                           marginBottom: 12,
+                          transition: "box-shadow 0.2s, transform 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow =
+                            "3px 5px 16px rgba(0,0,0,0.13)";
+                          e.currentTarget.style.transform = "translateY(-1px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow =
+                            "2px 3px 8px rgba(0,0,0,0.08)";
+                          e.currentTarget.style.transform = "translateY(0)";
                         }}
                       >
                         {!isMobile && (
@@ -1786,16 +1915,42 @@ const CustomerPets = () => {
                     </p>
                   </div>
                   {prescriptions.length === 0 ? (
-                    <p
-                      style={{
-                        color: "var(--muted)",
-                        fontSize: 13,
-                        textAlign: "center",
-                        padding: "40px 0",
-                      }}
-                    >
-                      No prescription records.
-                    </p>
+                    <div style={{ textAlign: "center", padding: "48px 0" }}>
+                      <div
+                        style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: "50%",
+                          background: "#eff6ff",
+                          margin: "0 auto 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <svg
+                          width="22"
+                          height="22"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#93c5fd"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        >
+                          <path d="M10.5 20H4a2 2 0 0 1-2-2V5c0-1.1.9-2 2-2h3.93a2 2 0 0 1 1.66.9l.82 1.2a2 2 0 0 0 1.66.9H20a2 2 0 0 1 2 2v3" />
+                          <circle cx="18" cy="18" r="3" />
+                        </svg>
+                      </div>
+                      <p
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 13,
+                          margin: 0,
+                        }}
+                      >
+                        No prescription records.
+                      </p>
+                    </div>
                   ) : (
                     prescriptions.map((rx) => (
                       <div
@@ -1807,6 +1962,17 @@ const CustomerPets = () => {
                           overflow: "hidden",
                           marginBottom: 12,
                           boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                          transition: "box-shadow 0.2s, transform 0.2s",
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.boxShadow =
+                            "0 6px 20px rgba(30,58,138,0.14)";
+                          e.currentTarget.style.transform = "translateY(-1px)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.boxShadow =
+                            "0 2px 8px rgba(0,0,0,0.06)";
+                          e.currentTarget.style.transform = "translateY(0)";
                         }}
                       >
                         <div
@@ -2084,16 +2250,42 @@ const CustomerPets = () => {
                       ))}
                     </div>
                   ) : patientFiles.length === 0 ? (
-                    <p
-                      style={{
-                        color: "var(--muted)",
-                        fontSize: 13,
-                        textAlign: "center",
-                        padding: "40px 0",
-                      }}
-                    >
-                      No files uploaded yet.
-                    </p>
+                    <div style={{ textAlign: "center", padding: "48px 0" }}>
+                      <div
+                        style={{
+                          width: 52,
+                          height: 52,
+                          borderRadius: "50%",
+                          background: "var(--bg)",
+                          margin: "0 auto 12px",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <svg
+                          width="22"
+                          height="22"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="#94a3b8"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                        >
+                          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                          <polyline points="14 2 14 8 20 8" />
+                        </svg>
+                      </div>
+                      <p
+                        style={{
+                          color: "var(--muted)",
+                          fontSize: 13,
+                          margin: 0,
+                        }}
+                      >
+                        No files uploaded yet.
+                      </p>
+                    </div>
                   ) : (
                     <div
                       style={{
@@ -2120,6 +2312,19 @@ const CustomerPets = () => {
                               flexDirection: "column",
                               gap: 8,
                               cursor: "pointer",
+                              transition:
+                                "border-color 0.15s, box-shadow 0.15s",
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.borderColor =
+                                "var(--royal)";
+                              e.currentTarget.style.boxShadow =
+                                "0 4px 14px rgba(30,58,138,0.1)";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.borderColor =
+                                "var(--border)";
+                              e.currentTarget.style.boxShadow = "none";
                             }}
                           >
                             {isImage ? (
@@ -2374,11 +2579,21 @@ const CustomerPets = () => {
                   style={{
                     background: "none",
                     border: "none",
+                    borderRadius: 8,
                     fontSize: 20,
                     cursor: "pointer",
                     color: "var(--muted)",
                     lineHeight: 1,
-                    padding: "2px 6px",
+                    padding: "4px 8px",
+                    transition: "background 0.15s, color 0.15s",
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = "var(--border)";
+                    e.currentTarget.style.color = "var(--text)";
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = "none";
+                    e.currentTarget.style.color = "var(--muted)";
                   }}
                 >
                   ✕

@@ -663,8 +663,32 @@ const CustomerMessages = () => {
     };
   }, [userLoading, myId]);
 
+  const getClearedAt = (staffId) => {
+    try {
+      const map = JSON.parse(
+        localStorage.getItem("customer_msg_cleared") || "{}",
+      );
+      return map[staffId] || null;
+    } catch {
+      return null;
+    }
+  };
+
+  const setClearedAt = (staffId, iso) => {
+    try {
+      const map = JSON.parse(
+        localStorage.getItem("customer_msg_cleared") || "{}",
+      );
+      map[staffId] = iso;
+      localStorage.setItem("customer_msg_cleared", JSON.stringify(map));
+    } catch {
+      // localStorage unavailable — clearing just won't persist across reloads
+    }
+  };
+
   const fetchMessages = async (staffId) => {
     if (!myId || !staffId) return;
+    const clearedAt = getClearedAt(staffId);
     const [{ data: sameData }, { data: crossData }] = await Promise.all([
       supabase
         .from(T_MESSAGES)
@@ -690,9 +714,14 @@ const CustomerMessages = () => {
       message: m.content,
       receiver_id: m.recipient_id,
     }));
-    const merged = [...(sameData || []), ...crossMsgs].sort(
+    let merged = [...(sameData || []), ...crossMsgs].sort(
       (a, b) => new Date(b.created_at) - new Date(a.created_at),
     );
+    if (clearedAt) {
+      merged = merged.filter(
+        (m) => new Date(m.created_at) > new Date(clearedAt),
+      );
+    }
     setMessages(merged.slice().reverse());
     setTimeout(
       () => bottomRef.current?.scrollIntoView({ behavior: "smooth" }),
@@ -917,9 +946,10 @@ const CustomerMessages = () => {
   const handleClearMessages = () =>
     showModal(
       "Clear Messages",
-      `Remove all messages with ${selected?.full_name} from your view?`,
+      `Remove all messages with ${selected?.full_name} from your view? New messages will still appear.`,
       "confirm",
       () => {
+        if (selected?.id) setClearedAt(selected.id, new Date().toISOString());
         setMessages([]);
         closeModal();
       },
@@ -935,16 +965,45 @@ const CustomerMessages = () => {
       async () => {
         closeModal();
         setDeleting(true);
-        const { data: rows } = await supabase
-          .from(T_MESSAGES)
-          .select("id")
-          .or(
-            `and(sender_id.eq.${myId},receiver_id.eq.${selected.id}),and(sender_id.eq.${selected.id},receiver_id.eq.${myId})`,
-          );
-        const ids = (rows || []).map((r) => r.id);
-        if (ids.length) await supabase.from(T_MESSAGES).delete().in("id", ids);
+        const deletedId = selected.id;
+        const [{ data: sameRows }, { data: crossRows }] = await Promise.all([
+          supabase
+            .from(T_MESSAGES)
+            .select("id")
+            .or(
+              `and(sender_id.eq.${myId},receiver_id.eq.${deletedId}),and(sender_id.eq.${deletedId},receiver_id.eq.${myId})`,
+            ),
+          supabase
+            .from(CROSS_BRANCH_TABLE)
+            .select("id")
+            .or(
+              `and(sender_id.eq.${myId},recipient_id.eq.${deletedId}),and(sender_id.eq.${deletedId},recipient_id.eq.${myId})`,
+            ),
+        ]);
+        const sameIds = (sameRows || []).map((r) => r.id);
+        const crossIds = (crossRows || []).map((r) => r.id);
+        await Promise.all([
+          sameIds.length
+            ? supabase.from(T_MESSAGES).delete().in("id", sameIds)
+            : Promise.resolve(),
+          crossIds.length
+            ? supabase.from(CROSS_BRANCH_TABLE).delete().in("id", crossIds)
+            : Promise.resolve(),
+        ]);
         setDeleting(false);
         setMessages([]);
+        setConversationIds((prev) => {
+          const next = new Set(prev);
+          next.delete(deletedId);
+          return next;
+        });
+        setLastMessageTimes((prev) => {
+          const next = { ...prev };
+          delete next[deletedId];
+          return next;
+        });
+        setSelected(null);
+        setMobileView("list");
       },
       "Delete Forever",
       "Cancel",

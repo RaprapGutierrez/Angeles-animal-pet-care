@@ -1,5 +1,5 @@
 // src/pages/PredictiveAnalytics.jsx
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useId } from "react";
 import ReactDOM from "react-dom";
 import Layout from "../../components/layout";
 import { supabase } from "../../js/Utils/supabase";
@@ -262,6 +262,18 @@ const CustomSelect = ({
       <div
         ref={triggerRef}
         onClick={handleOpen}
+        role="button"
+        tabIndex={0}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleOpen();
+          } else if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
         style={{
           display: "flex",
           alignItems: "center",
@@ -313,11 +325,12 @@ const CustomSelect = ({
     MINI SPARKLINE — pure SVG, zero deps
   ──────────────────────────────────────────── */
 const Sparkline = ({ data = [], color = C.indigo, h = 40, filled = true }) => {
+  const gradId = useId();
   if (!data.length) return null;
   const w = 120;
   const max = Math.max(...data, 1);
   const pts = data.map((v, i) => [
-    (i / (data.length - 1)) * w,
+    data.length > 1 ? (i / (data.length - 1)) * w : w / 2,
     h - (v / max) * (h - 4) - 2,
   ]);
   const path = pts
@@ -331,19 +344,13 @@ const Sparkline = ({ data = [], color = C.indigo, h = 40, filled = true }) => {
     <svg width={w} height={h} style={{ display: "block" }}>
       {filled && (
         <defs>
-          <linearGradient
-            id={`sg-${color.replace("#", "")}`}
-            x1="0"
-            y1="0"
-            x2="0"
-            y2="1"
-          >
+          <linearGradient id={`sg-${gradId}`} x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor={color} stopOpacity={0.25} />
             <stop offset="100%" stopColor={color} stopOpacity={0.03} />
           </linearGradient>
         </defs>
       )}
-      {filled && <path d={fill} fill={`url(#sg-${color.replace("#", "")})`} />}
+      {filled && <path d={fill} fill={`url(#sg-${gradId})`} />}
       <path
         d={path}
         fill="none"
@@ -463,6 +470,7 @@ const InsightCard = ({
       {action && (
         <button
           onClick={onAction}
+          aria-expanded={active}
           style={{
             fontSize: 11,
             fontWeight: 700,
@@ -479,7 +487,7 @@ const InsightCard = ({
           }}
         >
           {action}
-          {active ? " ▲" : ""}
+          <span aria-hidden="true">{active ? "▲" : "▼"}</span>
         </button>
       )}
     </div>
@@ -730,12 +738,19 @@ const VisitsQuad = ({
         title="Busiest Days of the Week"
         subtitle={`${subtitlePrefix}Aggregate visits over the past 90 days`}
       />
-      <BarChart
-        labels={DAYS}
-        values={dowValues || Array(7).fill(0)}
-        color={C.indigo}
-        height={140}
-      />
+
+      {(dowValues || []).some((v) => v > 0) ? (
+        <BarChart
+          labels={DAYS}
+          values={dowValues || Array(7).fill(0)}
+          color={C.indigo}
+          height={140}
+        />
+      ) : (
+        <p style={{ fontSize: 12, color: "#94a3b8", margin: "24px 0" }}>
+          No visit data yet for this period.
+        </p>
+      )}
     </div>
     <div className="pa-card" style={cardStyle}>
       <SectionHeader
@@ -743,12 +758,18 @@ const VisitsQuad = ({
         title="Visits by Time Slot"
         subtitle={`${subtitlePrefix}Which hours see the most traffic`}
       />
-      <BarChart
-        labels={hourLabels || []}
-        values={hourValues || []}
-        color={C.teal}
-        height={140}
-      />
+      {(hourValues || []).some((v) => v > 0) ? (
+        <BarChart
+          labels={hourLabels || []}
+          values={hourValues || []}
+          color={C.teal}
+          height={140}
+        />
+      ) : (
+        <p style={{ fontSize: 12, color: "#94a3b8", margin: "24px 0" }}>
+          No visit data yet for this period.
+        </p>
+      )}
     </div>
     <div className="pa-card" style={cardStyle}>
       <SectionHeader
@@ -1058,10 +1079,18 @@ const PredictiveAnalytics = () => {
       .slice(0, 5);
 
     const restockNeeded = [...salesVelocity]
-      .sort((a, b) => b.sold90d - a.sold90d) // rank by best-selling first
+      .sort((a, b) => {
+        // Items about to run out must never be bumped off the list by
+        // high-volume items that are already well-stocked.
+        const aDays = Number.isFinite(a.daysLeft) ? a.daysLeft : Infinity;
+        const bDays = Number.isFinite(b.daysLeft) ? b.daysLeft : Infinity;
+        if (aDays !== bDays) return aDays - bDays;
+        return b.sold90d - a.sold90d;
+      })
       .slice(0, 8)
       .map((i) => {
-        const suggestedQty = Math.max(1, Math.ceil(i.perWeek * 4)); // ~4 weeks of demand, regardless of current stock
+        // ~4 weeks of demand, minus what's already on the shelf
+        const suggestedQty = Math.max(1, Math.ceil(i.perWeek * 4 - i.stock));
         const priority =
           i.daysLeft <= 7
             ? "Urgent"
@@ -1072,7 +1101,6 @@ const PredictiveAnalytics = () => {
                 : "Top seller";
         return { ...i, suggestedQty, priority };
       });
-
     /* --- new patients trend --- */
     const walkinByMonth = [0, 0, 0];
     walkins.forEach((w) => {
@@ -1138,7 +1166,7 @@ const PredictiveAnalytics = () => {
       title: `Peak Day: ${DAYS[peakDow]}`,
       body: `${DAYS[peakDow]}s consistently see the highest patient volume. Consider scheduling extra staff on ${DAYS[peakDow]}s.`,
       color: C.indigo,
-      action: "Staff planning →",
+      action: "Staff planning",
       type: "peakDay",
       suggestions: genSuggestions("peakDay", { dayLabel: DAYS[peakDow] }),
     });
@@ -1161,7 +1189,7 @@ const PredictiveAnalytics = () => {
         title: `Rush Hour: ${HOUR_LABELS[peakHour]}`,
         body: `The ${HOUR_LABELS[peakHour]} slot is the most booked time. Prepare for a surge in walk-ins and appointments during this window.`,
         color: C.teal,
-        action: "Review schedule →",
+        action: "Review schedule",
         type: "rushHour",
         suggestions: genSuggestions("rushHour", {
           hourLabel: HOUR_LABELS[peakHour],
@@ -1186,7 +1214,7 @@ const PredictiveAnalytics = () => {
         title: `Walk-In Rush Hour: ${HOUR_LABELS[walkinPeakHourIdx]}`,
         body: `Walk-ins cluster heavily around ${HOUR_LABELS[walkinPeakHourIdx]}. Expect longer wait times and possible front-desk overcrowding during this window.`,
         color: C.rose,
-        action: "Prep front desk →",
+        action: "Prep front desk",
         type: "walkinRush",
         suggestions: genSuggestions("walkinRush", {
           hourLabel: HOUR_LABELS[walkinPeakHourIdx],
@@ -1216,7 +1244,7 @@ const PredictiveAnalytics = () => {
             ", ",
           )}${criticalStock.length > 3 ? " and more" : ""} need immediate restocking.`,
         color: C.rose,
-        action: "View inventory →",
+        action: "View inventory",
         type: "criticalStock",
         suggestions: genSuggestions("criticalStock", {
           items: criticalStock.slice(0, 6),
@@ -1241,7 +1269,7 @@ const PredictiveAnalytics = () => {
         title: `Top Service: ${topPurposes[0][0]}`,
         body: `${topPurposes[0][0]} accounts for the largest share of appointments. Ensure sufficient vet availability for this service.`,
         color: C.amber,
-        action: "Adjust rosters →",
+        action: "Adjust rosters",
         type: "topService",
         suggestions: genSuggestions("topService", {
           purpose: topPurposes[0][0],
@@ -1276,7 +1304,7 @@ const PredictiveAnalytics = () => {
         title: `Patient Growth: +${growth}% this month`,
         body: `New patient registrations are trending up. Capacity planning and appointment slot expansion may be needed.`,
         color: C.emerald,
-        action: "View growth →",
+        action: "View growth",
         type: "growth",
         suggestions: genSuggestions("growth", { growth }),
       });
@@ -1468,9 +1496,10 @@ const PredictiveAnalytics = () => {
           left: "var(--current-sidebar-w, 62px)",
           right: 0,
           zIndex: 40,
-          background: "#fff",
+          background: "var(--card)",
         }}
       >
+        {" "}
         <div className="topbar-title" style={{ minWidth: 0 }}>
           <img
             src="/icon/predictive-analytics.webp"
@@ -1905,6 +1934,10 @@ const PredictiveAnalytics = () => {
               />
               {loading ? (
                 <Skel h={120} />
+              ) : !analytics?.purposeTotal ? (
+                <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>
+                  No appointment data yet.
+                </p>
               ) : (
                 <div
                   style={{
@@ -1933,7 +1966,7 @@ const PredictiveAnalytics = () => {
                     );
                   })}
                 </div>
-              )}
+              )}{" "}
             </div>
           </div>
         )}
@@ -2097,12 +2130,11 @@ const PredictiveAnalytics = () => {
             </div>
 
             {/* Restock prediction */}
-
-            {/* Restock prediction */}
             <div
               className="pa-card"
               style={{ ...card, gridColumn: "1 / -1", animationDelay: "0.2s" }}
             >
+              {" "}
               <SectionHeader
                 icon={
                   <svg
@@ -2141,7 +2173,6 @@ const PredictiveAnalytics = () => {
                   }}
                 >
                   {(analytics?.restockNeeded || []).map((item) => {
-                    const isCritical = item.priority === "Urgent";
                     const badgeColor =
                       item.priority === "Urgent"
                         ? C.rose

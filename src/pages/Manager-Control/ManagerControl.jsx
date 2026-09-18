@@ -1175,6 +1175,12 @@ const ManagerControl = () => {
     )
       return false;
     if (!addForm.password.trim() || addForm.password.length < 8) return false;
+    if (
+      !/[A-Z]/.test(addForm.password) ||
+      !/[a-z]/.test(addForm.password) ||
+      !/[0-9]/.test(addForm.password)
+    )
+      return false;
     if (!addForm.sex) return false;
     if (!addForm.role) return false;
     return true;
@@ -3239,7 +3245,9 @@ const ManagerControl = () => {
                         fontFamily: "inherit",
                       }}
                     >
-                      Will be sent to Admin for approval
+                      {addForm.role === "Customer"
+                        ? "Account will be created immediately"
+                        : "Will be sent to Admin for approval"}
                     </span>
                   </div>
                 </div>
@@ -3296,8 +3304,17 @@ const ManagerControl = () => {
                   <line x1="12" y1="17" x2="12.01" y2="17" />
                 </svg>
                 <span>
-                  This request will be sent to an <strong>Admin</strong> for
-                  review. The account is only created after approval.
+                  {addForm.role === "Customer" ? (
+                    <>
+                      Customer accounts are created <strong>immediately</strong>{" "}
+                      — no Admin approval needed.
+                    </>
+                  ) : (
+                    <>
+                      This request will be sent to an <strong>Admin</strong> for
+                      review. The account is only created after approval.
+                    </>
+                  )}
                 </span>
               </div>
 
@@ -3318,6 +3335,7 @@ const ManagerControl = () => {
                     value={addForm.first_name}
                     onChange={(e) => handleFirstNameChange(e.target.value)}
                     className={addErrors.first_name ? "mc-input-err" : ""}
+                    autoFocus
                   />
                   {addErrors.first_name && (
                     <div className="mc-err-msg">{addErrors.first_name}</div>
@@ -3699,7 +3717,11 @@ const ManagerControl = () => {
                 disabled={saving || !isRequestFormValid()}
               >
                 {saving ? (
-                  "Submitting…"
+                  addForm.role === "Customer" ? (
+                    "Creating…"
+                  ) : (
+                    "Submitting…"
+                  )
                 ) : (
                   <span
                     style={{ display: "flex", alignItems: "center", gap: 6 }}
@@ -3716,7 +3738,9 @@ const ManagerControl = () => {
                       <circle cx="12" cy="12" r="10" />
                       <polyline points="12 6 12 12 16 14" />
                     </svg>{" "}
-                    Submit for Approval
+                    {addForm.role === "Customer"
+                      ? "Create Account"
+                      : "Submit for Approval"}
                   </span>
                 )}
               </button>

@@ -680,7 +680,7 @@ const Register = () => {
           "Welcome!",
           "Your account has been created and you're now signed in.",
         );
-        setTimeout(() => navigate("/dashboard"), 1600); // adjust to your customer landing route
+        setTimeout(() => navigate("/customer/dashboard"), 1600);
       } else {
         // This only happens if Supabase still requires email confirmation.
         // Turn OFF "Confirm email" in Supabase Dashboard → Authentication
@@ -882,6 +882,7 @@ const Register = () => {
                       onChange={set("firstName")}
                       onKeyDown={(e) => e.key === "Enter" && handleNextStep()}
                       required
+                      autoFocus
                     />
                     <label htmlFor="reg-firstName">First name</label>
                   </div>
@@ -918,7 +919,20 @@ const Register = () => {
                   <button
                     type="button"
                     onClick={handleNextStep}
+                    disabled={
+                      !form.firstName || !form.lastName || !form.phoneNumber
+                    }
                     className="auth-btn-text-stroke"
+                    style={{
+                      opacity:
+                        !form.firstName || !form.lastName || !form.phoneNumber
+                          ? 0.65
+                          : 1,
+                      cursor:
+                        !form.firstName || !form.lastName || !form.phoneNumber
+                          ? "not-allowed"
+                          : "pointer",
+                    }}
                   >
                     Next
                   </button>
@@ -1008,8 +1022,13 @@ const Register = () => {
                   <button
                     type="button"
                     onClick={handleNextStep}
+                    disabled={!form.branchId}
                     className="auth-btn-text-stroke"
-                    style={{ flex: 2 }}
+                    style={{
+                      flex: 2,
+                      opacity: !form.branchId ? 0.65 : 1,
+                      cursor: !form.branchId ? "not-allowed" : "pointer",
+                    }}
                   >
                     Next
                   </button>
@@ -1196,9 +1215,30 @@ const Register = () => {
                   <button
                     type="button"
                     onClick={handleRegister}
-                    disabled={loading}
+                    disabled={
+                      loading ||
+                      !form.password ||
+                      form.password !== form.confirmPassword ||
+                      (strength && strength.score < 5)
+                    }
                     className="auth-btn-text-stroke"
-                    style={{ flex: 2 }}
+                    style={{
+                      flex: 2,
+                      opacity:
+                        loading ||
+                        !form.password ||
+                        form.password !== form.confirmPassword ||
+                        (strength && strength.score < 5)
+                          ? 0.65
+                          : 1,
+                      cursor:
+                        loading ||
+                        !form.password ||
+                        form.password !== form.confirmPassword ||
+                        (strength && strength.score < 5)
+                          ? "not-allowed"
+                          : "pointer",
+                    }}
                   >
                     {loading ? "Creating account..." : "Create Account"}
                   </button>
@@ -1228,7 +1268,7 @@ const Register = () => {
             </p>
 
             <Link
-              to="/ai-assessment"
+              to="/guest-ai-chat"
               className="ai-assessment-link"
               style={{ marginTop: 8 }}
             >

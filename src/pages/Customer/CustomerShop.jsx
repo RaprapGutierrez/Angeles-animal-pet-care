@@ -32,11 +32,8 @@ const CustomerShop = () => {
 
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [cart] = useState([]);
   const [catFilter, setCatFilter] = useState("All");
   const [search, setSearch] = useState("");
-  const [showCart, setShowCart] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 640);
   const [showReceipts, setShowReceipts] = useState(false);
   const [receipts, setReceipts] = useState([]);
@@ -270,8 +267,6 @@ const CustomerShop = () => {
       (catFilter === "All" || p.category === catFilter) &&
       (!search || p.name.toLowerCase().includes(search.toLowerCase())),
   );
-  const total = 0;
-  const cartQty = 0;
 
   const filteredReceipts = receipts.filter((r) => {
     const q = receiptSearch.toLowerCase().trim();
@@ -292,70 +287,6 @@ const CustomerShop = () => {
       d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
     );
   }).length;
-
-  // ── Cart helpers ──────────────────────────────────────────────────────────
-  const addToCart = (product) => {
-    setCart((prev) => {
-      const ex = prev.find((i) => i.id === product.id);
-      if (ex)
-        return prev.map((i) =>
-          i.id === product.id ? { ...i, qty: i.qty + 1 } : i,
-        );
-      return [...prev, { ...product, qty: 1 }];
-    });
-  };
-
-  const updateQty = (id, delta) => {
-    setCart((prev) =>
-      prev
-        .map((i) =>
-          i.id === id ? { ...i, qty: Math.max(0, i.qty + delta) } : i,
-        )
-        .filter((i) => i.qty > 0),
-    );
-  };
-
-  // ── Place order ───────────────────────────────────────────────────────────
-  const placeOrder = async () => {
-    if (cart.length === 0) return;
-    const userId = await getCurrentUserId();
-
-    // Use name from useCurrentUser — no extra profile fetch needed
-    const clientName = user?.fullName || "Customer";
-    const clientEmail = user?.email || null;
-
-    // ── PATCH: insert includes branch_id ─────────────────────────────────
-    const { error } = await supabase.from(T_TRANSACTIONS).insert([
-      {
-        client: clientName,
-        client_id: userId || null,
-        client_email: clientEmail,
-        items: cart.map((i) => ({
-          id: i.id,
-          name: i.name,
-          qty: i.qty,
-          price: i.price,
-          isCustom: false,
-        })),
-        subtotal: total,
-        discount: 0,
-        total,
-        payment: "Online Order",
-        branch_id: user?.branchId ?? null,
-      },
-    ]);
-
-    if (error) {
-      alert("Order error: " + error.message);
-      return;
-    }
-
-    setCart([]);
-    setShowCart(false);
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 4500);
-    fetchProducts();
-  };
 
   // ── Payment badge colors ──────────────────────────────────────────────────
   const payColor = (p) =>
@@ -736,49 +667,6 @@ const CustomerShop = () => {
         </div>
 
         <div style={S.cont} className="customer-shop-content">
-          {/* Success banner */}
-          {showSuccess && (
-            <div
-              style={{
-                background: "#dcfce7",
-                border: "1px solid #86efac",
-                borderRadius: 10,
-                padding: "14px 20px",
-                marginBottom: 20,
-                display: "flex",
-                alignItems: "center",
-                gap: 12,
-                animation: "shopSlideIn 0.3s ease both",
-              }}
-            >
-              <span style={{ color: "#16a34a" }}>
-                <svg
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  style={{ width: 22, height: 22 }}
-                >
-                  <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-                  <polyline points="22 4 12 14.01 9 11.01" />
-                </svg>
-              </span>
-              <div>
-                <strong
-                  style={{ color: "#16a34a", fontSize: 14, display: "block" }}
-                >
-                  Order placed successfully!
-                </strong>
-                <span style={{ color: "#15803d", fontSize: 12 }}>
-                  Our team will contact you shortly. Click{" "}
-                  <strong>My Receipts</strong> to view your order.
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Category filters */}
           <div
             style={{
@@ -1326,7 +1214,7 @@ const CustomerShop = () => {
                       </p>
                     </div>
                   ) : filteredReceipts.length === 0 ? (
-                    (<div
+                    <div
                       style={{
                         padding: "32px 20px",
                         textAlign: "center",
@@ -1357,7 +1245,7 @@ const CustomerShop = () => {
                       <p style={{ fontSize: 13 }}>
                         No receipts matching "{receiptSearch}"
                       </p>
-                    </div>)()
+                    </div>
                   ) : (
                     filteredReceipts.map((tx) => {
                       const isOpen = expandedTx === tx.id;
