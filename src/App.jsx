@@ -13,6 +13,9 @@ const Register = React.lazy(() => import("./pages/Login-Register/Register"));
 const InformationSystemBranches = React.lazy(
   () => import("./pages/Information-system/InformationSystemBranches"),
 );
+const PrivacyPolicy = React.lazy(
+  () => import("./pages/PrivacyPolicy/PrivacyPolicy"),
+);
 
 const Dashboard = React.lazy(() => import("./pages/Dashboard/Dashboard"));
 const PatientRecord = React.lazy(
@@ -254,6 +257,7 @@ const App = () => {
            back to the dashboard the way "/" does above. Used by the "Go to Info
            Site" button in the dashboard topbar. ── */}
           <Route path="/info" element={<InformationSystemBranches />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
 
           {/* ── Auth ── */}
           <Route
