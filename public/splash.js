@@ -1,4 +1,29 @@
 /*
+ *  Google Fonts preload → stylesheet swap
+ *  ─────────────────────────────────────────────────────────────────
+ *  index.html preloads the Google Fonts stylesheet (rel="preload")
+ *  for performance, then needs to flip it to rel="stylesheet" once
+ *  it's fetched so the browser actually applies it. This used to be
+ *  done via an inline onload="" attribute, but that's blocked by the
+ *  CSP script-src policy (no 'unsafe-inline'). Doing it here instead,
+ *  from an external script, satisfies script-src 'self' and applies
+ *  the font correctly.
+ */
+(function () {
+  const fontLink = document.getElementById("google-font-preload");
+  if (!fontLink) return;
+  fontLink.addEventListener("load", function () {
+    fontLink.onload = null;
+    fontLink.rel = "stylesheet";
+  });
+  // Edge case: if the stylesheet was already cached and loaded before
+  // this listener attached, sheet will be non-null already.
+  if (fontLink.sheet) {
+    fontLink.rel = "stylesheet";
+  }
+})();
+
+/*
  *  Splash dismissal
  *  ─────────────────────────────────────────────────────────────────
  *  React calls window.__dismissSplash() from main.jsx after mount.
