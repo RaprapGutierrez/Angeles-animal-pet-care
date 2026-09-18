@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import ReactDOM from "react-dom";
 import { Link, useLocation } from "react-router-dom";
 import Layout from "../../components/layout";
 import { supabase } from "../../js/Utils/supabase";
@@ -553,6 +554,18 @@ const LiveDateTime = () => {
 // the grid to one fewer row and moves everything below it — a real layout
 // shift Lighthouse penalizes.
 const STAT_CARD_COUNT = (isAdmin, isManager) => (isAdmin || isManager ? 6 : 5);
+
+// ─── CustomSelect (shared dropdown style from Appointments.jsx) ─────────────
+const CustomSelect = ({
+  value,
+  onChange,
+  options,
+  placeholder = "—",
+  accent = "#6366f1",
+  searchable = false,
+}) => {
+  // ...paste full body from Appointments.jsx here...
+};
 
 // ─── Main Dashboard Component ─────────────────────────────────────────────────
 const Dashboard = () => {
@@ -1365,27 +1378,18 @@ const Dashboard = () => {
               >
                 Branch:
               </label>
-              <select
-                value={branchFilter}
-                onChange={(e) => setBranchFilter(e.target.value)}
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  padding: "6px 12px",
-                  borderRadius: 9,
-                  border: "1.5px solid var(--border)",
-                  background: "var(--card)",
-                  color: "var(--text)",
-                  cursor: "pointer",
-                }}
-              >
-                <option value="">All Branches</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
+              <div style={{ width: 200 }}>
+                <CustomSelect
+                  value={branchFilter}
+                  onChange={(val) => setBranchFilter(val)}
+                  placeholder="All Branches"
+                  accent="#7c3aed"
+                  options={branches.map((b) => ({
+                    value: b.id,
+                    label: b.name,
+                  }))}
+                />
+              </div>{" "}
             </div>
           )}
 

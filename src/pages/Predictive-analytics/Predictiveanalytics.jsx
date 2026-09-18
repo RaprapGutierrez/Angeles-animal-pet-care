@@ -1393,6 +1393,41 @@ const PredictiveAnalytics = () => {
           });
         }
 
+        // Rush-hour overload: one time slot dominates this branch's appointments
+        const bHourTotal = bHourBuckets.reduce((s, n) => s + n, 0);
+        const bPeakHourIdx = bHourBuckets.indexOf(Math.max(...bHourBuckets));
+        if (
+          bHourTotal > 0 &&
+          Math.max(...bHourBuckets) > 0 &&
+          Math.max(...bHourBuckets) / bHourTotal > 0.3
+        ) {
+          problems.push({
+            issue: `Appointments cluster heavily around ${HOUR_LABELS[bPeakHourIdx]}`,
+            suggestion: `Schedule an extra vet or tech during ${HOUR_LABELS[bPeakHourIdx]}, or spread bookings by limiting slots in that hour.`,
+            color: C.teal,
+          });
+        }
+
+        // Declining trend: recent visits noticeably below the branch's own recent average
+        const bRecentWindow = bAppts.filter(
+          (a) => new Date(a.date) >= addDays(today, -30),
+        ).length;
+        const bPriorWindow = bAppts.filter((a) => {
+          const d = new Date(a.date);
+          return d >= addDays(today, -60) && d < addDays(today, -30);
+        }).length;
+        if (bPriorWindow >= 5 && bRecentWindow < bPriorWindow * 0.7) {
+          const pctDrop = Math.round(
+            ((bPriorWindow - bRecentWindow) / bPriorWindow) * 100,
+          );
+          problems.push({
+            issue: `Appointment volume dropped ~${pctDrop}% vs. the prior 30 days`,
+            suggestion:
+              "Investigate possible causes (staffing gaps, complaints, competitor activity) and consider a local outreach or promo to recover volume.",
+            color: C.rose,
+          });
+        }
+
         return {
           id: b.id,
           name: b.name,

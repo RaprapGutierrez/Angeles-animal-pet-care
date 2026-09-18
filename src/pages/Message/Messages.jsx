@@ -876,6 +876,214 @@ const ConversationMenu = ({ onDelete, onClear }) => {
   );
 };
 
+// ── VetBot: simple FAQ chatbot for vet service inquiries ──────────────────
+const VET_FAQ = [
+  {
+    keys: ["hour", "open", "close", "time"],
+    a: "We're open Mon–Sat, 8:00 AM – 7:00 PM, and Sundays 9:00 AM – 3:00 PM for walk-ins and appointments.",
+  },
+  {
+    keys: ["emergency", "urgent", "24"],
+    a: "For emergencies outside business hours, please call our emergency line immediately or head to the nearest 24-hour animal ER. Don't wait for a chat reply in urgent situations.",
+  },
+  {
+    keys: ["book", "appointment", "schedule"],
+    a: "You can book an appointment by messaging a staff member here, calling the clinic, or using the booking page on our website.",
+  },
+  {
+    keys: ["price", "cost", "fee", "how much"],
+    a: "Pricing varies by service — checkups typically start around ₱500, vaccinations and procedures are quoted after a quick assessment. Message a staff member for an exact quote.",
+  },
+  {
+    keys: ["vaccine", "vaccination", "shot"],
+    a: "We offer core and non-core vaccinations for dogs and cats, including rabies, DHPP, and bordetella. Bring your pet's vaccination record if you have one.",
+  },
+  {
+    keys: ["groom", "bath", "grooming"],
+    a: "Yes, we offer grooming services including baths, haircuts, nail trims, and ear cleaning. Ask about grooming packages.",
+  },
+  {
+    keys: ["service", "offer", "do you"],
+    a: "We offer checkups, vaccinations, grooming, surgery, dental care, diagnostics, and boarding. Let me know if you'd like details on any specific service.",
+  },
+  {
+    keys: ["location", "address", "where"],
+    a: "You can find our clinic address and directions on our website's Contact page, or ask a staff member here for exact directions.",
+  },
+  {
+    keys: ["surgery", "spay", "neuter"],
+    a: "We perform routine surgeries including spay/neuter, as well as minor procedures. A consultation is required first to assess your pet's health.",
+  },
+  {
+    keys: ["board", "boarding", "daycare"],
+    a: "We offer pet boarding with daily care, feeding, and monitoring. Availability may vary — message staff to check current openings.",
+  },
+];
+
+const vetBotAnswer = (text) => {
+  const t = text.toLowerCase();
+  const hit = VET_FAQ.find((f) => f.keys.some((k) => t.includes(k)));
+  return hit
+    ? hit.a
+    : "I'm not sure about that one — I can help with hours, appointments, pricing, vaccinations, grooming, surgery, and boarding. For anything else, a staff member here can help!";
+};
+
+const VetBot = () => {
+  const [open, setOpen] = useState(false);
+  const [msgs, setMsgs] = useState([
+    {
+      from: "bot",
+      text: "Hi! I'm VetBot 🐾 Ask me about our hours, services, pricing, or booking an appointment.",
+    },
+  ]);
+  const [input, setInput] = useState("");
+  const endRef = useRef(null);
+
+  useEffect(() => {
+    if (open) endRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs, open]);
+
+  const send = () => {
+    const text = input.trim();
+    if (!text) return;
+    const reply = vetBotAnswer(text);
+    setMsgs((p) => [
+      ...p,
+      { from: "user", text },
+      { from: "bot", text: reply },
+    ]);
+    setInput("");
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        title="Ask VetBot"
+        style={{
+          position: "fixed",
+          bottom: 24,
+          right: 24,
+          zIndex: 99997,
+          width: 56,
+          height: 56,
+          borderRadius: "50%",
+          border: "none",
+          background: "linear-gradient(135deg,#22c55e,#16a34a)",
+          color: "#fff",
+          fontSize: 24,
+          cursor: "pointer",
+          boxShadow: "0 6px 20px rgba(34,197,94,0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        {open ? "✕" : "🐾"}
+      </button>
+      {open && (
+        <div
+          style={{
+            position: "fixed",
+            bottom: 92,
+            right: 24,
+            zIndex: 99997,
+            width: 320,
+            maxHeight: 440,
+            background: "#fff",
+            borderRadius: 16,
+            boxShadow: "0 12px 40px rgba(0,0,0,0.2)",
+            display: "flex",
+            flexDirection: "column",
+            overflow: "hidden",
+            border: "1px solid #e5e7eb",
+          }}
+        >
+          <div
+            style={{
+              padding: "12px 16px",
+              background: "linear-gradient(135deg,#22c55e,#16a34a)",
+              color: "#fff",
+              fontWeight: 700,
+              fontSize: 14,
+            }}
+          >
+            VetBot — Ask about our services
+          </div>
+          <div
+            style={{
+              flex: 1,
+              overflowY: "auto",
+              padding: 12,
+              display: "flex",
+              flexDirection: "column",
+              gap: 8,
+              background: "#f4f6fb",
+            }}
+          >
+            {msgs.map((m, i) => (
+              <div
+                key={i}
+                style={{
+                  alignSelf: m.from === "bot" ? "flex-start" : "flex-end",
+                  background: m.from === "bot" ? "#fff" : "#22c55e",
+                  color: m.from === "bot" ? "#111827" : "#fff",
+                  padding: "8px 12px",
+                  borderRadius: 12,
+                  fontSize: 13,
+                  maxWidth: "85%",
+                  boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                }}
+              >
+                {m.text}
+              </div>
+            ))}
+            <div ref={endRef} />
+          </div>
+          <div
+            style={{
+              padding: 10,
+              borderTop: "1px solid #e5e7eb",
+              display: "flex",
+              gap: 8,
+            }}
+          >
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && send()}
+              placeholder="Ask a question…"
+              style={{
+                flex: 1,
+                padding: "8px 12px",
+                borderRadius: 20,
+                border: "1.5px solid #e5e7eb",
+                fontSize: 13,
+                outline: "none",
+                fontFamily: "inherit",
+              }}
+            />
+            <button
+              onClick={send}
+              style={{
+                padding: "8px 14px",
+                borderRadius: 20,
+                border: "none",
+                background: "#22c55e",
+                color: "#fff",
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              →
+            </button>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
 // ═════════════════════════════════════════════════════════════════════════════
 // Main Messages component
 // ═════════════════════════════════════════════════════════════════════════════
@@ -1894,6 +2102,7 @@ const Messages = () => {
 
   return (
     <Layout>
+      <VetBot />
       {/* Pass full currentUser object so AddClientModal can apply role-based filtering */}
       <AddClientModal
         show={showAdd}
