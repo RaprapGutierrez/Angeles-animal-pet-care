@@ -686,7 +686,7 @@ const VetBot = () => {
                 padding: "8px 14px",
                 borderRadius: 20,
                 border: "none",
-                background: "#22c55e",
+                background: "#3b82f6",
                 color: "#fff",
                 fontWeight: 700,
                 cursor: "pointer",

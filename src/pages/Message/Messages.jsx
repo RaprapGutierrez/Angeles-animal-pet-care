@@ -969,17 +969,37 @@ const VetBot = () => {
           height: 56,
           borderRadius: "50%",
           border: "none",
-          background: "linear-gradient(135deg,#22c55e,#16a34a)",
+          background: "linear-gradient(135deg,#3b82f6,#2563eb)",
           color: "#fff",
-          fontSize: 24,
           cursor: "pointer",
-          boxShadow: "0 6px 20px rgba(34,197,94,0.4)",
+          boxShadow: "0 6px 20px rgba(59,130,246,0.4)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        {open ? "✕" : "🐾"}
+        {open ? (
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="#fff"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        ) : (
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="#fff">
+            <ellipse cx="12" cy="16" rx="5" ry="4.2" />
+            <ellipse cx="5.5" cy="9" rx="2.1" ry="2.6" />
+            <ellipse cx="10" cy="5.5" rx="2.1" ry="2.6" />
+            <ellipse cx="14" cy="5.5" rx="2.1" ry="2.6" />
+            <ellipse cx="18.5" cy="9" rx="2.1" ry="2.6" />
+          </svg>
+        )}
       </button>
       {open && (
         <div
@@ -1002,7 +1022,7 @@ const VetBot = () => {
           <div
             style={{
               padding: "12px 16px",
-              background: "linear-gradient(135deg,#22c55e,#16a34a)",
+              background: "linear-gradient(135deg,#3b82f6,#2563eb)",
               color: "#fff",
               fontWeight: 700,
               fontSize: 14,
@@ -1026,7 +1046,7 @@ const VetBot = () => {
                 key={i}
                 style={{
                   alignSelf: m.from === "bot" ? "flex-start" : "flex-end",
-                  background: m.from === "bot" ? "#fff" : "#22c55e",
+                  background: m.from === "bot" ? "#fff" : "#3b82f6",
                   color: m.from === "bot" ? "#111827" : "#fff",
                   padding: "8px 12px",
                   borderRadius: 12,
@@ -1069,7 +1089,7 @@ const VetBot = () => {
                 padding: "8px 14px",
                 borderRadius: 20,
                 border: "none",
-                background: "#22c55e",
+                background: "#3b82f6",
                 color: "#fff",
                 fontWeight: 700,
                 cursor: "pointer",
