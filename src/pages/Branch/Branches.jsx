@@ -1627,6 +1627,45 @@ const Branches = () => {
   const [geocoding, setGeocoding] = useState(false);
   const [geocodeStatus, setGeocodeStatus] = useState(null); // {type:'ok'|'error', message}
   const accountFormSnapshotRef = useRef(null);
+  const latLngManualRef = useRef(false); // true once the user types lat/lng by hand
+  const geocodeReqRef = useRef(0); // guards against out-of-order responses
+
+  // Auto-fill lat/lng while typing the address (Add Branch only)
+  useEffect(() => {
+    if (!showModal || editBranch) return;
+    const addr = (form.address || "").trim();
+    if (addr.length < 8 || latLngManualRef.current) return;
+
+    const reqId = ++geocodeReqRef.current;
+    const timer = setTimeout(async () => {
+      setGeocoding(true);
+      setGeocodeStatus(null);
+      try {
+        const { lat, lng } = await geocodeAddress(addr);
+        if (reqId !== geocodeReqRef.current || latLngManualRef.current) return;
+        setForm((f) => ({
+          ...f,
+          lat: lat.toFixed(6),
+          lng: lng.toFixed(6),
+        }));
+        setGeocodeStatus({
+          type: "ok",
+          message:
+            "Coordinates filled in automatically. Please double-check the pin is correct.",
+        });
+      } catch (err) {
+        if (reqId === geocodeReqRef.current)
+          setGeocodeStatus({
+            type: "error",
+            message:
+              "Couldn't find coordinates for that address — refine it or enter them manually.",
+          });
+      }
+      if (reqId === geocodeReqRef.current) setGeocoding(false);
+    }, 900);
+
+    return () => clearTimeout(timer);
+  }, [form.address, showModal, editBranch]);
 
   const isAccountFormDirty = () =>
     accountModalMode === "form" &&
@@ -1824,6 +1863,8 @@ const Branches = () => {
     setBranchAccounts([]);
     setEditBranch(null);
     setFormDirty(false);
+    latLngManualRef.current = false;
+    setGeocodeStatus(null);
     setShowModal(true);
   };
   const openEdit = (b) => {
@@ -4287,6 +4328,7 @@ const Branches = () => {
                           });
                           return;
                         }
+                        latLngManualRef.current = false;
                         setGeocoding(true);
                         setGeocodeStatus(null);
                         try {
@@ -4484,6 +4526,7 @@ const Branches = () => {
                     type="text"
                     value={form.lat}
                     onChange={(e) => {
+                      latLngManualRef.current = true;
                       setFormDirty(true);
                       setForm({ ...form, lat: e.target.value });
                     }}
@@ -4498,6 +4541,7 @@ const Branches = () => {
                     type="text"
                     value={form.lng}
                     onChange={(e) => {
+                      latLngManualRef.current = true;
                       setFormDirty(true);
                       setForm({ ...form, lng: e.target.value });
                     }}
