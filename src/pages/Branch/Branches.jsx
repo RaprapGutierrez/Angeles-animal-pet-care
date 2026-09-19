@@ -899,16 +899,161 @@ const isValidPhMobile = (digits) => /^09\d{9}$/.test((digits || "").trim());
 // ── Forward-geocode a typed address into lat/lng using OpenStreetMap's free
 // Nominatim API — lets the person auto-fill coordinates from the Address
 // field instead of having to look them up and type them in manually. ──
-const geocodeAddress = async (address) => {
+// ── Google Plus Code (Open Location Code) decoder ──
+const PLUS_ALPHABET = "23456789CFGHJMPQRVWX";
+const PLUS_CODE_RE =
+  /^\s*([23456789CFGHJMPQRVWX]{2,8}\+[23456789CFGHJMPQRVWX]{2,})\s*,?\s*(.*)$/i;
+
+const decodePlusCode = (raw, refLat, refLng) => {
+  const [before, after = ""] = raw.toUpperCase().trim().split("+");
+  let full = before + after;
+  const missing = 8 - before.length; // chars dropped from a "short" code
+
+  if (missing > 0) {
+    if (refLat == null || refLng == null) return null;
+    // Borrow the leading characters from a nearby reference location
+    let a = refLat + 90,
+      b = refLng + 180,
+      res = 20,
+      prefix = "";
+    for (let i = 0; i < missing / 2; i++) {
+      const ai = Math.floor(a / res),
+        bi = Math.floor(b / res);
+      prefix += PLUS_ALPHABET[ai] + PLUS_ALPHABET[bi];
+      a -= ai * res;
+      b -= bi * res;
+      res /= 20;
+    }
+    full = prefix + full;
+  }
+
+  const pairLen = Math.min(full.length, 10);
+  let lat = 0,
+    lng = 0,
+    res = 20,
+    cell = 20;
+  for (let i = 0; i < pairLen; i += 2) {
+    lat += PLUS_ALPHABET.indexOf(full[i]) * res;
+    lng += PLUS_ALPHABET.indexOf(full[i + 1]) * res;
+    cell = res;
+    res /= 20;
+  }
+  let latRes = cell,
+    lngRes = cell;
+  for (let i = 10; i < full.length; i++) {
+    const idx = PLUS_ALPHABET.indexOf(full[i]);
+    latRes /= 5;
+    lngRes /= 4;
+    lat += Math.floor(idx / 4) * latRes;
+    lng += (idx % 4) * lngRes;
+  }
+  lat += latRes / 2 - 90;
+  lng += lngRes / 2 - 180;
+
+  // Snap to the copy of the area closest to the reference location
+  if (missing > 0) {
+    const area = 20 / Math.pow(20, missing / 2 - 1);
+    if (lat - refLat > area / 2) lat -= area;
+    else if (lat - refLat < -area / 2) lat += area;
+    if (lng - refLng > area / 2) lng -= area;
+    else if (lng - refLng < -area / 2) lng += area;
+  }
+  return { lat, lng };
+};
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+const searchNominatim = async (q) => {
   const res = await fetch(
-    `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(address)}&limit=1&countrycodes=ph`,
+    `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(q)}&limit=1&countrycodes=ph`,
     { headers: { Accept: "application/json" } },
   );
-  if (!res.ok) throw new Error("Geocoding request failed");
+  if (!res.ok) return null;
   const data = await res.json();
-  if (!data || data.length === 0)
-    throw new Error("No match found for that address");
-  return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  return data?.[0]
+    ? { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) }
+    : null;
+};
+
+const searchPhoton = async (q) => {
+  const res = await fetch(
+    `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&limit=1&bbox=116.9,4.5,126.7,21.2`,
+  );
+  if (!res.ok) return null;
+  const data = await res.json();
+  const c = data?.features?.[0]?.geometry?.coordinates;
+  return c ? { lat: c[1], lng: c[0] } : null;
+};
+
+// Try Nominatim, then Photon, for a single query string
+const lookupPlace = async (q) => {
+  try {
+    const hit = await searchNominatim(q);
+    if (hit) return hit;
+  } catch (e) {}
+  await sleep(1100);
+  try {
+    return await searchPhoton(q);
+  } catch (e) {
+    return null;
+  }
+};
+
+const cleanAddressParts = (text) =>
+  text
+    .replace(/\b\d{4,6}\b/g, "") // postal codes
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+// Turns any Philippine address into { lat, lng }
+const geocodeAddress = async (rawAddress) => {
+  const input = (rawAddress || "").trim();
+
+  // 1. Pasted coordinates, e.g. "15.1573285, 120.5938193"
+  const coordMatch = input.match(/^(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)$/);
+  if (coordMatch) {
+    return { lat: parseFloat(coordMatch[1]), lng: parseFloat(coordMatch[2]) };
+  }
+
+  // 2. Google Plus Code at the start, e.g. "5H4R+WRP, Balibago, Angeles"
+  let addressText = input;
+  const plus = input.match(PLUS_CODE_RE);
+  if (plus) {
+    const code = plus[1];
+    const locality = cleanAddressParts(plus[2]);
+    addressText = plus[2];
+    const isFull = code.split("+")[0].length >= 8;
+
+    if (isFull) {
+      const exact = decodePlusCode(code);
+      if (exact) return exact;
+    } else {
+      // Short code: find the town first, then decode relative to it
+      for (let i = 0; i < locality.length; i++) {
+        if (i > 0) await sleep(1100);
+        const ref = await lookupPlace(locality.slice(i).join(", "));
+        if (ref) {
+          const exact = decodePlusCode(code, ref.lat, ref.lng);
+          if (exact) return exact;
+        }
+      }
+    }
+  }
+
+  // 3. Normal address: full text first, then progressively shorter
+  const parts = cleanAddressParts(addressText);
+  if (parts.length === 0) throw new Error("No match found for that address");
+  const queries = [];
+  for (let i = 0; i < Math.max(parts.length - 1, 1); i++)
+    queries.push(parts.slice(i).join(", "));
+
+  for (let i = 0; i < queries.length; i++) {
+    if (i > 0) await sleep(1100);
+    const hit = await lookupPlace(queries[i]);
+    if (hit) return hit;
+  }
+  throw new Error("No match found for that address");
 };
 
 // ── Module Selector sub-component ──
