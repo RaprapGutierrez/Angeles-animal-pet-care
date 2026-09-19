@@ -1446,6 +1446,165 @@ const PredictiveAnalytics = () => {
       });
     }
 
+    /* --- branch health: good / watch / at risk / critical + close or expand advice --- */
+    if (branchComparison.length > 0) {
+      const d30 = addDays(today, -30);
+      const d60 = addDays(today, -60);
+      const txTotal = (t) => {
+        const direct = Number(
+          t.total ?? t.grand_total ?? t.total_amount ?? t.amount,
+        );
+        if (Number.isFinite(direct) && direct > 0) return direct;
+        return (Array.isArray(t.items) ? t.items : []).reduce(
+          (s, it) => s + (Number(it.price) || 0) * (Number(it.qty) || 1),
+          0,
+        );
+      };
+      const validTx = (transactions || []).filter(
+        (t) => !t.voided_at && (!t.status || t.status === "Active"),
+      );
+
+      branchComparison.forEach((b) => {
+        const bAp = appts.filter((a) => a.branch_id === b.id);
+        const bWi = walkins.filter((w) => w.branch_id === b.id);
+        const bTx = validTx.filter((t) => t.branch_id === b.id);
+
+        const visitDates = [
+          ...bAp.map((a) => new Date(a.date)),
+          ...bWi.map((w) => new Date(w.arrived_at)),
+        ];
+        b.visitsRecent = visitDates.filter((d) => d >= d30).length;
+        b.visitsPrior = visitDates.filter((d) => d >= d60 && d < d30).length;
+
+        b.revenue90 = bTx.reduce((s, t) => s + txTotal(t), 0);
+        b.revenueRecent = bTx
+          .filter((t) => new Date(t.created_at) >= d30)
+          .reduce((s, t) => s + txTotal(t), 0);
+        b.revenuePrior = bTx
+          .filter((t) => {
+            const d = new Date(t.created_at);
+            return d >= d60 && d < d30;
+          })
+          .reduce((s, t) => s + txTotal(t), 0);
+      });
+
+      const n = branchComparison.length;
+      const avgVisits =
+        branchComparison.reduce((s, b) => s + b.totalVisits, 0) / n;
+      const avgRevenue =
+        branchComparison.reduce((s, b) => s + b.revenue90, 0) / n;
+
+      branchComparison.forEach((b) => {
+        let score = 100;
+        const reasons = [];
+        const vRatio = avgVisits > 0 ? b.totalVisits / avgVisits : 1;
+        const rRatio = avgRevenue > 0 ? b.revenue90 / avgRevenue : 1;
+
+        if (b.totalVisits === 0) {
+          score -= 45;
+          reasons.push("No patient visits recorded in the last 90 days.");
+        } else if (n > 1 && vRatio < 0.25) {
+          score -= 35;
+          reasons.push(
+            `Very low traffic — only ${Math.round(vRatio * 100)}% of the average branch's visits.`,
+          );
+        } else if (n > 1 && vRatio < 0.5) {
+          score -= 20;
+          reasons.push(
+            `Low traffic — ${Math.round(vRatio * 100)}% of the average branch's visits.`,
+          );
+        } else if (n > 1 && vRatio < 0.75) {
+          score -= 10;
+          reasons.push("Traffic is below the network average.");
+        }
+
+        if (b.visitsPrior >= 5 && b.visitsRecent < b.visitsPrior * 0.5) {
+          score -= 25;
+          reasons.push(
+            `Visits fell ${Math.round(((b.visitsPrior - b.visitsRecent) / b.visitsPrior) * 100)}% versus the previous 30 days.`,
+          );
+        } else if (b.visitsPrior >= 5 && b.visitsRecent < b.visitsPrior * 0.7) {
+          score -= 15;
+          reasons.push("Visits are trending down versus the previous 30 days.");
+        }
+
+        if (n > 1 && avgRevenue > 0 && rRatio < 0.25) {
+          score -= 20;
+          reasons.push("Sales are far below the network average.");
+        } else if (n > 1 && avgRevenue > 0 && rRatio < 0.5) {
+          score -= 10;
+          reasons.push("Sales are well below the network average.");
+        }
+        if (b.revenuePrior > 0 && b.revenueRecent < b.revenuePrior * 0.7) {
+          score -= 15;
+          reasons.push(
+            `Sales dropped ${Math.round(((b.revenuePrior - b.revenueRecent) / b.revenuePrior) * 100)}% versus the previous 30 days.`,
+          );
+        }
+
+        if (b.lowStockCount >= 5) {
+          score -= 10;
+          reasons.push(`${b.lowStockCount} items are below reorder level.`);
+        } else if (b.lowStockCount > 0) {
+          score -= 5;
+        }
+
+        score = Math.max(0, Math.min(100, score));
+
+        const growing =
+          b.visitsPrior > 0 ? b.visitsRecent >= b.visitsPrior * 1.1 : false;
+        const overloaded = n > 1 && vRatio >= 1.4 && growing && score >= 75;
+
+        let status, color, action, verdict, recommendation;
+        if (score < 35) {
+          status = "Critical";
+          color = C.rose;
+          action = "close";
+          verdict = "Failing — at risk of closing";
+          recommendation =
+            "Consider closing or merging this branch. Before deciding: check its rent, salaries and other costs against its sales (not tracked here), and see whether patients and staff can move to the nearest healthy branch. If costs are low, run a 60-day recovery plan first (promos, staffing fix, restock) and re-check.";
+        } else if (score < 55) {
+          status = "At Risk";
+          color = C.amber;
+          action = "recover";
+          verdict = "Struggling — needs a recovery plan";
+          recommendation =
+            "Do not close yet. Run a 60-day recovery plan: local promotions, fix stock shortages, review staffing on slow days. If the score doesn't improve by the next review, consider merging it into a nearby branch.";
+        } else if (score < 75) {
+          status = "Watch";
+          color = C.sky;
+          action = "monitor";
+          verdict = "Okay, but slipping in some areas";
+          recommendation =
+            "Keep operating. Fix the issues listed and re-check this branch monthly.";
+        } else if (overloaded) {
+          status = "Healthy";
+          color = C.emerald;
+          action = "expand";
+          verdict = "Strong and growing — demand is high";
+          recommendation =
+            "Traffic is well above average and rising. Add staff/appointment slots here, and consider opening a new branch in a nearby high-demand area to share the load.";
+        } else {
+          status = "Healthy";
+          color = C.emerald;
+          action = "maintain";
+          verdict = "Good — performing well";
+          recommendation =
+            "Keep current operations. Maintain stock levels and staffing.";
+        }
+
+        b.health = {
+          score,
+          status,
+          color,
+          action,
+          verdict,
+          recommendation,
+          reasons,
+        };
+      });
+    }
+
     setAnalytics({
       dowAppt,
       hourBuckets,
@@ -2695,6 +2854,150 @@ const PredictiveAnalytics = () => {
             </div>
 
             {!loading &&
+              (analytics?.branchComparison || []).length > 0 &&
+              (() => {
+                const list = analytics.branchComparison;
+                const by = (s) => list.filter((b) => b.health?.status === s);
+                const closing = list.filter(
+                  (b) => b.health?.action === "close",
+                );
+                const expanding = list.filter(
+                  (b) => b.health?.action === "expand",
+                );
+                const stats = [
+                  ["Healthy", by("Healthy").length, C.emerald],
+                  ["Watch", by("Watch").length, C.sky],
+                  ["At Risk", by("At Risk").length, C.amber],
+                  ["Critical", by("Critical").length, C.rose],
+                ];
+                return (
+                  <div
+                    className="pa-card"
+                    style={{
+                      ...card,
+                      gridColumn: "1 / -1",
+                      animationDelay: "0.12s",
+                    }}
+                  >
+                    <SectionHeader
+                      icon={
+                        <svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                          strokeLinecap="round"
+                        >
+                          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                        </svg>
+                      }
+                      title="Branch Health Overview"
+                      subtitle="Scored from visits, sales, 30-day trend and stock levels"
+                    />
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "repeat(4, 1fr)",
+                        gap: 10,
+                        marginBottom: 14,
+                      }}
+                    >
+                      {stats.map(([lbl, val, col]) => (
+                        <div
+                          key={lbl}
+                          style={{
+                            textAlign: "center",
+                            padding: "10px 4px",
+                            borderRadius: 10,
+                            background: `${col}10`,
+                            border: `1px solid ${col}30`,
+                          }}
+                        >
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: 22,
+                              fontWeight: 900,
+                              color: col,
+                            }}
+                          >
+                            {val}
+                          </p>
+                          <p
+                            style={{
+                              margin: 0,
+                              fontSize: 11,
+                              color: "#94a3b8",
+                            }}
+                          >
+                            {lbl}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                    <ul style={{ margin: 0, paddingLeft: 18 }}>
+                      {closing.length > 0 && (
+                        <li
+                          style={{
+                            fontSize: 12,
+                            color: "var(--text)",
+                            marginBottom: 4,
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          <strong style={{ color: C.rose }}>
+                            Consider closing or merging:
+                          </strong>{" "}
+                          {closing.map((b) => b.name).join(", ")}.
+                        </li>
+                      )}
+                      {expanding.length > 0 && (
+                        <li
+                          style={{
+                            fontSize: 12,
+                            color: "var(--text)",
+                            marginBottom: 4,
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          <strong style={{ color: C.emerald }}>
+                            Consider adding a new branch or capacity near:
+                          </strong>{" "}
+                          {expanding.map((b) => b.name).join(", ")} (high,
+                          growing demand).
+                        </li>
+                      )}
+                      {closing.length === 0 && expanding.length === 0 && (
+                        <li
+                          style={{
+                            fontSize: 12,
+                            color: "var(--muted)",
+                            lineHeight: 1.5,
+                          }}
+                        >
+                          No branch needs closing or expansion right now. The
+                          network looks stable.
+                        </li>
+                      )}
+                    </ul>
+                    <p
+                      style={{
+                        margin: "10px 0 0",
+                        fontSize: 11,
+                        color: "#94a3b8",
+                      }}
+                    >
+                      Note: this uses visits and sales only. Rent, salaries and
+                      other expenses aren't tracked, so "Critical" means poor
+                      performance, not confirmed bankruptcy.
+                    </p>
+                  </div>
+                );
+              })()}
+
+            {!loading &&
               (analytics?.branchComparison || []).map((b, i) => (
                 <div
                   key={b.id}
@@ -2771,6 +3074,103 @@ const PredictiveAnalytics = () => {
                       </div>
                     ))}
                   </div>
+                  {b.health && (
+                    <div
+                      style={{
+                        borderRadius: 10,
+                        border: `1.5px solid ${b.health.color}50`,
+                        background: `${b.health.color}0d`,
+                        padding: "10px 12px",
+                        marginBottom: 10,
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
+                          marginBottom: 4,
+                        }}
+                      >
+                        <span
+                          style={{
+                            fontSize: 10,
+                            fontWeight: 800,
+                            color: "#fff",
+                            background: b.health.color,
+                            borderRadius: 20,
+                            padding: "2px 9px",
+                            textTransform: "uppercase",
+                          }}
+                        >
+                          {b.health.status}
+                        </span>
+                        <span
+                          style={{
+                            fontSize: 12,
+                            fontWeight: 800,
+                            color: b.health.color,
+                          }}
+                        >
+                          Score {b.health.score}/100
+                        </span>
+                      </div>
+                      <p
+                        style={{
+                          margin: "0 0 4px",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          color: "var(--text)",
+                        }}
+                      >
+                        {b.health.verdict}
+                      </p>
+                      <p
+                        style={{
+                          margin: "0 0 6px",
+                          fontSize: 11,
+                          color: "var(--muted)",
+                        }}
+                      >
+                        Sales (90d): ₱{Math.round(b.revenue90).toLocaleString()}{" "}
+                        · Visits (30d): {b.visitsRecent} vs {b.visitsPrior}{" "}
+                        before
+                      </p>
+                      {b.health.reasons.length > 0 && (
+                        <ul style={{ margin: "0 0 6px", paddingLeft: 16 }}>
+                          {b.health.reasons.map((r, ri) => (
+                            <li
+                              key={ri}
+                              style={{
+                                fontSize: 11,
+                                color: "var(--muted)",
+                                lineHeight: 1.5,
+                              }}
+                            >
+                              {r}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      <p
+                        style={{
+                          margin: 0,
+                          fontSize: 11,
+                          lineHeight: 1.5,
+                          color: "var(--text)",
+                        }}
+                      >
+                        <strong style={{ color: b.health.color }}>
+                          {b.health.action === "close"
+                            ? "Recommendation (close/merge): "
+                            : b.health.action === "expand"
+                              ? "Recommendation (expand): "
+                              : "Recommendation: "}
+                        </strong>
+                        {b.health.recommendation}
+                      </p>
+                    </div>
+                  )}
                   {b.problems.length === 0 ? (
                     <div
                       style={{
