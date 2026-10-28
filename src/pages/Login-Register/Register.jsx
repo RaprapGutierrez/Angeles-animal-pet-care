@@ -145,22 +145,38 @@ const CustomSelect = ({
       )
         setOpen(false);
     };
+    // Close when the form/page scrolls or the window resizes, so the
+    // menu never floats away from its field (ignore scrolling inside the menu)
+    const closeOnScroll = (e) => {
+      if (ref.current && ref.current.contains(e.target)) return;
+      setOpen(false);
+    };
+    const closeOnResize = () => setOpen(false);
     document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    window.addEventListener("scroll", closeOnScroll, true);
+    window.addEventListener("resize", closeOnResize);
+    return () => {
+      document.removeEventListener("mousedown", handler);
+      window.removeEventListener("scroll", closeOnScroll, true);
+      window.removeEventListener("resize", closeOnResize);
+    };
   }, []);
 
   const handleOpen = () => {
     if (!open && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
       const spaceBelow = window.innerHeight - rect.bottom;
-      const dropHeight = Math.min((options.length + 1) * 38, 240);
-      const showAbove = spaceBelow < dropHeight + 10;
+      const spaceAbove = rect.top;
+      const dropHeight = Math.min(options.length * 36 + 10, 260);
+      const showAbove = spaceBelow < dropHeight + 10 && spaceAbove > spaceBelow;
+      const width = Math.max(rect.width, 160);
+      const maxLeft = window.innerWidth - width - 8;
       setDropPos({
-        top: showAbove
-          ? rect.top + window.scrollY - dropHeight - 6
-          : rect.bottom + window.scrollY + 6,
-        left: rect.left + window.scrollX,
-        width: rect.width,
+        top: rect.bottom + 6,
+        bottom: window.innerHeight - rect.top + 6,
+        above: showAbove,
+        left: Math.max(8, Math.min(rect.left, maxLeft)),
+        width,
       });
     }
     setOpen((o) => !o);
@@ -172,13 +188,14 @@ const CustomSelect = ({
           <div
             ref={ref}
             style={{
-              position: "absolute",
-              top: dropPos.top,
+              position: "fixed",
+              top: dropPos.above ? undefined : dropPos.top,
+              bottom: dropPos.above ? dropPos.bottom : undefined,
               left: dropPos.left,
               width: dropPos.width,
               background: "#fff",
               borderRadius: 12,
-              zIndex: 99999,
+              zIndex: 2147483000,
               boxShadow:
                 "0 16px 40px rgba(0,0,0,0.13), 0 4px 12px rgba(0,0,0,0.07), 0 0 0 1px rgba(0,0,0,0.06)",
               border: "1.5px solid #e8edf4",
@@ -292,6 +309,16 @@ const CustomSelect = ({
         role="button"
         tabIndex={0}
         aria-label={ariaLabel}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            handleOpen();
+          } else if (e.key === "Escape") {
+            setOpen(false);
+          }
+        }}
         style={{
           width: "100%",
           padding: "12px 34px 12px 12px",
@@ -945,8 +972,8 @@ const Register = () => {
                 <div
                   style={{
                     display: "grid",
-                    gridTemplateColumns: "1fr 1fr",
-                    gap: 10,
+                    gridTemplateColumns: "1fr",
+                    gap: 12,
                     marginBottom: 14,
                   }}
                 >

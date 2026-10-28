@@ -1188,7 +1188,7 @@ const Report = () => {
     }
   };
 
-  // ── Generate Report (Appointments / Walk-Ins / Patients / Transactions) ────
+  // ── Generate Report (Appointments / Walk-Ins / Patients / Transactions / All) ─
   const GEN_TYPES = {
     appointments: {
       table: "appointments",
@@ -1216,163 +1216,215 @@ const Report = () => {
     },
   };
 
+  const HIDDEN_COLS = new Set([
+    "client_id",
+    "voided_by",
+    "branch_id",
+    "deleted_at",
+  ]);
+
+  // created_at -> "Created At"
+  const prettyHeader = (c) =>
+    c.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
+
+  // Turns any DB value into clean readable text (used by PDF and Excel)
+  const formatValue = (val) => {
+    if (val == null) return "";
+    if (Array.isArray(val)) {
+      return val
+        .map((item) =>
+          item && typeof item === "object"
+            ? item.name ||
+              item.label ||
+              item.title ||
+              item.item_name ||
+              JSON.stringify(item)
+            : String(item),
+        )
+        .join(", ");
+    }
+    if (typeof val === "object") {
+      return val.name || val.label || val.title || JSON.stringify(val);
+    }
+    if (typeof val === "boolean") return val ? "Yes" : "No";
+    if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
+      return new Date(val).toLocaleString("en-PH", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+      });
+    }
+    return String(val);
+  };
+
+  // Excel keeps real numbers so cells can still be summed
+  const formatExcelValue = (val) =>
+    typeof val === "number" ? val : formatValue(val);
+
+  const getGenRange = (cfg) => {
+    if (genPeriodType === "day") {
+      return {
+        start: cfg.dateOnly ? genDate : `${genDate}T00:00:00`,
+        end: cfg.dateOnly ? genDate : `${genDate}T23:59:59`,
+      };
+    }
+    const [y, m] = genMonth.split("-").map(Number);
+    const lastDay = String(new Date(y, m, 0).getDate()).padStart(2, "0");
+    return cfg.dateOnly
+      ? { start: `${genMonth}-01`, end: `${genMonth}-${lastDay}` }
+      : {
+          start: `${genMonth}-01T00:00:00`,
+          end: `${genMonth}-${lastDay}T23:59:59`,
+        };
+  };
+
   const runGenerateReport = async () => {
     if (!genDataType || !genFormat) return;
     setGenerating(true);
     try {
-      const cfg = GEN_TYPES[genDataType];
-      let start, end, periodLabel;
-      if (genPeriodType === "day") {
-        periodLabel = genDate;
-        start = cfg.dateOnly ? genDate : `${genDate}T00:00:00`;
-        end = cfg.dateOnly ? genDate : `${genDate}T23:59:59`;
-      } else {
-        periodLabel = genMonth;
-        const [y, m] = genMonth.split("-").map(Number);
-        const lastDay = new Date(y, m, 0).getDate();
-        if (cfg.dateOnly) {
-          start = `${genMonth}-01`;
-          end = `${genMonth}-${String(lastDay).padStart(2, "0")}`;
-        } else {
-          start = `${genMonth}-01T00:00:00`;
-          end = `${genMonth}-${String(lastDay).padStart(2, "0")}T23:59:59`;
-        }
+      const periodLabel = genPeriodType === "day" ? genDate : genMonth;
+      const keys =
+        genDataType === "all" ? Object.keys(GEN_TYPES) : [genDataType];
+      const title =
+        genDataType === "all" ? "All Data" : GEN_TYPES[genDataType].label;
+
+      // ── Fetch every requested table ──
+      const sections = [];
+      for (const key of keys) {
+        const cfg = GEN_TYPES[key];
+        const { start, end } = getGenRange(cfg);
+        let q = supabase
+          .from(cfg.table)
+          .select("*")
+          .gte(cfg.dateField, start)
+          .lte(cfg.dateField, end);
+        if (cfg.table === "patients") q = q.is("deleted_at", null);
+        if (!seeAllBranches && user?.branchId)
+          q = q.eq("branch_id", user.branchId);
+        if (seeAllBranches && branchFilter) q = q.eq("branch_id", branchFilter);
+
+        const { data, error } = await q;
+        if (error) throw error;
+        const rows = data || [];
+        if (rows.length === 0) continue;
+
+        // union of keys so no column is missed
+        const colSet = new Set();
+        rows.forEach((r) => Object.keys(r).forEach((k) => colSet.add(k)));
+        const cols = [...colSet].filter((c) => !HIDDEN_COLS.has(c));
+        sections.push({ cfg, rows, cols });
       }
 
-      let q = supabase
-        .from(cfg.table)
-        .select("*")
-        .gte(cfg.dateField, start)
-        .lte(cfg.dateField, end);
-      if (cfg.table === "patients") q = q.is("deleted_at", null);
-      if (!seeAllBranches && user?.branchId)
-        q = q.eq("branch_id", user.branchId);
-      if (seeAllBranches && branchFilter) q = q.eq("branch_id", branchFilter);
-
-      const { data, error } = await q;
-      if (error) throw error;
-      const rows = data || [];
-      if (rows.length === 0) {
-        showToast(
-          `No records found for ${cfg.label} on ${periodLabel}.`,
-          "error",
-        );
-        setGenerating(false);
+      if (sections.length === 0) {
+        showToast(`No records found for ${title} on ${periodLabel}.`, "error");
         return;
       }
-      const HIDDEN_COLS = new Set(["client_id", "voided_by", "branch_id"]);
-      const cols =
-        rows.length > 0
-          ? Object.keys(rows[0]).filter((c) => !HIDDEN_COLS.has(c))
-          : [];
+
+      const fileBase = `${title.replace(/\s/g, "")}_${periodLabel}`;
 
       if (genFormat === "pdf") {
         const { default: jsPDF } = await import("jspdf");
         const { default: autoTable } = await import("jspdf-autotable");
-        const doc = new jsPDF();
+        const doc = new jsPDF({ orientation: "landscape" });
+        const cx = doc.internal.pageSize.getWidth() / 2;
+
         doc.setFontSize(16);
         doc.setFont("helvetica", "bold");
         doc.setTextColor(30, 58, 138);
-        doc.text("Angeles Animal Care Hospital", 105, 16, { align: "center" });
+        doc.text("Angeles Animal Care Hospital", cx, 16, { align: "center" });
         doc.setFontSize(11);
         doc.setFont("helvetica", "normal");
         doc.setTextColor(100, 116, 139);
-        doc.text(`${cfg.label} Report — ${branchLabel}`, 105, 23, {
+        doc.text(`${title} Report — ${branchLabel}`, cx, 23, {
           align: "center",
         });
         doc.setFontSize(10);
         doc.text(
           `Period: ${periodLabel} | Generated: ${new Date().toLocaleDateString("en-PH")}`,
-          105,
+          cx,
           29,
           { align: "center" },
         );
-        const formatCell = (val) => {
-          if (val == null) return "";
-          if (Array.isArray(val)) {
-            return val
-              .map((item) => {
-                if (item && typeof item === "object") {
-                  return (
-                    item.name ||
-                    item.label ||
-                    item.title ||
-                    item.item_name ||
-                    JSON.stringify(item)
-                  );
-                }
-                return String(item);
-              })
-              .join(", ");
-          }
-          if (typeof val === "object") {
-            return val.name || val.label || val.title || JSON.stringify(val);
-          }
-          if (typeof val === "string" && /^\d{4}-\d{2}-\d{2}T/.test(val)) {
-            return new Date(val).toLocaleString("en-PH", {
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-              hour12: true,
-            });
-          }
-          return String(val);
-        };
 
-        const itemsColIdx = cols.indexOf("items");
-        const createdColIdx = cols.indexOf("created_at");
-        const columnStyles = {};
-        if (itemsColIdx !== -1) {
-          columnStyles[itemsColIdx] = { cellWidth: 65 };
-        }
-        if (createdColIdx !== -1) {
-          columnStyles[createdColIdx] = { cellWidth: 32 };
-        }
+        let y = 36;
+        sections.forEach(({ cfg, rows, cols }, idx) => {
+          if (idx > 0 && y > 170) {
+            doc.addPage();
+            y = 16;
+          }
+          doc.setFontSize(12);
+          doc.setFont("helvetica", "bold");
+          doc.setTextColor(30, 41, 59);
+          doc.text(`${cfg.label} (${rows.length})`, 8, y);
 
-        autoTable(doc, {
-          startY: 36,
-          head: [cols],
-          body: rows.map((r) => cols.map((c) => formatCell(r[c]))),
-          headStyles: {
-            fillColor: [30, 58, 138],
-            textColor: 255,
-            fontStyle: "bold",
-          },
-          styles: {
-            fontSize: 8,
-            cellPadding: 3,
-            overflow: "linebreak",
-            cellWidth: "wrap",
-            valign: "top",
-          },
-          columnStyles,
-          margin: { left: 8, right: 8 },
+          const columnStyles = {};
+          const itemsIdx = cols.indexOf("items");
+          if (itemsIdx !== -1) columnStyles[itemsIdx] = { cellWidth: 60 };
+
+          autoTable(doc, {
+            startY: y + 3,
+            head: [cols.map(prettyHeader)],
+            body: rows.map((r) => cols.map((c) => formatValue(r[c]))),
+            headStyles: {
+              fillColor: [30, 58, 138],
+              textColor: 255,
+              fontStyle: "bold",
+            },
+            alternateRowStyles: { fillColor: [240, 245, 255] },
+            styles: {
+              fontSize: cols.length > 9 ? 6.5 : 8,
+              cellPadding: 2.5,
+              overflow: "linebreak",
+              valign: "top",
+            },
+            columnStyles,
+            margin: { left: 8, right: 8 },
+          });
+          y = doc.lastAutoTable.finalY + 12;
         });
-        doc.save(`${cfg.label.replace(/\s/g, "")}_${periodLabel}.pdf`);
+
+        const pc = doc.internal.getNumberOfPages();
+        const ph = doc.internal.pageSize.getHeight();
+        for (let i = 1; i <= pc; i++) {
+          doc.setPage(i);
+          doc.setFontSize(9);
+          doc.setTextColor(150);
+          doc.text(`Page ${i} of ${pc}`, cx, ph - 6, { align: "center" });
+          doc.text("Angeles Animal Care Hospital — Confidential", 8, ph - 6);
+        }
+        doc.save(`${fileBase}.pdf`);
       } else {
         const XLSX = await import("xlsx");
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(
-          wb,
-          XLSX.utils.aoa_to_sheet([
-            cols,
-            ...rows.map((r) => cols.map((c) => r[c])),
-          ]),
-          cfg.label.slice(0, 30),
-        );
-        XLSX.writeFile(
-          wb,
-          `${cfg.label.replace(/\s/g, "")}_${periodLabel}.xlsx`,
-        );
+        sections.forEach(({ cfg, rows, cols }) => {
+          const aoa = [
+            cols.map(prettyHeader),
+            ...rows.map((r) => cols.map((c) => formatExcelValue(r[c]))),
+          ];
+          const ws = XLSX.utils.aoa_to_sheet(aoa);
+          // auto column widths
+          ws["!cols"] = cols.map((_, ci) => ({
+            wch: Math.min(
+              45,
+              Math.max(10, ...aoa.map((row) => String(row[ci] ?? "").length)) +
+                2,
+            ),
+          }));
+          const sheetName = cfg.label.replace(/[\\/?*[\]:]/g, "").slice(0, 31);
+          XLSX.utils.book_append_sheet(wb, ws, sheetName);
+        });
+        XLSX.writeFile(wb, `${fileBase}.xlsx`);
       }
 
       logActivity(
         user,
         "Generated report",
-        `${cfg.label} — ${periodLabel} (${genFormat.toUpperCase()})`,
+        `${title} — ${periodLabel} (${genFormat.toUpperCase()})`,
       );
-      showToast(`${cfg.label} report downloaded successfully!`, "success");
+      showToast(`${title} report downloaded successfully!`, "success");
       setShowGenerateModal(false);
       setGenDataType("");
       setGenFormat("");
@@ -1383,7 +1435,6 @@ const Report = () => {
       setGenerating(false);
     }
   };
-
   // ── Derived chart values ────────────────────────────────────────────────────
   const maxSales = Math.max(...salesData.map((d) => d.total), 1);
   const maxAppts = Math.max(...apptData.map((d) => d.count), 1);
@@ -2945,11 +2996,13 @@ const Report = () => {
                     { key: "walkins", label: "Walk-Ins" },
                     { key: "patients", label: "Patient Records" },
                     { key: "transactions", label: "Transactions (POS)" },
+                    { key: "all", label: "All Data (every report)" },
                   ].map((t) => (
                     <button
                       key={t.key}
                       onClick={() => setGenDataType(t.key)}
                       style={{
+                        gridColumn: t.key === "all" ? "1 / -1" : undefined,
                         padding: "10px 8px",
                         borderRadius: 8,
                         border: `2px solid ${genDataType === t.key ? "var(--royal)" : "var(--border)"}`,
