@@ -1314,7 +1314,11 @@ const Report = () => {
         // union of keys so no column is missed
         const colSet = new Set();
         rows.forEach((r) => Object.keys(r).forEach((k) => colSet.add(k)));
-        const cols = [...colSet].filter((c) => !HIDDEN_COLS.has(c));
+        const cols = [...colSet].filter(
+          (c) =>
+            !HIDDEN_COLS.has(c) &&
+            rows.some((r) => r[c] != null && String(r[c]).trim() !== ""),
+        );
         sections.push({ cfg, rows, cols });
       }
 
@@ -1363,6 +1367,8 @@ const Report = () => {
           const columnStyles = {};
           const itemsIdx = cols.indexOf("items");
           if (itemsIdx !== -1) columnStyles[itemsIdx] = { cellWidth: 60 };
+          const idIdx = cols.indexOf("id");
+          if (idIdx !== -1) columnStyles[idIdx] = { cellWidth: 12 };
 
           autoTable(doc, {
             startY: y + 3,
@@ -1381,7 +1387,8 @@ const Report = () => {
               valign: "top",
             },
             columnStyles,
-            margin: { left: 8, right: 8 },
+            rowPageBreak: "avoid",
+            margin: { left: 8, right: 8, bottom: 20 },
           });
           y = doc.lastAutoTable.finalY + 12;
         });
@@ -1392,8 +1399,12 @@ const Report = () => {
           doc.setPage(i);
           doc.setFontSize(9);
           doc.setTextColor(150);
-          doc.text(`Page ${i} of ${pc}`, cx, ph - 6, { align: "center" });
-          doc.text("Angeles Animal Care Hospital — Confidential", 8, ph - 6);
+          doc.setDrawColor(200, 210, 232);
+          doc.line(8, ph - 12, cx * 2 - 8, ph - 12);
+          doc.text("Angeles Animal Care Hospital — Confidential", 8, ph - 7);
+          doc.text(`Page ${i} of ${pc}`, cx * 2 - 8, ph - 7, {
+            align: "right",
+          });
         }
         doc.save(`${fileBase}.pdf`);
       } else {
